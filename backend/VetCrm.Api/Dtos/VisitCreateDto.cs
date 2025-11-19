@@ -11,5 +11,6 @@ public class VisitCreateDto
     public decimal? AmountTl { get; set; }
     public string? Notes { get; set; }
 
+    public string? Purpose { get; set; }
     public DateOnly? NextDate { get; set; }  // defterdeki "ne zaman gelecek"
 }

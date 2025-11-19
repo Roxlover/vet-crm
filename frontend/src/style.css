@@ -29,7 +29,8 @@ a {
 
 .sidebar {
   width: 240px;
-  background: #111827;
+  background: #585e68;
+  /* background: #111827; */
   color: #e5e7eb;
   padding: 1.25rem 1rem;
   display: flex;
@@ -98,7 +99,7 @@ a {
 }
 
 .nav-item.active {
-  background: #eaa0a0;
+  background: #ffe2ab;
   color: #000000;
   font-weight: 600;
 }

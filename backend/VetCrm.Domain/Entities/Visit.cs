@@ -13,6 +13,8 @@ public class Visit
     public string? Notes { get; set; }
 
     public DateOnly? NextDate { get; set; }
+    public string? ImageUrl { get; set; }
+    public string? Purpose { get; set; }  // Ne için gelecek
 
     public ICollection<Reminder> Reminders { get; set; } = new List<Reminder>();
 }

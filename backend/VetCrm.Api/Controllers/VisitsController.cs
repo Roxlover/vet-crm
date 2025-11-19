@@ -119,7 +119,8 @@ public class VisitsController : ControllerBase
             Procedures = dto.Procedures,
             AmountTl = dto.AmountTl,
             Notes = dto.Notes,
-            NextDate = dto.NextDate
+            NextDate = dto.NextDate,
+            Purpose = dto.Purpose
         };
 
         _db.Visits.Add(visit);
@@ -157,6 +158,7 @@ public class VisitsController : ControllerBase
         visit.AmountTl = dto.AmountTl;
         visit.Notes = dto.Notes;
         visit.NextDate = dto.NextDate;
+        visit.Purpose = dto.Purpose;
 
         SyncReminderForVisit(visit);
 

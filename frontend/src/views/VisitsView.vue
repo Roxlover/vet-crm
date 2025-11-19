@@ -77,10 +77,22 @@
           </div>
         </div>
 
-        <div class="field">
-          <label>Ne zaman gelecek? (Sonraki aşı / kontrol tarihi)</label>
-          <input type="date" v-model="form.nextDate" />
+        <div class="form-row-inline">
+          <div class="form-group">
+            <label>Ne zaman gelecek? (Sonraki aşı / kontrol tarihi)</label>
+            <input type="date" v-model="form.nextDate" />
+          </div>
+
+          <div class="form-group">
+            <label>Ne için gelecek</label>
+            <input
+              type="text"
+              v-model="form.purpose"
+
+            />
+          </div>
         </div>
+
 
         <div class="field">
           <label>Hasta sahibi durumu</label>
@@ -117,7 +129,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { fetchOwners } from '../api/owners'
-import { fetchPets } from '../api/pets'
+import { fetchPetsByOwner } from '../api/pets'
 import { createVisit } from '../api/visits'
 
 const owners = ref([])
@@ -140,6 +152,7 @@ const form = reactive({
   performedAt: '',
   amountTl: null,
   nextDate: '',
+  purpose: '',
   ownerStatus: '',
   notes: '',
   imageFile: null,
@@ -158,7 +171,7 @@ async function loadOwnersAndPets() {
   try {
     const [ownersData, petsData] = await Promise.all([
       fetchOwners(),
-      fetchPets(),
+      fetchPetsByOwner(),
     ])
     owners.value = ownersData
     pets.value = petsData
@@ -232,6 +245,7 @@ async function handleSave() {
       amountTl: form.amountTl ?? 0,
       notes: notesText,
       nextDate: form.nextDate || null, // DateOnly gibi '2025-11-20' formatı
+      purpose: form.purpose,
     }
 
     await createVisit(payload)
@@ -324,6 +338,38 @@ select {
   background: #f9fafb;
   font-size: 0.9rem;
 }
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.form-row-inline {
+  display: flex;
+  gap: 12px;              /* aradaki boşluk */
+}
+
+.form-row-inline .form-group {
+  flex: 1;                /* ikisi de eşit genişlikte olsun */
+}
+
+/* çok dar ekranda tekrar alta geçsin istersen: */
+ @media (max-width: 640px) {
+  .form-row-inline {
+    flex-direction: column;
+  }
+} 
 
 .visit-body {
   padding: 1rem;

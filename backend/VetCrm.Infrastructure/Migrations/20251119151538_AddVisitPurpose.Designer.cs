@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VetCrm.Infrastructure.Data;
@@ -11,9 +12,11 @@ using VetCrm.Infrastructure.Data;
 namespace VetCrm.Infrastructure.Migrations
 {
     [DbContext(typeof(VetCrmDbContext))]
-    partial class VetCrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251119151538_AddVisitPurpose")]
+    partial class AddVisitPurpose
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -61,9 +64,6 @@ namespace VetCrm.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AgeYears")
-                        .HasColumnType("integer");
 
                     b.Property<DateOnly?>("BirthDate")
                         .HasColumnType("date");

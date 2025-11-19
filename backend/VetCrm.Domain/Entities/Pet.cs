@@ -11,6 +11,7 @@ public class Pet
     public string? Species { get; set; }   // kedi/köpek
     public string? Breed { get; set; }     // ırk
     public DateOnly? BirthDate { get; set; }
+    public int? AgeYears { get; set; }
 
     public string? Notes { get; set; }
 

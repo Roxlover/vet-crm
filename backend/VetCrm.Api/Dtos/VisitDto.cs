@@ -14,6 +14,7 @@ public class VisitDto
     public string? Procedures { get; set; }        // neler uygulandı
     public decimal? AmountTl { get; set; }         // ne kadar aldım
     public string? Notes { get; set; }
+    public string? Purpose { get; set; }
 
     public DateOnly? NextDate { get; set; }        // ne zaman gelecek
 }
