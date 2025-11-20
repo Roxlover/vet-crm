@@ -6,11 +6,12 @@ import PetsView from '../views/PetsView.vue'
 import VisitsView from '../views/VisitsView.vue'
 
 const routes = [
-  {
-    path: '/',
-    name: 'dashboard',
-    component: DashboardView,
-  },
+{
+  path: '/dashboard',
+  name: 'dashboard',
+  component: () => import('../views/DashboardView.vue'),
+},
+
   {
     path: '/owners',
     name: 'owners',

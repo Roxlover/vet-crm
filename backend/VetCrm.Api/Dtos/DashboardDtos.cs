@@ -17,6 +17,7 @@ public class ReminderSummaryDto
     public int PendingToday { get; set; }
     public int PendingTomorrow { get; set; }
     public int Overdue { get; set; }
+    public int Completed { get; set; }
 
     public List<ReminderItemDto> Upcoming { get; set; } = new();
 }

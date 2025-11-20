@@ -20,4 +20,6 @@ public class Reminder
     public string? ErrorMessage { get; set; }  // WA hata logu için
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? SentAt { get; set; }
+    public bool IsCompleted { get; set; } = false;
+    public DateTime? CompletedAt { get; set; }
 }

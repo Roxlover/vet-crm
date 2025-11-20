@@ -38,6 +38,15 @@
         <p class="value">{{ summary?.overdue ?? 0 }}</p>
         <p class="label">henüz işlenmemiş</p>
       </div>
+      <div
+        class="card kpi done"
+        :class="{ active: activeFilter === 'done' }"
+        @click="loadList('done')"
+      >
+        <h2>İşlem Yapıldı</h2>
+        <p class="value">{{ summary?.completed ?? 0 }}</p>
+        <p class="label">tamamlanan</p>
+      </div>
     </section>
 
     <!-- AŞAĞIDAKİ TABLO -->
@@ -104,6 +113,13 @@
       <div v-if="selectedVisit.imageUrl" class="image-box">
         <img :src="selectedVisit.imageUrl" alt="Ziyaret görseli" />
       </div>
+      <div class="status-row">
+        <p><strong>İşlem durumu:</strong> Bu işlem işleme alındı mı?</p>
+      </div>
+      <div class="actions-row">
+        <button class="btn-fail" @click="markReminder(false)">✗ Yapılmadı</button>
+        <button class="btn-success" @click="markReminder(true)">✓ Yapıldı</button>
+      </div>
     </div>
   </div>
 </div>
@@ -115,6 +131,8 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { fetchReminderSummary, fetchReminders, fetchVisitDetail } from '../api/dashboard'
+import { http } from '@/api/http'
+
 
 const loading = ref(false)
 const error = ref('')
@@ -128,6 +146,7 @@ const selectedVisit = ref(null)
 const listLoading = ref(false)
 const reminderList = ref([])
 const activeFilter = ref('upcoming')
+const selectedReminderId = ref(null) 
 
 onMounted(async () => {
   await loadSummary()
@@ -138,6 +157,7 @@ async function openVisit(item) {
   showDetail.value = true
   detailLoading.value = true
   selectedVisit.value = null
+  selectedReminderId.value = item.id   // YENİ: bu reminder'ın id'sini saklıyoruz
 
   try {
     selectedVisit.value = await fetchVisitDetail(item.visitId)
@@ -147,6 +167,27 @@ async function openVisit(item) {
     detailLoading.value = false
   }
 }
+
+async function markReminder(completed) {
+  if (!selectedReminderId.value) return
+
+  try {
+    await http.patch(`/reminders/${selectedReminderId.value}/status`, {
+      completed,
+      markAsOverdue: !completed,
+    })
+
+    // Özet ve listeyi tazele
+    await loadSummary()
+    await loadList(completed ? 'done' : 'overdue')
+
+    // Modalı kapat
+    closeDetail()
+  } catch (e) {
+    console.error(e)
+  }
+}
+
 
 async function openVisitDetail(item) {
   try {
@@ -173,7 +214,9 @@ async function loadSummary() {
   loading.value = true
   error.value = ''
   try {
-    summary.value = await fetchReminderSummary()
+    const result = await fetchReminderSummary()
+    console.log('SUMMARY FROM API >>>', result) // 🔴 DEBUG satırı
+    summary.value = result
   } catch (e) {
     console.error(e)
     error.value = 'Hatırlatma özeti yüklenirken bir hata oluştu.'
@@ -208,10 +251,13 @@ function titleForFilter() {
       return 'Yarının hatırlatmaları'
     case 'overdue':
       return 'Geciken hatırlatmalar'
+    case 'done':
+      return 'Tamamlanan işlemler'
     default:
       return 'Yaklaşan hatırlatmalar'
   }
 }
+
 </script>
 
 <style scoped>
@@ -231,16 +277,23 @@ function titleForFilter() {
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
 @media (max-width: 900px) {
   .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .cards {
     grid-template-columns: 1fr;
   }
 }
+
 
 .card {
   background: #ffffff;
@@ -363,6 +416,45 @@ function titleForFilter() {
   overflow-y: auto;
   position: relative;
 }
+.status-row {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.actions-row {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-success,
+.btn-fail {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.btn-success:hover {
+  background: #bbf7d0;
+}
+
+.btn-fail {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn-fail:hover {
+  background: #fecaca;
+}
+
 
 .modal .close {
   position: absolute;
