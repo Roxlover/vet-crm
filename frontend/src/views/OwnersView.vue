@@ -148,13 +148,9 @@
 </section>
 
 
-          <!-- en altta zaten Kaydet butonun var -->
           <button type="button" class="btn-primary" @click="handleCreate" :disabled="creating">
             {{ creating ? 'Kaydediliyor…' : 'Kaydet' }}
           </button>
-
-
-
 
           <div class="form-actions">
             <button class="btn" type="submit" :disabled="creating">
@@ -186,7 +182,6 @@ const error = ref('')
 const formError = ref('')
 const formSuccess = ref('')
 
-// Artık e-posta / adres yok, KVKK + birden fazla pet var
 const form = reactive({
   fullName: '',
   phoneE164: '',
@@ -239,7 +234,6 @@ async function handleCreate() {
       return
     }
 
-    // Boş olan pet satırlarını at, kalanları temizle
     const cleanedPets = form.pets
       .filter(p => (p.name && p.name.trim().length > 0))
       .map(p => ({
@@ -434,14 +428,13 @@ onMounted(loadOwners)
 }
 .form-row-inline {
   display: flex;
-  gap: 12px;              /* aradaki boşluk */
+  gap: 12px;   
 }
 
 .form-row-inline .form-group {
-  flex: 1;                /* ikisi de eşit genişlikte olsun */
+  flex: 1; 
 }
 
-/* çok dar ekranda tekrar alta geçsin istersen: */
  @media (max-width: 640px) {
   .form-row-inline {
     flex-direction: column;
@@ -504,7 +497,6 @@ textarea:focus {
   margin-top: 0.5rem;
 }
 
-/* Evcil hayvanlar genel kutu */
 .pets-section {
   margin-top: 1.5rem;
   padding: 1.25rem;
@@ -513,7 +505,6 @@ textarea:focus {
   border: 1px dashed #e5e7eb;
 }
 
-/* Başlık + açıklama */
 .pets-header {
   display: flex;
   flex-direction: column;
@@ -532,7 +523,6 @@ textarea:focus {
   color: #6b7280;
 }
 
-/* Tek tek pet kartı */
 .pet-card {
   background: #ffffff;
   border-radius: 0.75rem;
@@ -541,7 +531,6 @@ textarea:focus {
   margin-bottom: 0.75rem;
 }
 
-/* kart üst satır: #1 + "bu peti kaldır" linki */
 .pet-card-header {
   display: flex;
   justify-content: space-between;
@@ -562,7 +551,6 @@ textarea:focus {
   color: #1d4ed8;
 }
 
-/* kaldır butonu */
 .link-button {
   border: none;
   background: transparent;
@@ -576,7 +564,6 @@ textarea:focus {
   text-decoration: underline;
 }
 
-/* Pet kartının iç grid’i */
 .pet-card-grid {
   display: grid;
   grid-template-columns: 2fr 2fr 1fr;
@@ -584,19 +571,16 @@ textarea:focus {
   margin-bottom: 0.5rem;
 }
 
-/* yaş alanını biraz daralt */
 .field-small input {
   max-width: 140px;
 }
 
-/* "Pet ekle" butonu */
 .add-pet-button {
   margin-top: 0.25rem;
   width: 100%;
   justify-content: center;
 }
 
-/* ikincil buton stili – eğer yoksa ekle */
 .btn-secondary {
   border-radius: 999px;
   border: 1px solid #d1d5db;
@@ -614,7 +598,6 @@ textarea:focus {
   background: #f3f4f6;
 }
 
-/* Dar ekranda pet kart grid'i alta geçsin */
 @media (max-width: 768px) {
   .pet-card-grid {
     grid-template-columns: 1fr;
