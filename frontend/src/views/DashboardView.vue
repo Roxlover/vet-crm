@@ -7,75 +7,97 @@
       </p>
     </header>
 
-    <!-- 3 KUTU -->
-    <section class="cards">
-      <div
-        class="card kpi today"
-        :class="{ active: activeFilter === 'today' }"
-        @click="loadList('today')"
-      >
-        <h2>Bugün</h2>
-        <p class="value">{{ summary?.pendingToday ?? 0 }}</p>
-        <p class="label">hatırlatma</p>
-      </div>
+    <!-- LİSTE / TAKVİM SEKMELERİ -->
+    <section class="view-tabs">
+      <button
+  class="tab-btn"
+  :class="{ active: activeView === 'list' }"
+  @click="activeView = 'list'"
+  >
+    Liste
+  </button>
+  <button
+    class="tab-btn"
+    :class="{ active: activeView === 'calendar' }"
+    @click="showCalendar"
+  >
+    Takvim
+  </button>
 
-      <div
-        class="card kpi tomorrow"
-        :class="{ active: activeFilter === 'tomorrow' }"
-        @click="loadList('tomorrow')"
-      >
-        <h2>Yarın</h2>
-        <p class="value">{{ summary?.pendingTomorrow ?? 0 }}</p>
-        <p class="label">hatırlatma</p>
-      </div>
-
-      <div
-        class="card kpi overdue"
-        :class="{ active: activeFilter === 'overdue' }"
-        @click="loadList('overdue')"
-      >
-        <h2>Geciken</h2>
-        <p class="value">{{ summary?.overdue ?? 0 }}</p>
-        <p class="label">henüz işlenmemiş</p>
-      </div>
-      <div
-        class="card kpi done"
-        :class="{ active: activeFilter === 'done' }"
-        @click="loadList('done')"
-      >
-        <h2>İşlem Yapıldı</h2>
-        <p class="value">{{ summary?.completed ?? 0 }}</p>
-        <p class="label">tamamlanan</p>
-      </div>
     </section>
 
-    <!-- AŞAĞIDAKİ TABLO -->
-    <section class="card upcoming">
-      <div class="card-header">
-        <h2>{{ titleForFilter() }}</h2>
-      </div>
+    <!-- LISTE GÖRÜNÜMÜ -->
+    <section v-if="activeView === 'list'">
+      <!-- 3 KUTU -->
+      <section class="cards">
+        <div
+          class="card kpi today"
+          :class="{ active: activeFilter === 'today' }"
+          @click="loadList('today')"
+        >
+          <h2>Bugün</h2>
+          <p class="value">{{ summary?.pendingToday ?? 0 }}</p>
+          <p class="label">hatırlatma</p>
+        </div>
 
-      <div v-if="listLoading" class="state">Yükleniyor...</div>
+        <div
+          class="card kpi tomorrow"
+          :class="{ active: activeFilter === 'tomorrow' }"
+          @click="loadList('tomorrow')"
+        >
+          <h2>Yarın</h2>
+          <p class="value">{{ summary?.pendingTomorrow ?? 0 }}</p>
+          <p class="label">hatırlatma</p>
+        </div>
 
-      <div
-        v-else-if="!reminderList || reminderList.length === 0"
-        class="state"
-      >
-        Kayıt bulunamadı.
-      </div>
+        <div
+          class="card kpi overdue"
+          :class="{ active: activeFilter === 'overdue' }"
+          @click="loadList('overdue')"
+        >
+          <h2>Geciken</h2>
+          <p class="value">{{ summary?.overdue ?? 0 }}</p>
+          <p class="label">henüz işlenmemiş</p>
+        </div>
 
-      <table v-else class="table">
-        <thead>
-          <tr>
-            <th>Hatırlatma</th>
-            <th>Randevu</th>
-            <th>Hasta</th>
-            <th>Sahip</th>
-            <th>İşlem</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
+        <div
+          class="card kpi done"
+          :class="{ active: activeFilter === 'done' }"
+          @click="loadList('done')"
+        >
+          <h2>İşlem Yapıldı</h2>
+          <p class="value">{{ summary?.completed ?? 0 }}</p>
+          <p class="label">tamamlanan</p>
+        </div>
+      </section>
+
+      <!-- AŞAĞIDAKİ TABLO -->
+      <section class="card upcoming">
+        <div class="card-header">
+          <h2>{{ titleForFilter() }}</h2>
+        </div>
+
+        <div v-if="listLoading" class="state">Yükleniyor...</div>
+
+        <div
+          v-else-if="!reminderList || reminderList.length === 0"
+          class="state"
+        >
+          Kayıt bulunamadı.
+        </div>
+
+        <table v-else class="table">
+          <thead>
+            <tr>
+              <th>Hatırlatma</th>
+              <th>Randevu</th>
+              <th>Hasta</th>
+              <th>Sahip</th>
+              <th>İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
               v-for="item in reminderList"
               :key="item.id"
               @click="openVisit(item)"
@@ -86,54 +108,301 @@
               <td>{{ item.petName }}</td>
               <td>{{ item.ownerName }}</td>
               <td class="procedure-cell">{{ item.procedures }}</td>
-          </tr>
-
-        </tbody>
-      </table>
+            </tr>
+          </tbody>
+        </table>
+      </section>
     </section>
+
+    <!-- TAKVİM GÖRÜNÜMÜ -->
+<!-- TAKVİM GÖRÜNÜMÜ -->
+<section v-else class="calendar-section">
+  <section class="card calendar-card">
+    <div class="calendar-header">
+      <div class="calendar-nav">
+        <button class="icon-btn" @click="goToPrevMonth">‹</button>
+        <div class="month-title">{{ formatMonthYear(currentMonth) }}</div>
+        <button class="icon-btn" @click="goToNextMonth">›</button>
+      </div>
+      <button class="btn-today" @click="goToToday">Bugün</button>
+    </div>
+
+    <div v-if="calendarLoading" class="state">Yükleniyor...</div>
+
+    <div v-else class="calendar-grid">
+      <!-- Gün isimleri -->
+      <div class="calendar-weekdays">
+        <div
+          v-for="d in weekdayLabels"
+          :key="d"
+          class="weekday"
+        >
+          {{ d }}
+        </div>
+      </div>
+
+      <!-- Haftalar -->
+      <div class="calendar-weeks">
+        <div
+          v-for="(week, wi) in calendarWeeks"
+          :key="wi"
+          class="calendar-week"
+        >
+            <div
+              v-for="day in week"
+              :key="day.iso"
+              class="calendar-day"
+              :class="{
+                'other-month': !day.inCurrentMonth,
+                'today': day.isToday
+              }"
+              @click="openNewAppointmentFromCalendar(day)"
+            >
+            <div class="day-number">{{ day.date.getDate() }}</div>
+
+            <div class="day-events">
+            <div
+              v-for="event in day.appointments"
+              :key="event.visitId"
+              class="event-pill"
+              @click.stop="openVisitFromCalendar(event)"
+            >
+              <span class="event-time">
+                {{ formatTime(event.scheduledAt) }}
+              </span>
+              <span class="event-text">
+                {{ event.petName }} – {{ event.ownerName }}
+              </span>
+              <div class="event-meta">
+                <span v-if="event.doctorName">
+                  Dr: {{ event.doctorName }}
+                </span>
+                <span v-if="event.createdByName">
+                  • Ekleyen: {{ event.createdByName }}
+                </span>
+              </div>
+            </div>
+
+              <div
+                v-if="day.appointments.length === 0"
+                class="no-event-placeholder"
+              >
+                —
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>
+
   </div>
 
-<div v-if="showDetail" class="modal-backdrop" @click.self="closeDetail">
-  <div class="modal">
-    <button class="close" @click="closeDetail">×</button>
+  <!-- MODAL -->
+  <div v-if="showDetail" class="modal-backdrop" @click.self="closeDetail">
+    <div class="modal">
+      <button class="close" @click="closeDetail">×</button>
 
-    <div v-if="detailLoading" class="state">Yükleniyor...</div>
-    <div v-else-if="!selectedVisit" class="state">
-      Kayıt bulunamadı.
-    </div>
-    <div v-else class="detail-body">
-      <h3>{{ selectedVisit.petName }} – {{ selectedVisit.ownerName }}</h3>
-      <p><strong>Yapılan işlem tarihi:</strong> {{ selectedVisit.performedAt }}</p>
-      <p><strong>Ne zaman gelecek? :</strong> {{ formatDateTime(selectedVisit.nextDate) }}</p>
-      <p><strong>Ne için gelecek? :</strong> {{ selectedVisit.purpose || '—' }}</p>
-      <p><strong>İşlem(ler):</strong> {{ selectedVisit.procedures || '—' }}</p>
-      <p><strong>Tutar:</strong> {{ selectedVisit.amountTl ?? '—' }} TL</p>
-      <p><strong>Hasta sahibine not:</strong> {{ selectedVisit.notes || '—' }}</p>
+      <div v-if="detailLoading" class="state">Yükleniyor...</div>
+      <div v-else-if="!selectedVisit" class="state">
+        Kayıt bulunamadı.
+      </div>
+      <div v-else class="detail-body">
+        <h3>{{ selectedVisit.petName }} – {{ selectedVisit.ownerName }}</h3>
+        <p><strong>Yapılan işlem tarihi:</strong> {{ selectedVisit.performedAt }}</p>
+        <p><strong>Ne zaman gelecek? :</strong> {{ formatDateTime(selectedVisit.nextDate) }}</p>
+        <p><strong>Ne için gelecek? :</strong> {{ selectedVisit.purpose || '—' }}</p>
+        <p><strong>İşlem(ler):</strong> {{ selectedVisit.procedures || '—' }}</p>
+        <p><strong>Tutar:</strong> {{ selectedVisit.amountTl ?? '—' }} TL</p>
+        <p><strong>Hasta sahibine not:</strong> {{ selectedVisit.notes || '—' }}</p>
 
-      <div v-if="selectedVisit.imageUrl" class="image-box">
-        <img :src="selectedVisit.imageUrl" alt="Ziyaret görseli" />
-      </div>
-      <div class="status-row">
-        <p><strong>İşlem durumu:</strong> Bu işlem işleme alındı mı?</p>
-      </div>
-      <div class="actions-row">
-        <button class="btn-fail" @click="markReminder(false)">✗ Yapılmadı</button>
-        <button class="btn-success" @click="markReminder(true)">✓ Yapıldı</button>
+        <div v-if="selectedVisit.imageUrl" class="image-box">
+          <img :src="selectedVisit.imageUrl" alt="Ziyaret görseli" />
+        </div>
+
+        <!-- İŞLEM DURUMU -->
+        <hr class="divider" />
+
+        <div class="status-row">
+          <div class="status-text">
+            <strong>İşlem durumu:</strong>
+            <span>Bu işlem işleme alındı mı?</span>
+          </div>
+          <div class="status-buttons">
+            <button
+              class="btn-fail"
+              :disabled="statusSaving"
+              @click.stop="markReminder(false)"
+            >
+              Yapılmadı
+            </button>
+            <button
+              class="btn-success"
+              :disabled="statusSaving"
+              @click.stop="markReminder(true)"
+            >
+              Yapıldı
+            </button>
+
+          </div>
+        </div>
+
+        <!-- YENİ RANDEVU FORMU -->
+        <hr class="divider" />
+
+        <div class="new-appointment-header">
+          <h4>Yeni Randevu Oluştur</h4>
+          <button class="btn-toggle" @click="showNewAppointment = !showNewAppointment">
+            {{ showNewAppointment ? 'Gizle' : 'Oluştur' }}
+          </button>
+        </div>
+
+        <div v-if="showNewAppointment" class="new-appointment">
+          <!-- Tarih & Saat -->
+          <div class="field-row">
+            <label>Tarih</label>
+            <input type="date" v-model="appointmentDate" />
+          </div>
+          <div class="field-row">
+            <label>Saat</label>
+            <input type="time" v-model="appointmentTime" />
+          </div>
+
+          <!-- Açıklama -->
+          <div class="field-row">
+            <label>Ne için gelecek?</label>
+            <textarea
+              v-model="appointmentPurpose"
+              rows="2"
+              placeholder="Örn: Karma aşı, kontrol, tırnak kesimi..."
+            ></textarea>
+          </div>
+
+          <!-- Doktor -->
+          <div class="field-row">
+            <label>İşlemi yapacak doktor</label>
+            <select v-model="selectedDoctorId">
+              <option :value="null">Doktor seç (opsiyonel)</option>
+              <option
+                v-for="doc in doctors"
+                :key="doc.id"
+                :value="doc.id"
+              >
+                {{ doc.fullName }}
+              </option>
+            </select>
+          </div>
+          <!-- Hasta sahibi arama -->
+          <div class="field-row owner-search" @click.stop>
+            <label>Hasta Sahibi</label>
+            <div class="owner-input-wrapper">
+              <input
+                type="text"
+                v-model="ownerQuery"
+                placeholder="İsim veya telefon ile ara..."
+                @input="onOwnerQueryInput"
+                @focus="ownerSearchOpen = true"
+              />
+              <div
+                v-if="ownerSearchOpen && ownerResults.length > 0"
+                class="owner-results"
+              >
+                <div
+                  v-for="o in ownerResults"
+                  :key="o.id"
+                  class="owner-result-item"
+                  @click="selectOwner(o)"
+                >
+                  <div class="owner-name">{{ o.fullName }}</div>
+                  <div class="owner-phone">{{ o.phone }}</div>
+                </div>
+              </div>
+            </div>
+            <p class="hint" v-if="!selectedOwnerId">
+              Önce hasta sahibini seçin, ardından hayvan(lar)ı işaretleyin.
+            </p>
+          </div>
+          <!-- Hayvan seçimi -->
+          <div class="field-row">
+            <label>Hayvan(lar)</label>
+
+            <div class="mode-row">
+              <label>
+                <input
+                  type="radio"
+                  value="single"
+                  v-model="appointmentMode"
+                />
+                Tek hayvan seç
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  value="multiple"
+                  v-model="appointmentMode"
+                />
+                Birden fazla hayvan
+              </label>
+            </div>
+
+            <div class="pets-list">
+              <p v-if="!ownerPets || ownerPets.length === 0" class="hint">
+                Bu hasta sahibine tanımlı başka hayvan bulunamadı.
+              </p>
+              <label
+                v-for="pet in ownerPets"
+                :key="pet.id"
+                class="pet-option"
+              >
+                <input
+                  type="checkbox"
+                  :value="pet.id"
+                  v-model="selectedPetIds"
+                  :disabled="
+                    appointmentMode === 'single' &&
+                    selectedPetIds.length >= 1 &&
+                    !selectedPetIds.includes(pet.id)
+                  "
+                />
+                {{ pet.name }}
+              </label>
+            </div>
+          </div>
+
+          <div class="actions-row">
+            <button class="btn-fail" @click="showNewAppointment = false">
+              Vazgeç
+            </button>
+            <button class="btn-success" @click="submitAppointment">
+              Randevuyu Kaydet
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-</div>
-
-
-
 </template>
+
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { fetchReminderSummary, fetchReminders, fetchVisitDetail } from '../api/dashboard'
+import {  fetchReminderSummary,
+  fetchReminders,
+  fetchVisitDetail,
+  fetchDoctors,
+  fetchOwnerPets,
+  createAppointment,
+  fetchCalendarAppointments,
+  searchOwners, } from '../api/dashboard'
 import { http } from '@/api/http'
+import { useRouter } from 'vue-router'
 
 
+const activeView = ref('list')          // 'list' | 'calendar' notunu istersen yorumda yaz
+const selectedReminderId = ref(null) 
+const statusSaving = ref(false)
+const router = useRouter()
 const loading = ref(false)
 const error = ref('')
 const summary = ref(null)
@@ -142,31 +411,267 @@ const showDetailModal = ref(false)
 const showDetail = ref(false)
 const detailLoading = ref(false)
 const selectedVisit = ref(null)
-
 const listLoading = ref(false)
 const reminderList = ref([])
 const activeFilter = ref('upcoming')
-const selectedReminderId = ref(null) 
+const ownerPets = ref([])       
+const showNewAppointment = ref(false)   
+const appointmentDate = ref('')     
+const appointmentTime = ref('')        
+const appointmentPurpose = ref('')
+const selectedPetIds = ref([])          
+const appointmentMode = ref('multiple')  
+const currentMonth = ref(new Date())
+const calendarLoading = ref(false)
+const calendarAppointments = ref([])
+const calendarWeeks = ref([])
+const weekdayLabels = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
+const selectedOwnerId = ref(null)
+const selectedOwnerLabel = ref('')
+const ownerQuery = ref('')
+const ownerResults = ref([])
+const ownerSearchOpen = ref(false)
+let ownerSearchTimeout = null
+const doctors = ref([])
 
 onMounted(async () => {
   await loadSummary()
   await loadList('upcoming')
 })
 
+async function showCalendar() {
+  activeView.value = 'calendar'
+  // İlk kez açılıyorsa bu ayı yükle
+  if (calendarWeeks.value.length === 0) {
+    await goToToday()
+  }
+}
+
+function toIsoDate(d) {
+  return d.toISOString().slice(0, 10) // YYYY-MM-DD
+}
+
+function onOwnerQueryInput() {
+  ownerSearchOpen.value = true
+
+  if (ownerSearchTimeout) {
+    clearTimeout(ownerSearchTimeout)
+  }
+
+  // 300ms debounce
+  ownerSearchTimeout = setTimeout(async () => {
+    const q = ownerQuery.value.trim()
+    if (!q) {
+      ownerResults.value = []
+      return
+    }
+    try {
+      ownerResults.value = await searchOwners(q)
+    } catch (e) {
+      console.error('owner search error', e)
+    }
+  }, 300)
+}
+
+async function selectOwner(owner) {
+  selectedOwnerId.value = owner.id
+  selectedOwnerLabel.value = `${owner.fullName} (${owner.phone})`
+  ownerQuery.value = selectedOwnerLabel.value
+  ownerSearchOpen.value = false
+
+  // bu owner'a ait hayvanları yükle
+  try {
+    ownerPets.value = await fetchOwnerPets(owner.id)
+  } catch (e) {
+    console.error('fetchOwnerPets error', e)
+    ownerPets.value = []
+  }
+
+  // önceki seçimleri sıfırla
+  selectedPetIds.value = []
+}
+
+function closeOwnerSearch() {
+  ownerSearchOpen.value = false
+}
+
+
+// Aylık görünüm için 6 haftalık grid başlangıç/bitişi
+function startOfCalendarGrid(date) {
+  const first = new Date(date.getFullYear(), date.getMonth(), 1)
+  const day = first.getDay() || 7 // Paz=7, Pzt=1
+  const diff = day - 1 // Pazartesi ile başlat
+  first.setDate(first.getDate() - diff)
+  return first
+}
+
+async function openVisitFromCalendar(event) {
+  // calendarAppointments içindeki event -> VisitId var
+  const fakeItem = {
+    id: null,                // reminder yok, sadece visit var
+    visitId: event.visitId,
+  }
+
+  await openVisit(fakeItem)
+}
+function openNewAppointmentFromCalendar(day) {
+  showDetail.value = true
+  detailLoading.value = false
+  selectedVisit.value = null
+  selectedReminderId.value = null
+  showNewAppointment.value = true
+  appointmentDate.value = day.iso      // YYYY-MM-DD
+  appointmentTime.value = ''           // kullanıcı seçecek
+  appointmentPurpose.value = ''
+  selectedDoctorId.value = null
+  selectedPetIds.value = []
+  appointmentMode.value = 'single'
+  ownerPets.value = []
+  selectedOwnerId.value = null
+  selectedOwnerLabel.value = ''
+  ownerQuery.value = ''
+  ownerResults.value = []
+}
+
+function endOfCalendarGrid(date) {
+  const start = startOfCalendarGrid(date)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6 * 7 - 1) // 6 hafta
+  return end
+}
+
+// API'den randevuları çekip haftalık yapıya çevir
+async function loadCalendarForMonth(baseDate) {
+  calendarLoading.value = true
+  try {
+    const start = startOfCalendarGrid(baseDate)
+    const end = endOfCalendarGrid(baseDate)
+    const from = toIsoDate(start)
+    const to = toIsoDate(end)
+
+    const data = await fetchCalendarAppointments(from, to)
+    calendarAppointments.value = data
+    buildCalendarWeeks(baseDate, data)
+  } catch (e) {
+    console.error('Takvim yüklenirken hata:', e)
+  } finally {
+    calendarLoading.value = false
+  }
+}
+
+function buildCalendarWeeks(baseDate, appointments) {
+  const start = startOfCalendarGrid(baseDate)
+  const weeks = []
+
+  const byDate = {}
+  appointments.forEach((a) => {
+    const iso = a.scheduledAt.slice(0, 10)
+    if (!byDate[iso]) byDate[iso] = []
+    byDate[iso].push(a)
+  })
+
+  const todayIso = toIsoDate(new Date())
+  let current = new Date(start)
+
+  for (let w = 0; w < 6; w++) {
+    const week = []
+    for (let d = 0; d < 7; d++) {
+      const iso = toIsoDate(current)
+      week.push({
+        date: new Date(current),
+        iso,
+        inCurrentMonth: current.getMonth() === baseDate.getMonth(),
+        isToday: iso === todayIso,
+        appointments: byDate[iso] || [],
+      })
+      current.setDate(current.getDate() + 1)
+    }
+    weeks.push(week)
+  }
+
+  calendarWeeks.value = weeks
+}
+
+// Ay navigasyonu
+async function goToPrevMonth() {
+  currentMonth.value = new Date(
+    currentMonth.value.getFullYear(),
+    currentMonth.value.getMonth() - 1,
+    1
+  )
+  await loadCalendarForMonth(currentMonth.value)
+}
+
+async function goToNextMonth() {
+  currentMonth.value = new Date(
+    currentMonth.value.getFullYear(),
+    currentMonth.value.getMonth() + 1,
+    1
+  )
+  await loadCalendarForMonth(currentMonth.value)
+}
+
+async function goToToday() {
+  currentMonth.value = new Date()
+  await loadCalendarForMonth(currentMonth.value)
+}
+
+// Görsel formatlar
+function formatMonthYear(date) {
+  return date.toLocaleDateString('tr-TR', {
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+function formatTime(iso) {
+  const d = new Date(iso)
+  return d.toLocaleTimeString('tr-TR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+
 async function openVisit(item) {
+  console.log('openVisit item >>>', item)
   showDetail.value = true
   detailLoading.value = true
   selectedVisit.value = null
-  selectedReminderId.value = item.id   // YENİ: bu reminder'ın id'sini saklıyoruz
+  selectedReminderId.value = item.id ?? null
 
   try {
-    selectedVisit.value = await fetchVisitDetail(item.visitId)
+    const detail = await fetchVisitDetail(item.visitId)   // 🔴 detay değişkeni
+    selectedVisit.value = detail
+    console.log('visitDetail >>>', detail)
+
+    if (detail.ownerId) {
+      selectedOwnerId.value = detail.ownerId
+      selectedOwnerLabel.value = `${detail.ownerName}`
+      ownerQuery.value = selectedOwnerLabel.value
+
+      try {
+        ownerPets.value = await fetchOwnerPets(detail.ownerId)
+      } catch (e) {
+        console.error('fetchOwnerPets error', e)
+        ownerPets.value = []
+      }
+    }
   } catch (e) {
-    console.error(e)
+    console.error('fetchVisitDetail error >>>', e)
   } finally {
     detailLoading.value = false
   }
+
+  // Doktor listesi
+  try {
+    doctors.value = await fetchDoctors()
+  } catch (e) {
+    console.error('Doktorlar yüklenirken hata:', e)
+  }
 }
+
+
 
 async function markReminder(completed) {
   if (!selectedReminderId.value) return
@@ -200,7 +705,6 @@ async function openVisitDetail(item) {
 }
 function formatDateTime(dt) {
   if (!dt) return '—'
-  // backend'den ISO string geliyorsa:
   const d = new Date(dt)
   return d.toLocaleDateString('tr-TR')
 }
@@ -224,6 +728,46 @@ async function loadSummary() {
     loading.value = false
   }
 }
+
+async function submitAppointment() {
+  if (!selectedOwnerId.value) {
+    alert('Lütfen hasta sahibini seçin.')
+    return
+  }
+  if (!selectedPetIds.value || selectedPetIds.value.length === 0) {
+    alert('En az bir hayvan seçmelisiniz.')
+    return
+  }
+  if (!appointmentDate.value || !appointmentTime.value) {
+    alert('Tarih ve saat seçin.')
+    return
+  }
+
+  const isoDateTime = new Date(
+    `${appointmentDate.value}T${appointmentTime.value}:00`
+  ).toISOString()
+
+  const payload = {
+    ownerId: selectedOwnerId.value,
+    petIds: selectedPetIds.value,
+    scheduledAt: isoDateTime,
+    purpose: appointmentPurpose.value,
+    doctorId: selectedDoctorId.value || null,
+    createdByUserId: 1, // şimdilik Ahmet
+  }
+
+  try {
+    await createAppointment(payload)
+    await loadSummary()
+    await loadList(activeFilter.value)
+    await loadCalendarForMonth(currentMonth.value)
+
+    showNewAppointment.value = false
+  } catch (e) {
+    console.error('createAppointment error', e)
+  }
+}
+
 
 async function loadList(filter) {
   activeFilter.value = filter
@@ -472,6 +1016,318 @@ function titleForFilter() {
 .image-box img {
   max-width: 100%;
   border-radius: 0.5rem;
+}
+
+
+.divider {
+  margin: 0.75rem 0;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+}
+
+.new-appointment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.new-appointment-header h4 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.btn-toggle {
+  border: none;
+  background: #e5e7eb;
+  border-radius: 999px;
+  padding: 0.2rem 0.8rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.new-appointment .field-row {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.new-appointment label {
+  font-weight: 600;
+}
+
+.new-appointment input[type='date'],
+.new-appointment input[type='time'],
+.new-appointment textarea {
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.mode-row {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+}
+
+.pets-list {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.pet-option {
+  font-size: 0.8rem;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+.new-appointment select {
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
+.view-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tab-btn {
+  border: none;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: #e5e7eb;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  background: #111827;
+  color: #fff;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.status-text span {
+  margin-left: 0.25rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.status-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-success {
+  border: none;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: #22c55e;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-fail {
+  border: none;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-success:disabled,
+.btn-fail:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+
+.calendar-card {
+  margin-top: 0.5rem;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.icon-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  background: #e5e7eb;
+  cursor: pointer;
+}
+
+.month-title {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.btn-today {
+  border: none;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.calendar-grid {
+  margin-top: 0.25rem;
+}
+
+.calendar-weekdays,
+.calendar-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekday {
+  font-size: 0.75rem;
+  text-align: center;
+  color: #6b7280;
+  padding: 0.25rem 0;
+}
+
+.calendar-day {
+  border: 1px solid #e5e7eb;
+  min-height: 90px;
+  padding: 0.25rem;
+  font-size: 0.75rem;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-day.other-month {
+  background: #f9fafb;
+  color: #9ca3af;
+}
+
+.calendar-day.today {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 1px #0ea5e9;
+}
+
+.day-number {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.day-events {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.event-pill {
+  border-radius: 0.4rem;
+  padding: 0.15rem 0.3rem;
+  background: #eff6ff;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.event-time {
+  font-weight: 600;
+  margin-right: 0.2rem;
+}
+
+.no-event-placeholder {
+  font-size: 0.7rem;
+  color: #d1d5db;
+}
+
+section.calendar-section {
+    width: 1100px;
+}
+
+.event-text {
+  display: block;
+}
+
+.event-meta {
+  font-size: 0.65rem;
+  color: #6b7280;
+}
+.owner-search {
+  position: relative;
+}
+
+.owner-input-wrapper {
+  position: relative;
+}
+
+.owner-input-wrapper input {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.owner-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+  margin-top: 0.2rem;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 60;
+}
+
+.owner-result-item {
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+}
+
+.owner-result-item:hover {
+  background: #f3f4f6;
+}
+
+.owner-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.owner-phone {
+  font-size: 0.75rem;
+  color: #6b7280;
 }
 
 </style>

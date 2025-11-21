@@ -17,7 +17,7 @@ public class RemindersController : ControllerBase
         _db = db;
     }
 
-    [HttpPatch("{id:int}/status")]
+ [HttpPatch("{id:int}/status")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateReminderStatusRequest request)
     {
         var reminder = await _db.Reminders.FirstOrDefaultAsync(r => r.Id == id);

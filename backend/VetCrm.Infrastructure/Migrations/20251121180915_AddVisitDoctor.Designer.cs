@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VetCrm.Infrastructure.Data;
@@ -11,9 +12,11 @@ using VetCrm.Infrastructure.Data;
 namespace VetCrm.Infrastructure.Migrations
 {
     [DbContext(typeof(VetCrmDbContext))]
-    partial class VetCrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251121180915_AddVisitDoctor")]
+    partial class AddVisitDoctor
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -167,9 +170,6 @@ namespace VetCrm.Infrastructure.Migrations
                     b.Property<decimal?>("AmountTl")
                         .HasColumnType("numeric");
 
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("DoctorId")
                         .HasColumnType("integer");
 
@@ -195,8 +195,6 @@ namespace VetCrm.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("DoctorId");
 
@@ -229,11 +227,6 @@ namespace VetCrm.Infrastructure.Migrations
 
             modelBuilder.Entity("VetCrm.Domain.Entities.Visit", b =>
                 {
-                    b.HasOne("VetCrm.Domain.Entities.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("VetCrm.Domain.Entities.User", "Doctor")
                         .WithMany("Visits")
                         .HasForeignKey("DoctorId")
@@ -244,8 +237,6 @@ namespace VetCrm.Infrastructure.Migrations
                         .HasForeignKey("PetId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("CreatedByUser");
 
                     b.Navigation("Doctor");
 

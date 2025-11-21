@@ -7,7 +7,7 @@ import VisitsView from '../views/VisitsView.vue'
 
 const routes = [
 {
-  path: '/dashboard',
+  path: '/',
   name: 'dashboard',
   component: () => import('../views/DashboardView.vue'),
 },
@@ -27,11 +27,17 @@ const routes = [
     name: 'visits',
     component: VisitsView,
   },
+  {
+  path: '/calendar',
+  name: 'calendar',
+  component: () => import('../views/CalendarView.vue'),
+}
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+
 })
 
 export default router

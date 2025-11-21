@@ -41,7 +41,6 @@ public async Task<ActionResult<ReminderSummaryDto>> GetRemindersSummary()
 
     const int STATUS_PENDING = 0;
 
-    // sadece tamamlanmamışlar
     var pendingToday = await _db.Reminders
         .Where(r => r.DueDate == today && r.Status == STATUS_PENDING && !r.IsCompleted)
         .CountAsync();
@@ -54,7 +53,6 @@ public async Task<ActionResult<ReminderSummaryDto>> GetRemindersSummary()
         .Where(r => r.DueDate < today && r.Status == STATUS_PENDING && !r.IsCompleted)
         .CountAsync();
 
-    // 🔴 TAMAMLANANLAR
     var completed = await _db.Reminders
         .Where(r => r.IsCompleted)
         .CountAsync();
@@ -186,9 +184,11 @@ public async Task<ActionResult<ReminderSummaryDto>> GetRemindersSummary()
         if (v == null)
             return NotFound();
 
-        var dto = new VisitDetailDto
+       var dto = new VisitDetailDto
         {
             Id = v.Id,
+            PetId = v.PetId,                           // 🔴
+            OwnerId = v.Pet.OwnerId,                   // 🔴
             PetName = v.Pet!.Name,
             OwnerName = v.Pet.Owner!.FullName,
             PerformedAt = v.PerformedAt,

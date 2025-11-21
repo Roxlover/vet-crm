@@ -61,40 +61,39 @@ public class OwnersController : ControllerBase
         return Ok(owner);
     }
 
-[HttpPost]
-public async Task<ActionResult<OwnerDto>> CreateOwner([FromBody] OwnerCreateDto dto)
-{
-    var owner = new Owner
+    [HttpPost]
+    public async Task<ActionResult<OwnerDto>> CreateOwner([FromBody] OwnerCreateDto dto)
     {
-        FullName = dto.FullName,
-        PhoneE164 = dto.PhoneE164,
-        KvkkOptIn = dto.KvkkOptIn,
-        Pets = dto.Pets
-            .Where(p => !string.IsNullOrWhiteSpace(p.Name))
-            .Select(p => new Pet
-            {
-                Name = p.Name.Trim(),
-                Species = p.Species,
-                AgeYears = p.AgeYears,
-                Notes = p.Notes
-            })
-            .ToList()
-    };
+        var owner = new Owner
+        {
+            FullName = dto.FullName,
+            PhoneE164 = dto.PhoneE164,
+            KvkkOptIn = dto.KvkkOptIn,
+            Pets = dto.Pets
+                .Where(p => !string.IsNullOrWhiteSpace(p.Name))
+                .Select(p => new Pet
+                {
+                    Name = p.Name.Trim(),
+                    Species = p.Species,
+                    AgeYears = p.AgeYears,
+                    Notes = p.Notes
+                })
+                .ToList()
+        };
 
-    _db.Owners.Add(owner);
-    await _db.SaveChangesAsync();
+        _db.Owners.Add(owner);
+        await _db.SaveChangesAsync();
 
-    // İstersen OwnerDto’ya mapleyip dönebilirsin
-    var result = new OwnerDto
-    {
-        Id = owner.Id,
-        FullName = owner.FullName,
-        PhoneE164 = owner.PhoneE164,
-        PetCount = owner.Pets.Count
-    };
+        var result = new OwnerDto
+        {
+            Id = owner.Id,
+            FullName = owner.FullName,
+            PhoneE164 = owner.PhoneE164,
+            PetCount = owner.Pets.Count
+        };
 
-    return CreatedAtAction(nameof(GetOwner), new { id = owner.Id }, result);
-}
+        return CreatedAtAction(nameof(GetOwner), new { id = owner.Id }, result);
+    }
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateOwner(int id, [FromBody] OwnerUpdateDto dto)
@@ -134,7 +133,6 @@ public async Task<ActionResult<OwnerDto>> CreateOwner([FromBody] OwnerCreateDto 
         if (owner == null)
             return NotFound();
 
-        // Yaştan yaklaşık doğum tarihi hesapla (isteğe bağlı)
         DateOnly? birthDate = null;
         if (dto.AgeYears.HasValue && dto.AgeYears.Value > 0)
         {
@@ -158,4 +156,59 @@ public async Task<ActionResult<OwnerDto>> CreateOwner([FromBody] OwnerCreateDto 
         return Ok(dto);
     }
 
+    [HttpGet("{id:int}/pets")]
+    public async Task<ActionResult<List<OwnerPetDto>>> GetOwnerPets(int id)
+    {
+        var pets = await _db.Pets
+            .Where(p => p.OwnerId == id)
+            .OrderBy(p => p.Name)
+            .Select(p => new OwnerPetDto
+            {
+                Id = p.Id,
+                Name = p.Name
+            })
+            .ToListAsync();
+
+        return Ok(pets);
+    }
+
+    // 🔴 ARAMA ENDPOINTİ BURADA, CONTROLLER'IN İÇİNDE OLMALI
+    [HttpGet("search")]
+    public async Task<ActionResult<List<OwnerSearchDto>>> SearchOwners([FromQuery] string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return Ok(new List<OwnerSearchDto>());
+
+        query = query.Trim();
+
+        var owners = await _db.Owners
+            .Where(o =>
+                o.FullName.ToLower().Contains(query.ToLower()) ||
+                o.PhoneE164.Contains(query))
+            .OrderBy(o => o.FullName)
+            .Take(20)
+            .Select(o => new OwnerSearchDto
+            {
+                Id = o.Id,
+                FullName = o.FullName,
+                Phone = o.PhoneE164
+            })
+            .ToListAsync();
+
+        return Ok(owners);
+    }
+}
+
+// DTO'LAR CONTROLLER DIŞINDA OLABİLİR
+public class OwnerPetDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+}
+
+public class OwnerSearchDto
+{
+    public int Id { get; set; }
+    public string FullName { get; set; } = null!;
+    public string Phone { get; set; } = null!;
 }

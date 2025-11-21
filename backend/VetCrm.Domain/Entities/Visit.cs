@@ -7,14 +7,17 @@ public class Visit
     public int PetId { get; set; }
     public Pet Pet { get; set; } = null!;
 
-    public DateTime PerformedAt { get; set; }  
+    public DateTime PerformedAt { get; set; }
+    public DateOnly? NextDate { get; set; }
+
+    public string? Purpose { get; set; }
     public string? Procedures { get; set; }
-    public decimal? AmountTl { get; set; }     
+    public decimal? AmountTl { get; set; }
     public string? Notes { get; set; }
 
-    public DateOnly? NextDate { get; set; }
-    public string? ImageUrl { get; set; }
-    public string? Purpose { get; set; }  // Ne için gelecek
-
-    public ICollection<Reminder> Reminders { get; set; } = new List<Reminder>();
+public string? ImageUrl { get; set; }
+    public int? DoctorId { get; set; }
+    public User? Doctor { get; set; }
+    public int? CreatedByUserId { get; set; }
+    public User? CreatedByUser { get; set; }
 }

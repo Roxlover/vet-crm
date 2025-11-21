@@ -10,10 +10,12 @@ public class VetCrmDbContext : DbContext
     {
     }
 
-    public DbSet<Owner> Owners => Set<Owner>();
-    public DbSet<Pet> Pets => Set<Pet>();
-    public DbSet<Visit> Visits => Set<Visit>();
-    public DbSet<Reminder> Reminders => Set<Reminder>();
+    // 🔴 Her entity için TEK DbSet, hepsi auto-property
+    public DbSet<Owner> Owners { get; set; } = null!;
+    public DbSet<Pet> Pets { get; set; } = null!;
+    public DbSet<Visit> Visits { get; set; } = null!;
+    public DbSet<Reminder> Reminders { get; set; } = null!;
+    public DbSet<User> Users { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,12 +42,23 @@ public class VetCrmDbContext : DbContext
                 .WithMany(p => p.Visits)
                 .HasForeignKey(v => v.PetId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // 🔴 Doktor ilişkisi (Visit.DoctorId, Visit.Doctor)
+            b.HasOne(v => v.Doctor)
+                .WithMany(d => d.Visits)
+                .HasForeignKey(v => v.DoctorId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(v => v.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(v => v.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);   
         });
 
         modelBuilder.Entity<Reminder>(b =>
         {
             b.HasOne(r => r.Visit)
-                .WithMany(v => v.Reminders)
+                // Visit tarafında Reminders koleksiyonu TANIMLI DEĞİL, o yüzden:
+                .WithMany() // <--- v => v.Reminders DEĞİL
                 .HasForeignKey(r => r.VisitId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
