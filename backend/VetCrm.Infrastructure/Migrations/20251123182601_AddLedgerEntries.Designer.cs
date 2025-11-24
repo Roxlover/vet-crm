@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VetCrm.Infrastructure.Data;
@@ -11,9 +12,11 @@ using VetCrm.Infrastructure.Data;
 namespace VetCrm.Infrastructure.Migrations
 {
     [DbContext(typeof(VetCrmDbContext))]
-    partial class VetCrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251123182601_AddLedgerEntries")]
+    partial class AddLedgerEntries
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -31,26 +34,36 @@ namespace VetCrm.Infrastructure.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("numeric");
+                        .HasColumnType("numeric(12,2)");
 
                     b.Property<string>("Category")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW()");
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
 
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsIncome")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("Note")
-                        .HasColumnType("text");
+                    b.Property<int?>("VisitId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("VisitId");
 
                     b.ToTable("LedgerEntries");
                 });
@@ -236,6 +249,23 @@ namespace VetCrm.Infrastructure.Migrations
                     b.HasIndex("PetId");
 
                     b.ToTable("Visits");
+                });
+
+            modelBuilder.Entity("VetCrm.Domain.Entities.LedgerEntry", b =>
+                {
+                    b.HasOne("VetCrm.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("VetCrm.Domain.Entities.Visit", "Visit")
+                        .WithMany()
+                        .HasForeignKey("VisitId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Visit");
                 });
 
             modelBuilder.Entity("VetCrm.Domain.Entities.Pet", b =>

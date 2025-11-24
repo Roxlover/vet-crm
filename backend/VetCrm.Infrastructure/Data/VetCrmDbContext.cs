@@ -16,6 +16,7 @@ public class VetCrmDbContext : DbContext
     public DbSet<Visit> Visits { get; set; } = null!;
     public DbSet<Reminder> Reminders { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
+    public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,5 +63,16 @@ public class VetCrmDbContext : DbContext
                 .HasForeignKey(r => r.VisitId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        modelBuilder.Entity<LedgerEntry>(b =>
+            {
+                b.Property(x => x.Date).IsRequired();
+                b.Property(x => x.Amount).IsRequired();
+                b.Property(x => x.IsIncome).IsRequired();
+
+                // CreatedAt için veritabanı default’u da tanımlayalım (ek güvenlik)
+                b.Property(x => x.CreatedAt)
+                    .HasDefaultValueSql("NOW()");
+            });
     }
 }

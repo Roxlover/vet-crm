@@ -4,6 +4,7 @@ import DashboardView from '../views/DashboardView.vue'
 import OwnersView from '../views/OwnersView.vue'
 import PetsView from '../views/PetsView.vue'
 import VisitsView from '../views/VisitsView.vue'
+import BilancoView from '@/views/BilancoView.vue'
 
 const routes = [
 {
@@ -16,6 +17,11 @@ const routes = [
     path: '/owners',
     name: 'owners',
     component: OwnersView,
+  },
+    {
+    path: '/bilanco',
+    name: 'Bilanco',
+    component: BilancoView,
   },
   {
     path: '/pets',

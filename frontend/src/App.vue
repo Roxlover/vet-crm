@@ -32,13 +32,6 @@
           👤 <span>Hasta Sahipleri</span>
         </RouterLink>
 
-        <RouterLink
-          to="/pets"
-          class="nav-item"
-          :class="{ active: $route.name === 'pets' }"
-        >
-          🐾 <span>Hastalar</span>
-        </RouterLink>
 
         <RouterLink
           to="/visits"
@@ -46,6 +39,13 @@
           :class="{ active: $route.name === 'visits' }"
         >
           📋 <span>Ziyaretler</span>
+        </RouterLink>
+        <RouterLink
+          to="/bilanco"
+          class="nav-item"
+          :class="{ active: $route.name === 'Bilanco' }"
+        >
+          💰 <span>Bilanço</span>
         </RouterLink>
       </nav>
     </aside>

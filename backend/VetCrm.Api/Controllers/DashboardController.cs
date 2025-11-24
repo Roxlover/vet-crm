@@ -39,26 +39,26 @@ public async Task<ActionResult<ReminderSummaryDto>> GetRemindersSummary()
     var today = DateOnly.FromDateTime(DateTime.Today);
     var tomorrow = today.AddDays(1);
 
-    const int STATUS_PENDING = 0;
-
+    // Pending sayıları (IsCompleted = false)
     var pendingToday = await _db.Reminders
-        .Where(r => r.DueDate == today && r.Status == STATUS_PENDING && !r.IsCompleted)
+        .Where(r => r.DueDate == today && !r.IsCompleted)
         .CountAsync();
 
     var pendingTomorrow = await _db.Reminders
-        .Where(r => r.DueDate == tomorrow && r.Status == STATUS_PENDING && !r.IsCompleted)
+        .Where(r => r.DueDate == tomorrow && !r.IsCompleted)
         .CountAsync();
 
     var overdue = await _db.Reminders
-        .Where(r => r.DueDate < today && r.Status == STATUS_PENDING && !r.IsCompleted)
+        .Where(r => r.DueDate < today && !r.IsCompleted)
         .CountAsync();
 
     var completed = await _db.Reminders
         .Where(r => r.IsCompleted)
         .CountAsync();
 
+    // Aşağıdaki default liste: upcoming (bugünden sonrası, tamamlanmamış)
     var upcoming = await _db.Reminders
-        .Where(r => r.DueDate > today && r.Status == STATUS_PENDING && !r.IsCompleted)
+        .Where(r => r.DueDate > today && !r.IsCompleted)
         .OrderBy(r => r.DueDate)
         .Take(5)
         .Include(r => r.Visit)!.ThenInclude(v => v!.Pet)!.ThenInclude(p => p!.Owner)
@@ -79,59 +79,68 @@ public async Task<ActionResult<ReminderSummaryDto>> GetRemindersSummary()
         PendingToday = pendingToday,
         PendingTomorrow = pendingTomorrow,
         Overdue = overdue,
-        Completed = completed,   // 🔴 BURADA SET EDİLİYOR
+        Completed = completed,   // kartta kullandığın alan
         Upcoming = upcoming
     };
 
     return Ok(dto);
 }
 
+   [HttpGet("reminders")]
+public async Task<ActionResult<List<ReminderItemDto>>> GetReminders(
+    [FromQuery] string filter = "upcoming")
+{
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var tomorrow = today.AddDays(1);
 
-    // ============= ESKİ LISTE (filter'lı) - İstersen kullanmaya devam et =============
-    [HttpGet("reminders")]
-    public async Task<ActionResult<List<ReminderItemDto>>> GetReminders([FromQuery] string filter = "upcoming")
+    IQueryable<Reminder> query = _db.Reminders.AsQueryable();
+
+    switch (filter.ToLowerInvariant())
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var tomorrow = today.AddDays(1);
+        case "today":
+            // Bugün + tamamlanmamış
+            query = query.Where(r => r.DueDate == today && !r.IsCompleted);
+            break;
 
-        const int STATUS_PENDING = 0;
+        case "tomorrow":
+            // Yarın + tamamlanmamış
+            query = query.Where(r => r.DueDate == tomorrow && !r.IsCompleted);
+            break;
 
-        IQueryable<Reminder> query = _db.Reminders
-            .Where(r => r.Status == STATUS_PENDING);
+        case "overdue":
+            // Bugünden önce + tamamlanmamış
+            query = query.Where(r => r.DueDate < today && !r.IsCompleted);
+            break;
 
-        switch (filter.ToLowerInvariant())
-        {
-            case "today":
-                query = query.Where(r => r.DueDate == today);
-                break;
-            case "tomorrow":
-                query = query.Where(r => r.DueDate == tomorrow);
-                break;
-            case "overdue":
-                query = query.Where(r => r.DueDate < today);
-                break;
-            default: // upcoming
-                query = query.Where(r => r.DueDate > today);
-                break;
-        }
+        case "done":
+            // Sadece tamamlanmış kayıtlar
+            query = query.Where(r => r.IsCompleted)
+                         .OrderByDescending(r => r.CompletedAt);
+            break;
 
-        var items = await query
-            .OrderBy(r => r.DueDate)
-            .Include(r => r.Visit)!.ThenInclude(v => v!.Pet)!.ThenInclude(p => p!.Owner)
-            .Select(r => new ReminderItemDto
-            {
-                Id = r.Id,
-                VisitId = r.VisitId,
-                ReminderDate = r.DueDate,
-                AppointmentDate = r.Visit!.NextDate ?? r.DueDate,
-                PetName = r.Visit!.Pet!.Name,
-                OwnerName = r.Visit!.Pet!.Owner!.FullName,
-                Procedures = r.Visit!.Procedures ?? string.Empty
-            })
-            .ToListAsync();
-
-        return Ok(items);
+        default: // "upcoming"
+            // Bugünden sonrası + tamamlanmamış
+            query = query.Where(r => r.DueDate > today && !r.IsCompleted);
+            break;
     }
+
+    var items = await query
+        .OrderBy(r => r.DueDate)
+        .Include(r => r.Visit)!.ThenInclude(v => v!.Pet)!.ThenInclude(p => p!.Owner)
+        .Select(r => new ReminderItemDto
+        {
+            Id = r.Id,
+            VisitId = r.VisitId,
+            ReminderDate = r.DueDate,
+            AppointmentDate = r.Visit!.NextDate ?? r.DueDate,
+            PetName = r.Visit!.Pet!.Name,
+            OwnerName = r.Visit!.Pet!.Owner!.FullName,
+            Procedures = r.Visit!.Procedures ?? string.Empty
+        })
+        .ToListAsync();
+
+    return Ok(items);
+}
 
     // ============= YENİ: DASHBOARD 4 LİSTE (bugün / yarın / geciken / yapıldı) =============
     [HttpGet("reminders-dashboard")]
