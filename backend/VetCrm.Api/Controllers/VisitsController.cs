@@ -3,18 +3,23 @@ using Microsoft.EntityFrameworkCore;
 using VetCrm.Api.Dtos;
 using VetCrm.Domain.Entities;
 using VetCrm.Infrastructure.Data;
+using Microsoft.AspNetCore.Authorization;
+using VetCrm.Api.Services;   // 🔴 eklendi
 
 namespace VetCrm.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class VisitsController : ControllerBase
 {
     private readonly VetCrmDbContext _db;
+    private readonly ICurrentUserService _currentUser;   // 🔴 eklendi
 
-    public VisitsController(VetCrmDbContext db)
+    public VisitsController(VetCrmDbContext db, ICurrentUserService currentUser)
     {
         _db = db;
+        _currentUser = currentUser;                     // 🔴 eklendi
     }
 
     private void SyncReminderForVisit(Visit visit)
@@ -26,7 +31,7 @@ public class VisitsController : ControllerBase
             return;
 
         var next = visit.NextDate.Value;
-        var due = next.AddDays(-1); 
+        var due = next.AddDays(-1);
 
         var reminder = new Reminder
         {
@@ -46,6 +51,7 @@ public class VisitsController : ControllerBase
         var query = _db.Visits
             .Include(v => v.Pet)
                 .ThenInclude(p => p.Owner)
+            .Include(v => v.CreatedByUser)                 // 🔴 ekleyen kullanıcıyı include et
             .AsQueryable();
 
         if (ownerId.HasValue)
@@ -67,7 +73,11 @@ public class VisitsController : ControllerBase
                 Procedures = v.Procedures,
                 AmountTl = v.AmountTl,
                 Notes = v.Notes,
-                NextDate = v.NextDate
+                NextDate = v.NextDate,
+
+                // 🔴 ekleyen
+                CreatedByUsername = v.CreatedByUser != null ? v.CreatedByUser.Username : null,
+                CreatedByName     = v.CreatedByUser != null ? v.CreatedByUser.FullName : null
             })
             .ToListAsync();
 
@@ -80,6 +90,7 @@ public class VisitsController : ControllerBase
         var visit = await _db.Visits
             .Include(v => v.Pet)
                 .ThenInclude(p => p.Owner)
+            .Include(v => v.CreatedByUser)               // 🔴
             .Where(v => v.Id == id)
             .Select(v => new VisitDto
             {
@@ -92,7 +103,10 @@ public class VisitsController : ControllerBase
                 Procedures = v.Procedures,
                 AmountTl = v.AmountTl,
                 Notes = v.Notes,
-                NextDate = v.NextDate
+                NextDate = v.NextDate,
+
+                CreatedByUsername = v.CreatedByUser != null ? v.CreatedByUser.Username : null,
+                CreatedByName     = v.CreatedByUser != null ? v.CreatedByUser.FullName : null
             })
             .FirstOrDefaultAsync();
 
@@ -123,8 +137,15 @@ public class VisitsController : ControllerBase
             Purpose = dto.Purpose
         };
 
+        // 🔴 Giriş yapan kullanıcıyı bağla
+        var userId = _currentUser.UserId;
+        if (userId.HasValue)
+        {
+            visit.CreatedByUserId = userId.Value;
+        }
+
         _db.Visits.Add(visit);
-        await _db.SaveChangesAsync(); 
+        await _db.SaveChangesAsync();
 
         SyncReminderForVisit(visit);
         await _db.SaveChangesAsync();
@@ -140,7 +161,11 @@ public class VisitsController : ControllerBase
             Procedures = visit.Procedures,
             AmountTl = visit.AmountTl,
             Notes = visit.Notes,
-            NextDate = visit.NextDate
+            NextDate = visit.NextDate,
+
+            // 🔴 geri dönerken de ekleyen bilgisini dolduralım
+            CreatedByUsername = _currentUser.Username,
+            CreatedByName     = _currentUser.FullName
         };
 
         return CreatedAtAction(nameof(GetVisit), new { id = visit.Id }, result);
@@ -159,6 +184,8 @@ public class VisitsController : ControllerBase
         visit.Notes = dto.Notes;
         visit.NextDate = dto.NextDate;
         visit.Purpose = dto.Purpose;
+
+        // NOT: CreatedByUserId’i değiştirmiyoruz; ilk ekleyen kimse o kalsın.
 
         SyncReminderForVisit(visit);
 
@@ -183,32 +210,32 @@ public class VisitsController : ControllerBase
         return NoContent();
     }
 
-[HttpGet("upcoming")]
-public async Task<ActionResult<IEnumerable<UpcomingVisitDto>>> GetUpcoming([FromQuery] int days = 1)
-{
-    var today = DateOnly.FromDateTime(DateTime.Now.Date);
-    var target = today.AddDays(days);   // days=1 -> yarın 
-    var upcoming = await _db.Visits
-        .Include(v => v.Pet)
-            .ThenInclude(p => p.Owner)
-        .Where(v => v.NextDate == target)
-        .Select(v => new UpcomingVisitDto
-        {
-            VisitId = v.Id,
-            PetId = v.PetId,
-            PetName = v.Pet.Name,
-            OwnerId = v.Pet.OwnerId,
-            OwnerName = v.Pet.Owner.FullName,
-            OwnerPhoneE164 = v.Pet.Owner.PhoneE164,
-            VisitDate = v.NextDate!.Value,
-            Procedures = v.Procedures,
-            WhatsAppSent = false
-        })
-        .OrderBy(u => u.OwnerName)
-        .ThenBy(u => u.PetName)
-        .ToListAsync();
+    [HttpGet("upcoming")]
+    public async Task<ActionResult<IEnumerable<UpcomingVisitDto>>> GetUpcoming([FromQuery] int days = 1)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Now.Date);
+        var target = today.AddDays(days);
 
-    return Ok(upcoming);
-}
+        var upcoming = await _db.Visits
+            .Include(v => v.Pet)
+                .ThenInclude(p => p.Owner)
+            .Where(v => v.NextDate == target)
+            .Select(v => new UpcomingVisitDto
+            {
+                VisitId = v.Id,
+                PetId = v.PetId,
+                PetName = v.Pet.Name,
+                OwnerId = v.Pet.OwnerId,
+                OwnerName = v.Pet.Owner.FullName,
+                OwnerPhoneE164 = v.Pet.Owner.PhoneE164,
+                VisitDate = v.NextDate!.Value,
+                Procedures = v.Procedures,
+                WhatsAppSent = false
+            })
+            .OrderBy(u => u.OwnerName)
+            .ThenBy(u => u.PetName)
+            .ToListAsync();
 
+        return Ok(upcoming);
+    }
 }

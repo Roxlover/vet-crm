@@ -1,17 +1,18 @@
-import apiClient from './client'
+import { http } from './http'
+
 
 export async function fetchOwners() {
-  const res = await apiClient.get('/owners')
+  const res = await http.get('/owners')
   return res.data
 }
 
 export async function createOwner(payload) {
-  const res = await apiClient.post('/owners', payload)
+  const res = await http.post('/owners', payload)
   return res.data
 }
 
 export async function addPetToOwner(ownerId, petPayload) {
-  const res = await apiClient.post(`/owners/${ownerId}/pets`, petPayload)
+  const res = await http.post(`/owners/${ownerId}/pets`, petPayload)
   return res.data
 }
 

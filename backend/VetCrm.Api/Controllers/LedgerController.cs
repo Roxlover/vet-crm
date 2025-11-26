@@ -2,9 +2,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VetCrm.Domain.Entities;
 using VetCrm.Infrastructure.Data;
-
+using Microsoft.AspNetCore.Authorization;
 namespace VetCrm.Api.Controllers;
 
+[Authorize(Policy = "BullBossOnly")]
 [ApiController]
 [Route("api/[controller]")]
 public class LedgerController : ControllerBase
@@ -40,22 +41,22 @@ public class LedgerController : ControllerBase
         [FromQuery] DateOnly from,
         [FromQuery] DateOnly to)
     {
-        var list = await _db.LedgerEntries
-            .Where(x => x.Date >= from && x.Date <= to)
-            .OrderBy(x => x.Date)
-            .ThenByDescending(x => x.Id)
-            .Select(x => new LedgerEntryDto
-            {
-                Id = x.Id,
-                Date = x.Date,
-                Amount = x.Amount,
-                IsIncome = x.IsIncome,
-                Category = x.Category,
-                Note = x.Note
-            })
-            .ToListAsync();
+       var list = await _db.LedgerEntries
+        .Where(l => l.Date >= from && l.Date <= to)
+        .OrderBy(l => l.Date)
+        .ThenBy(l => l.Id)
+        .Select(l => new LedgerEntryDto
+        {
+            Id = l.Id,
+            Date = l.Date,
+            Amount = l.Amount,
+            IsIncome = l.IsIncome,
+            Category = l.Category,
+            Note = l.Note
+        })
+        .ToListAsync();
 
-        return Ok(list);
+    return Ok(list);
     }
 
     [HttpPost]

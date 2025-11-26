@@ -3,247 +3,304 @@
     <header class="page-header">
       <h1>Bilanço</h1>
       <p class="subtitle">
-        Günlük gelir / gider kayıtlarını tut, seçtiğin tarih aralığında özetini gör.
+        Günlük gelir / gider kayıtlarını tut, tarih aralığı seçerek özetini gör.
       </p>
     </header>
 
-    <!-- TARİH FİLTRELERİ -->
-    <section class="filters card">
-      <div class="date-row">
-        <div class="field">
-          <label>Başlangıç</label>
-          <input type="date" v-model="fromDate" @change="loadLedger" />
-        </div>
-        <div class="field">
-          <label>Bitiş</label>
-          <input type="date" v-model="toDate" @change="loadLedger" />
-        </div>
-        <div class="quick-buttons">
-          <button @click="setToday">Bugün</button>
-          <button @click="setThisWeek">Bu Hafta</button>
-          <button @click="setThisMonth">Bu Ay</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ÖZET KARTLAR -->
+    <!-- ÜST ÖZET KUTULARI -->
     <section class="cards">
       <div class="card kpi income">
-        <h2>Gelir</h2>
-        <p class="value">{{ formatMoney(summary.totalIncome) }}</p>
+        <h2>Toplam Gelir</h2>
+        <p class="value">{{ formatAmount(totalIncome) }} TL</p>
       </div>
       <div class="card kpi expense">
-        <h2>Gider</h2>
-        <p class="value">{{ formatMoney(summary.totalExpense) }}</p>
+        <h2>Toplam Gider</h2>
+        <p class="value">{{ formatAmount(totalExpense) }} TL</p>
       </div>
       <div class="card kpi net">
         <h2>Net</h2>
-        <p class="value">{{ formatMoney(summary.net) }}</p>
+        <p class="value">{{ formatAmount(netTotal) }} TL</p>
       </div>
     </section>
 
-    <div class="layout">
-      <!-- KAYIT FORMU -->
-      <section class="card form-card">
-        <h2>Yeni Kayıt</h2>
-
+    <!-- FİLTRE + TARİH ARALIĞI -->
+    <section class="card controls">
+      <div class="date-range">
         <div class="field">
-          <label>Tarih</label>
-          <input type="date" v-model="form.date" />
+          <label>Başlangıç</label>
+          <input type="date" v-model="from" />
         </div>
-
         <div class="field">
-          <label>Tür</label>
-          <div class="inline">
-            <label><input type="radio" value="income" v-model="form.type" /> Gelir</label>
-            <label><input type="radio" value="expense" v-model="form.type" /> Gider</label>
+          <label>Bitiş</label>
+          <input type="date" v-model="to" />
+        </div>
+        <div class="buttons">
+          <button class="btn" @click="setToday">Bugün</button>
+          <button class="btn" @click="setThisWeek">Bu Hafta</button>
+          <button class="btn primary" @click="loadLedger">Yenile</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- YENİ KAYIT FORMU -->
+    <section class="card form-card">
+      <h2>Yeni Kayıt Ekle</h2>
+
+      <form @submit.prevent="submitEntry" class="ledger-form">
+        <div class="field-row">
+          <div class="field">
+            <label>Tarih</label>
+            <input type="date" v-model="form.date" required />
+          </div>
+
+          <div class="field">
+            <label>Tutar (TL)</label>
+            <input
+              type="number"
+              step="0.01"
+              v-model.number="form.amount"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label>Tür</label>
+            <div class="radio-row">
+              <label>
+                <input
+                  type="radio"
+                  value="income"
+                  v-model="form.type"
+                />
+                Gelir
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  value="expense"
+                  v-model="form.type"
+                />
+                Gider
+              </label>
+            </div>
           </div>
         </div>
 
-        <div class="field">
-          <label>Tutar (TL)</label>
-          <input type="number" step="0.01" v-model.number="form.amount" />
+        <div class="field-row">
+          <div class="field flex-2">
+            <label>Kategori</label>
+            <input
+              type="text"
+              v-model="form.category"
+              placeholder="Örn: Muayene, Mama, Kira..."
+            />
+          </div>
+
+          <div class="field flex-3">
+            <label>Not</label>
+            <input
+              type="text"
+              v-model="form.note"
+              placeholder="İsteğe bağlı açıklama"
+            />
+          </div>
         </div>
 
-        <div class="field">
-          <label>Kategori</label>
-          <input type="text" v-model="form.category" placeholder="Örn: Muayene, Mama Satışı, Kira..." />
+        <div class="actions-row">
+          <button
+            type="submit"
+            class="btn primary"
+            :disabled="saving"
+          >
+            Kaydet
+          </button>
         </div>
+      </form>
+    </section>
 
-        <div class="field">
-          <label>Açıklama</label>
-          <textarea rows="2" v-model="form.description"></textarea>
-        </div>
+    <!-- LİSTE -->
+    <section class="card list-card">
+      <div class="card-header">
+        <h2>
+          Kayıtlar
+          <span class="small">
+            ({{ from }} – {{ to }})
+          </span>
+        </h2>
+      </div>
 
-        <div class="actions">
-          <button @click="resetForm">Temizle</button>
-          <button class="primary" @click="submitEntry">Kaydet</button>
-        </div>
-      </section>
+      <div v-if="loading" class="state">Yükleniyor...</div>
+      <div v-else-if="entries.length === 0" class="state">
+        Bu aralıkta kayıt yok.
+      </div>
 
-      <!-- LİSTE -->
-      <section class="card table-card">
-        <h2>Kayıtlar</h2>
-
-        <div v-if="loading" class="state">Yükleniyor...</div>
-        <div v-else-if="items.length === 0" class="state">
-          Bu aralıkta kayıt yok.
-        </div>
-
-        <table v-else class="table">
-          <thead>
-            <tr>
-              <th>Tarih</th>
-              <th>Tür</th>
-              <th>Kategori</th>
-              <th>Tutar</th>
-              <th>Açıklama</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in items" :key="item.id">
-              <td>{{ formatDate(item.date) }}</td>
-              <td>
-                <span :class="item.isIncome ? 'tag-income' : 'tag-expense'">
-                  {{ item.isIncome ? 'Gelir' : 'Gider' }}
-                </span>
-              </td>
-              <td>{{ item.category }}</td>
-              <td>{{ formatMoney(item.amount) }}</td>
-              <td>{{ item.description || '—' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </div>
+      <table v-else class="table">
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Tür</th>
+            <th>Kategori</th>
+            <th>Not</th>
+            <th class="right">Tutar</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="e in entries" :key="e.id">
+            <td>{{ e.date }}</td>
+            <td>
+              <span
+                class="badge"
+                :class="e.isIncome ? 'badge-income' : 'badge-expense'"
+              >
+                {{ e.isIncome ? 'Gelir' : 'Gider' }}
+              </span>
+            </td>
+            <td>{{ e.category || '—' }}</td>
+            <td>{{ e.note || '—' }}</td>
+            <td class="right">
+              {{ formatAmount(e.amount) }} TL
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { fetchLedgerRange, createLedgerEntry } from '@/api/ledger'
 
-const fromDate = ref('')
-const toDate = ref('')
+// === STATE ===
+const entries = ref([])          // API'den gelen düz array
 const loading = ref(false)
-const items = ref([])
+const saving = ref(false)
+const error = ref('')
 
-const summary = ref({
-  totalIncome: 0,
-  totalExpense: 0,
-  net: 0,
-})
+// Tarih aralığı (default: bugün)
+const todayIso = new Date().toISOString().slice(0, 10)
+const from = ref(todayIso)
+const to = ref(todayIso)
 
+// Form state
 const form = ref({
-  date: '',
-  type: 'income', // income | expense
+  date: todayIso,
   amount: null,
+  type: 'income',   // 'income' | 'expense'
   category: '',
-  description: '',
+  note: '',
 })
 
-onMounted(() => {
-  setToday()
-})
+// === COMPUTED TOPLU HESAPLAR ===
+const totalIncome = computed(() =>
+  entries.value
+    .filter(e => e.isIncome)
+    .reduce((sum, e) => sum + Number(e.amount || 0), 0)
+)
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10)
+const totalExpense = computed(() =>
+  entries.value
+    .filter(e => !e.isIncome)
+    .reduce((sum, e) => sum + Number(e.amount || 0), 0)
+)
+
+const netTotal = computed(() => totalIncome.value - totalExpense.value)
+
+// === HELPERS ===
+function formatAmount(value) {
+  return Number(value || 0).toLocaleString('tr-TR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 function setToday() {
-  const t = todayIso()
-  fromDate.value = t
-  toDate.value = t
-  form.value.date = t
+  const t = new Date().toISOString().slice(0, 10)
+  from.value = t
+  to.value = t
   loadLedger()
 }
 
 function setThisWeek() {
   const now = new Date()
-  const day = now.getDay() || 7 // pazar=0 → 7
-  const diff = day - 1
-  const start = new Date(now)
-  start.setDate(now.getDate() - diff)
+  const day = now.getDay() || 7 // Pazarı 7 say
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - (day - 1))
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
 
-  fromDate.value = start.toISOString().slice(0, 10)
-  toDate.value = todayIso()
+  from.value = monday.toISOString().slice(0, 10)
+  to.value = sunday.toISOString().slice(0, 10)
   loadLedger()
 }
 
-function setThisMonth() {
-  const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), 1)
-  fromDate.value = start.toISOString().slice(0, 10)
-  toDate.value = todayIso()
-  loadLedger()
-}
-
+// === API ÇAĞRILARI ===
 async function loadLedger() {
-  if (!fromDate.value || !toDate.value) return
   loading.value = true
+  error.value = ''
   try {
-    const data = await fetchLedgerRange(fromDate.value, toDate.value)
-    items.value = data.items
-    summary.value = {
-      totalIncome: data.totalIncome,
-      totalExpense: data.totalExpense,
-      net: data.net,
-    }
+    const params = { from: from.value, to: to.value }
+    console.log('LEDGER RANGE PARAMS >>>', params)
+
+    const data = await fetchLedgerRange(from.value, to.value)
+    console.log('LEDGER RANGE OK >>>', data)
+
+    // API düz array döndürdüğü için direkt atıyoruz
+    entries.value = Array.isArray(data) ? data : []
   } catch (e) {
     console.error('ledger load error', e)
+    error.value = 'Bilanço verileri yüklenirken hata oluştu.'
+    entries.value = []
   } finally {
     loading.value = false
   }
 }
 
-function formatDate(dateOnly) {
-  if (!dateOnly) return '—'
-  const [y, m, d] = dateOnly.split('-')
-  return `${d}.${m}.${y}`
-}
-
-function formatMoney(v) {
-  return new Intl.NumberFormat('tr-TR', {
-    style: 'currency',
-    currency: 'TRY',
-    minimumFractionDigits: 2,
-  }).format(v || 0)
-}
-
-function resetForm() {
-  form.value = {
-    date: form.value.date || todayIso(),
-    type: 'income',
-    amount: null,
-    category: '',
-    description: '',
-  }
-}
-
 async function submitEntry() {
-  if (!form.value.date || !form.value.amount || !form.value.category) {
-    alert('Tarih, tutar ve kategori zorunlu.')
+  if (!form.value.date || !form.value.amount) {
+    alert('Tarih ve tutar zorunlu.')
     return
   }
 
   const payload = {
     date: form.value.date,
-    amount: form.value.amount,
+    amount: Number(form.value.amount),
     isIncome: form.value.type === 'income',
-    category: form.value.category,
-    description: form.value.description,
-    createdByUserId: 1, // şimdilik Ahmet
+    category: form.value.category || null,
+    description: form.value.note || null,
   }
 
+  console.log('LEDGER PAYLOAD >>>', payload)
+
+  saving.value = true
   try {
-    await createLedgerEntry(payload)
-    // form tarihine göre seçili aralık içindeyse listede gözükecek
-    await loadLedger()
-    resetForm()
+    const created = await createLedgerEntry(payload)
+    console.log('LEDGER OK >>>', created)
+
+    // Aralıkta ise listeye ekle, yoksa sadece reload
+    if (created.date >= from.value && created.date <= to.value) {
+      entries.value.unshift(created)
+    } else {
+      await loadLedger()
+    }
+
+    // Formu sıfırla (tarihi bugünde bırak)
+    form.value.amount = null
+    form.value.category = ''
+    form.value.note = ''
+    form.value.type = 'income'
   } catch (e) {
     console.error('create ledger entry error', e)
+    alert('Kayıt eklenirken bir hata oluştu.')
+  } finally {
+    saving.value = false
   }
 }
+
+// İlk açılışta bugünün hareketlerini getir
+onMounted(() => {
+  loadLedger()
+})
 </script>
 
 <style scoped>
@@ -256,9 +313,17 @@ async function submitEntry() {
 }
 
 .subtitle {
-  margin-top: 0.25rem;
+  margin: 0.25rem 0 0;
   font-size: 0.85rem;
   color: #6b7280;
+}
+
+/* KARTLAR */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .card {
@@ -268,59 +333,8 @@ async function submitEntry() {
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
-.filters {
-  margin-bottom: 1rem;
-}
-
-.date-row {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-end;
-  flex-wrap: wrap;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.85rem;
-}
-
-.field label {
-  font-weight: 600;
-}
-
-.field input,
-.field textarea {
-  border-radius: 0.5rem;
-  border: 1px solid #d1d5db;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.85rem;
-}
-
-.quick-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.quick-buttons button {
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 999px;
-  background: #e5e7eb;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.quick-buttons button:hover {
-  background: #d1d5db;
-}
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin: 1rem 0;
+.kpi {
+  text-align: center;
 }
 
 .kpi h2 {
@@ -335,63 +349,121 @@ async function submitEntry() {
   font-weight: 700;
 }
 
-.income {
-  border-top: 3px solid #16a34a;
+.kpi.income {
+  border-top: 3px solid #22c55e;
 }
 
-.expense {
-  border-top: 3px solid #dc2626;
+.kpi.expense {
+  border-top: 3px solid #ef4444;
 }
 
-.net {
+.kpi.net {
   border-top: 3px solid #0ea5e9;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
-  gap: 1rem;
-}
-
-@media (max-width: 900px) {
-  .cards {
-    grid-template-columns: 1fr;
-  }
-  .layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.inline {
+/* KONTROLLER */
+.controls .date-range {
   display: flex;
-  gap: 1rem;
-  font-size: 0.8rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
 }
 
-.actions {
+.field {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.field label {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.field input {
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.buttons {
+  display: flex;
   gap: 0.5rem;
-  margin-top: 0.75rem;
 }
 
-.actions button {
+.btn {
   border: none;
-  padding: 0.35rem 0.8rem;
+  padding: 0.35rem 0.9rem;
   border-radius: 999px;
   font-size: 0.8rem;
   cursor: pointer;
+  background: #e5e7eb;
 }
 
-.actions .primary {
+.btn.primary {
   background: #111827;
   color: #fff;
 }
 
-.state {
-  padding: 0.5rem 0;
-  font-size: 0.85rem;
+/* FORM */
+.form-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.ledger-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.flex-2 {
+  flex: 2;
+}
+
+.flex-3 {
+  flex: 3;
+}
+
+.radio-row {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.actions-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* LİSTE */
+.list-card {
+  margin-top: 1rem;
+}
+
+.card-header {
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.card-header .small {
+  font-size: 0.8rem;
   color: #6b7280;
+}
+
+.state {
+  font-size: 0.9rem;
+  color: #6b7280;
+  padding: 0.4rem 0;
 }
 
 .table {
@@ -413,20 +485,36 @@ async function submitEntry() {
   font-size: 0.8rem;
 }
 
-.tag-income,
-.tag-expense {
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
+.table td.right,
+.table th.right {
+  text-align: right;
 }
 
-.tag-income {
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+}
+
+.badge-income {
   background: #dcfce7;
   color: #166534;
 }
 
-.tag-expense {
+.badge-expense {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .controls .date-range {
+    align-items: stretch;
+  }
 }
 </style>

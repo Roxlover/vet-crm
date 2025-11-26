@@ -3,9 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using VetCrm.Api.Dtos;
 using VetCrm.Infrastructure.Data;
 using VetCrm.Domain.Entities; // Reminder, Visit, Pet, Owner
+using Microsoft.AspNetCore.Authorization;
 
 namespace VetCrm.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class DashboardController : ControllerBase
@@ -70,7 +72,8 @@ public async Task<ActionResult<ReminderSummaryDto>> GetRemindersSummary()
             AppointmentDate = r.Visit!.NextDate ?? r.DueDate,
             PetName = r.Visit!.Pet!.Name,
             OwnerName = r.Visit!.Pet!.Owner!.FullName,
-            Procedures = r.Visit!.Procedures ?? string.Empty
+            Procedures = r.Visit!.Procedures ?? string.Empty,
+            CreditAmountTl = r.Visit!.CreditAmountTl 
         })
         .ToListAsync();
 
@@ -135,7 +138,8 @@ public async Task<ActionResult<List<ReminderItemDto>>> GetReminders(
             AppointmentDate = r.Visit!.NextDate ?? r.DueDate,
             PetName = r.Visit!.Pet!.Name,
             OwnerName = r.Visit!.Pet!.Owner!.FullName,
-            Procedures = r.Visit!.Procedures ?? string.Empty
+            Procedures = r.Visit!.Procedures ?? string.Empty,
+            CreditAmountTl = r.Visit!.CreditAmountTl 
         })
         .ToListAsync();
 
@@ -208,7 +212,10 @@ public async Task<ActionResult<List<ReminderItemDto>>> GetReminders(
             Procedures = v.Procedures ?? string.Empty,
             AmountTl = v.AmountTl,
             Notes = v.Notes ?? string.Empty,
-            ImageUrl = v.ImageUrl
+            ImageUrl = v.ImageUrl,
+            CreatedByUsername = v.CreatedByUser != null ? v.CreatedByUser.Username : null,
+            CreatedByName = v.CreatedByUser != null ? v.CreatedByUser.FullName : null,
+            CreditAmountTl = v.CreditAmountTl,
         };
 
         return Ok(dto);

@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VetCrm.Infrastructure.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace VetCrm.Api.Controllers;
-
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class CalendarController : ControllerBase
@@ -25,6 +26,8 @@ public class CalendarController : ControllerBase
         public string? DoctorName { get; set; }
 
         public string? CreatedByName { get; set; }
+        public string? CreatedByUsername { get; set; }
+        public decimal? CreditAmountTl { get; set; }
     }
 
     // /api/calendar/appointments?from=2025-11-01&to=2025-11-30
@@ -52,7 +55,10 @@ public class CalendarController : ControllerBase
             OwnerName = v.Pet.Owner!.FullName,
             Purpose = v.Purpose,
             DoctorName = v.Doctor != null ? v.Doctor.FullName : null,
-            CreatedByName = v.CreatedByUser != null ? v.CreatedByUser.FullName : null 
+            CreatedByUsername = v.CreatedByUser != null ? v.CreatedByUser.Username : null,
+            CreatedByName = v.CreatedByUser != null ? v.CreatedByUser.FullName : null,
+            CreditAmountTl = v.CreditAmountTl,
+
         }).ToList();
 
         return Ok(dtos);

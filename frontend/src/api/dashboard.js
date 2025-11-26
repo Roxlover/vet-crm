@@ -1,16 +1,14 @@
-// frontend/src/api/dashboard.js
-import apiClient from './client'
 import { http } from '@/api/http'
 
 // ÖZET (Bugün / Yarın / Geciken / Yapıldı kutuları)
 export async function fetchReminderSummary() {
-  const response = await apiClient.get('/dashboard/reminders-summary')
+  const response = await http.get('/dashboard/reminders-summary')
   return response.data
 }
 
 // Filtreye göre liste (today / tomorrow / overdue / upcoming / done)
 export async function fetchReminders(filter) {
-  const response = await apiClient.get('/dashboard/reminders', {
+  const response = await http.get('/dashboard/reminders', {
     params: { filter },
   })
   return response.data
@@ -18,8 +16,15 @@ export async function fetchReminders(filter) {
 
 // Ziyaret detayı (modal)
 export async function fetchVisitDetail(visitId) {
-  const res = await apiClient.get(`/dashboard/visit/${visitId}`)
+  const res = await http.get(`/dashboard/visit/${visitId}`)
   return res.data
+}
+// Takvim için randevu listesi
+export async function fetchCalendarAppointments(from, to) {
+  const { data } = await http.get('/calendar/appointments', {
+    params: { from, to },
+  })
+  return data
 }
 
 // Bir hasta sahibine ait diğer hayvanlar
@@ -37,14 +42,6 @@ export async function createAppointment(payload) {
 // Doktor listesi
 export async function fetchDoctors() {
   const { data } = await http.get('/doctors')
-  return data
-}
-
-// Takvim için randevu listesi
-export async function fetchCalendarAppointments(from, to) {
-  const { data } = await http.get('/calendar/appointments', {
-    params: { from, to },
-  })
   return data
 }
 

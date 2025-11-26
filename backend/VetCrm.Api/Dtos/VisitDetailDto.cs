@@ -15,6 +15,9 @@ public class VisitDetailDto
     public decimal? AmountTl { get; set; }
     public string Notes { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
+    public string? CreatedByName { get; set; }
+    public string? CreatedByUsername { get; set; }
+   public decimal? CreditAmountTl { get; set; }
 }
 
 

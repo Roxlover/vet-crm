@@ -107,7 +107,12 @@
               <td>{{ formatDate(item.appointmentDate) }}</td>
               <td>{{ item.petName }}</td>
               <td>{{ item.ownerName }}</td>
-              <td class="procedure-cell">{{ item.procedures }}</td>
+              <td class="procedure-cell">
+                {{ item.procedures }}
+                <span v-if="item.creditAmountTl" class="credit-pill">
+                  • Veresiye: {{ item.creditAmountTl }} TL
+                </span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -158,38 +163,47 @@
               }"
               @click="openNewAppointmentFromCalendar(day)"
             >
-            <div class="day-number">{{ day.date.getDate() }}</div>
+       <div class="day-number">{{ day.date.getDate() }}</div>
 
-            <div class="day-events">
-            <div
-              v-for="event in day.appointments"
-              :key="event.visitId"
-              class="event-pill"
-              @click.stop="openVisitFromCalendar(event)"
-            >
-              <span class="event-time">
-                {{ formatTime(event.scheduledAt) }}
-              </span>
-              <span class="event-text">
-                {{ event.petName }} – {{ event.ownerName }}
-              </span>
-              <div class="event-meta">
-                <span v-if="event.doctorName">
-                  Dr: {{ event.doctorName }}
-                </span>
-                <span v-if="event.createdByName">
-                  • Ekleyen: {{ event.createdByName }}
-                </span>
-              </div>
-            </div>
+<div class="day-events">
+  <div
+    v-for="appt in day.appointments"
+    :key="appt?.visitId"
+    class="event-pill"
+    @click.stop="openVisitFromCalendar(appt)"
+  >
+    <span class="event-time" v-if="appt?.scheduledAt">
+      {{ formatTime(appt.scheduledAt) }}
+    </span>
 
-              <div
-                v-if="day.appointments.length === 0"
-                class="no-event-placeholder"
-              >
-                —
-              </div>
-            </div>
+    <span class="event-text">
+      {{ appt?.petName }} – {{ appt?.ownerName }}
+    </span>
+
+    <span v-if="appt?.purpose" class="event-purpose">
+      {{ appt.purpose }}
+    </span>
+
+    <div class="event-meta">
+      <span v-if="appt?.doctorName">
+        Dr: {{ appt.doctorName }}
+      </span>
+      <span v-if="appt?.createdByUsername || appt?.createdByName">
+        • Ekleyen: {{ appt.createdByUsername || appt.createdByName }}
+      </span>
+    </div>
+  </div>
+
+  <!-- İstersen boş gün göstergesi -->
+  <div
+    v-if="!day.appointments || day.appointments.length === 0"
+    class="no-event-placeholder"
+  >
+    —
+  </div>
+</div>
+
+
           </div>
         </div>
       </div>
@@ -216,6 +230,10 @@
         <p><strong>İşlem(ler):</strong> {{ selectedVisit.procedures || '—' }}</p>
         <p><strong>Tutar:</strong> {{ selectedVisit.amountTl ?? '—' }} TL</p>
         <p><strong>Hasta sahibine not:</strong> {{ selectedVisit.notes || '—' }}</p>
+        <p v-if="selectedVisit.createdByUsername || selectedVisit.createdByName">
+          <strong>Kaydı ekleyen:</strong>
+          {{ selectedVisit.createdByUsername || selectedVisit.createdByName }}
+        </p>
 
         <div v-if="selectedVisit.imageUrl" class="image-box">
           <img :src="selectedVisit.imageUrl" alt="Ziyaret görseli" />
@@ -247,6 +265,45 @@
 
           </div>
         </div>
+        <!-- VERESİYE GÖRÜNÜMÜ + EDİT -->
+        <div class="credit-row">
+          <div class="credit-text">
+            <strong>Veresiye:</strong>
+            <span v-if="selectedVisit?.creditAmountTl">
+              {{ selectedVisit.creditAmountTl }} TL
+            </span>
+            <span v-else>Yok</span>
+          </div>
+          <div class="credit-actions">
+            <button
+              class="btn-credit"
+              type="button"
+              @click="creditEditOpen = !creditEditOpen"
+            >
+              {{ creditEditOpen ? 'İptal' : 'Veresiye Yaz / Güncelle' }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="creditEditOpen" class="field-row">
+          <label>Veresiye (TL)</label>
+          <input
+            v-model="creditAmount"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Örn: 750"
+          />
+          <button
+            class="btn-success"
+            type="button"
+            @click="saveCredit"
+            :disabled="savingCredit"
+          >
+            {{ savingCredit ? 'Kaydediliyor...' : 'Veresiyeyi Kaydet' }}
+          </button>
+        </div>
+
 
         <!-- YENİ RANDEVU FORMU -->
         <hr class="divider" />
@@ -266,7 +323,14 @@
           </div>
           <div class="field-row">
             <label>Saat</label>
-            <input type="time" v-model="appointmentTime" />
+            <input
+              type="time"
+              v-model="appointmentTime"
+              min="10:30"
+              max="19:30"
+              step="900"  
+            />
+
           </div>
 
           <!-- Açıklama -->
@@ -433,6 +497,10 @@ const ownerResults = ref([])
 const ownerSearchOpen = ref(false)
 let ownerSearchTimeout = null
 const doctors = ref([])
+const selectedDoctorId = ref(null)
+const creditEditOpen = ref(false)
+const creditAmount = ref('')
+const savingCredit = ref(false)
 
 onMounted(async () => {
   await loadSummary()
@@ -563,9 +631,14 @@ function buildCalendarWeeks(baseDate, appointments) {
   const start = startOfCalendarGrid(baseDate)
   const weeks = []
 
+  // 🔹 Bozuk / eksik kayıtları ele
+  const safeAppointments = (appointments || []).filter(
+    (a) => a && a.scheduledAt
+  )
+
   const byDate = {}
-  appointments.forEach((a) => {
-    const iso = a.scheduledAt.slice(0, 10)
+  safeAppointments.forEach((a) => {
+    const iso = a.scheduledAt.slice(0, 10) // YYYY-MM-DD
     if (!byDate[iso]) byDate[iso] = []
     byDate[iso].push(a)
   })
@@ -591,6 +664,7 @@ function buildCalendarWeeks(baseDate, appointments) {
 
   calendarWeeks.value = weeks
 }
+
 
 // Ay navigasyonu
 async function goToPrevMonth() {
@@ -644,6 +718,11 @@ async function openVisit(item) {
     const detail = await fetchVisitDetail(item.visitId)   // 🔴 detay değişkeni
     selectedVisit.value = detail
     console.log('visitDetail >>>', detail)
+    creditAmount.value = detail.creditAmountTl != null
+      ? detail.creditAmountTl.toString()
+      : ''
+    creditEditOpen.value = false
+    
 
     if (detail.ownerId) {
       selectedOwnerId.value = detail.ownerId
@@ -671,6 +750,47 @@ async function openVisit(item) {
   }
 }
 
+async function saveCredit() {
+  if (!selectedReminderId.value) {
+    alert('Bu kayıt bir hatırlatmaya bağlı değil, veresiye kaydedilemedi.')
+    return
+  }
+
+  let raw = (creditAmount.value ?? '').toString().replace(',', '.')
+  const val = parseFloat(raw)
+
+  if (isNaN(val) || val < 0) {
+    alert('Geçerli bir veresiye tutarı girin.')
+    return
+  }
+  
+  console.log('[CREDIT] PATCH isteği gönderiliyor...')
+  console.log('[CREDIT] reminderId =', selectedReminderId.value)
+  console.log('[CREDIT] body       =', { creditAmountTl: val })
+
+
+  try {
+    await http.patch(`/reminders/${selectedReminderId.value}/credit`, {
+      creditAmountTl: val,
+    })
+
+    console.log('[CREDIT] response status =', res.status)
+
+    if (selectedVisit.value) {
+      selectedVisit.value.creditAmountTl = val
+    }
+
+    // listeler de güncellensin ki randevu satırında görünsün
+    await loadSummary()
+    await loadList(activeFilter.value)
+
+    creditEditOpen.value = false
+  } catch (e) {
+    console.error('veresiye kaydedilirken hata', e)
+    console.log('[CREDIT] response?', e.response?.status, e.response?.data)
+    alert('Veresiye kaydedilirken bir hata oluştu.')
+  }
+}
 
 
 async function markReminder(completed) {
@@ -694,6 +814,8 @@ async function markReminder(completed) {
 }
 
 
+
+
 async function openVisitDetail(item) {
   try {
     detailLoading.value = true
@@ -709,10 +831,7 @@ function formatDateTime(dt) {
   return d.toLocaleDateString('tr-TR')
 }
 
-function closeDetail() {
-  showDetail.value = false
-  selectedVisit.value = null
-}
+function closeDetail() {showDetail.value = false}
 
 async function loadSummary() {
   loading.value = true
@@ -729,7 +848,23 @@ async function loadSummary() {
   }
 }
 
+function isTimeWithinWorkingHours(timeStr) {
+  if (!timeStr) return false
+  const [h, m] = timeStr.split(':').map(Number)
+  const total = h * 60 + m
+  const start = 10 * 60 + 30   // 10:30
+  const end = 19 * 60 + 30     // 19:30
+  return total >= start && total <= end
+}
+
 async function submitAppointment() {
+  const currentUser = getCurrentUser()
+  if (!currentUser) {
+    alert('Oturumunuz sona erdi, lütfen tekrar giriş yapın.')
+    router.push('/login')
+    return
+  }
+
   if (!selectedOwnerId.value) {
     alert('Lütfen hasta sahibini seçin.')
     return
@@ -743,6 +878,12 @@ async function submitAppointment() {
     return
   }
 
+  // 🔹 Saat kontrolü
+  if (!isTimeWithinWorkingHours(appointmentTime.value)) {
+    alert('Randevu saati 10:30 - 19:30 arasında olmalıdır.')
+    return
+  }
+
   const isoDateTime = new Date(
     `${appointmentDate.value}T${appointmentTime.value}:00`
   ).toISOString()
@@ -753,7 +894,6 @@ async function submitAppointment() {
     scheduledAt: isoDateTime,
     purpose: appointmentPurpose.value,
     doctorId: selectedDoctorId.value || null,
-    createdByUserId: 1, // şimdilik Ahmet
   }
 
   try {
@@ -761,7 +901,6 @@ async function submitAppointment() {
     await loadSummary()
     await loadList(activeFilter.value)
     await loadCalendarForMonth(currentMonth.value)
-
     showNewAppointment.value = false
   } catch (e) {
     console.error('createAppointment error', e)
@@ -1164,6 +1303,12 @@ function titleForFilter() {
 .calendar-card {
   margin-top: 0.5rem;
 }
+.event-purpose {
+  display: block;
+  font-size: 0.68rem;
+  color: #111827;
+}
+
 
 .calendar-header {
   display: flex;
@@ -1328,6 +1473,54 @@ section.calendar-section {
 .owner-phone {
   font-size: 0.75rem;
   color: #6b7280;
+}
+
+
+.credit-row {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.credit-text span {
+  margin-left: 0.25rem;
+}
+
+.btn-credit {
+  border: none;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: #facc15;
+  color: #78350f;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.credit-form {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.credit-form input {
+  max-width: 120px;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.credit-pill {
+  margin-left: 0.25rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.72rem;
 }
 
 </style>

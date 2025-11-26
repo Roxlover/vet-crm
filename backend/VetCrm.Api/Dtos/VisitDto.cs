@@ -15,6 +15,8 @@ public class VisitDto
     public decimal? AmountTl { get; set; }         // ne kadar aldım
     public string? Notes { get; set; }
     public string? Purpose { get; set; }
-
     public DateOnly? NextDate { get; set; }        // ne zaman gelecek
+    public decimal? CreditAmountTl { get; set; }
+    public string? CreatedByUsername { get; set; }
+    public string? CreatedByName { get; set; }
 }

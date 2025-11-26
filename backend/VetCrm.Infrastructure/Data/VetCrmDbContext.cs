@@ -16,7 +16,10 @@ public class VetCrmDbContext : DbContext
     public DbSet<Visit> Visits { get; set; } = null!;
     public DbSet<Reminder> Reminders { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
-    public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+    public DbSet<LedgerEntry> LedgerEntries { get; set; } = null!;
+
+    public DbSet<Notification> Notifications { get; set; } = null!;
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,5 +77,25 @@ public class VetCrmDbContext : DbContext
                 b.Property(x => x.CreatedAt)
                     .HasDefaultValueSql("NOW()");
             });
+        
+        modelBuilder.Entity<User>(b =>
+        {
+            b.Property(u => u.FullName).IsRequired().HasMaxLength(120);
+            b.Property(u => u.Username).IsRequired().HasMaxLength(50);
+            b.Property(u => u.Email).HasMaxLength(120);
+
+            b.HasIndex(u => u.Username).IsUnique(); // aynı username bir daha olmasın
+        });
+
+        modelBuilder.Entity<Notification>(b =>
+        {
+            b.Property(n => n.Type).IsRequired().HasMaxLength(50);
+            b.Property(n => n.Message).IsRequired().HasMaxLength(500);
+            b.HasOne(n => n.User)
+                .WithMany() // istersen User.Notifications koleksiyonu da ekleyebilirsin
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
     }
 }

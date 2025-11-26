@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VetCrm.Infrastructure.Data;
@@ -11,9 +12,11 @@ using VetCrm.Infrastructure.Data;
 namespace VetCrm.Infrastructure.Migrations
 {
     [DbContext(typeof(VetCrmDbContext))]
-    partial class VetCrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251124194116_AddPasswordHashToUsers")]
+    partial class AddPasswordHashToUsers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -53,43 +56,6 @@ namespace VetCrm.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("LedgerEntries");
-                });
-
-            modelBuilder.Entity("VetCrm.Domain.Entities.Notification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("VisitId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("VetCrm.Domain.Entities.Owner", b =>
@@ -211,13 +177,11 @@ namespace VetCrm.Infrastructure.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
+                        .HasColumnType("text");
 
                     b.Property<string>("FullName")
                         .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
+                        .HasColumnType("text");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -227,15 +191,7 @@ namespace VetCrm.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("Username")
-                        .IsUnique();
 
                     b.ToTable("Users");
                 });
@@ -253,9 +209,6 @@ namespace VetCrm.Infrastructure.Migrations
 
                     b.Property<int?>("CreatedByUserId")
                         .HasColumnType("integer");
-
-                    b.Property<decimal?>("CreditAmountTl")
-                        .HasColumnType("numeric");
 
                     b.Property<int?>("DoctorId")
                         .HasColumnType("integer");
@@ -290,17 +243,6 @@ namespace VetCrm.Infrastructure.Migrations
                     b.HasIndex("PetId");
 
                     b.ToTable("Visits");
-                });
-
-            modelBuilder.Entity("VetCrm.Domain.Entities.Notification", b =>
-                {
-                    b.HasOne("VetCrm.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("VetCrm.Domain.Entities.Pet", b =>

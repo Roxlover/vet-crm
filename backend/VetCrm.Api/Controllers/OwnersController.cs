@@ -3,9 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using VetCrm.Api.Dtos;
 using VetCrm.Domain.Entities;
 using VetCrm.Infrastructure.Data;
-
+using Microsoft.AspNetCore.Authorization;
 namespace VetCrm.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class OwnersController : ControllerBase

@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VetCrm.Infrastructure.Data;
 using VetCrm.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 
 namespace VetCrm.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class DoctorsController : ControllerBase

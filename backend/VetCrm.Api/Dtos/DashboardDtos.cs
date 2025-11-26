@@ -9,6 +9,7 @@ public class ReminderItemDto
     public DateOnly ReminderDate { get; set; }
     public DateOnly AppointmentDate { get; set; }
     public string Procedures { get; set; } = "";
+    public decimal? CreditAmountTl { get; set; } 
 }
 
 

@@ -10,4 +10,6 @@ public class CalendarAppointmentDto
     public string? Purpose { get; set; }
 
     public string? DoctorName { get; set; }
+    public string? CreatedByUsername { get; set; }
+    public string? CreatedByName { get; set; }
 }
