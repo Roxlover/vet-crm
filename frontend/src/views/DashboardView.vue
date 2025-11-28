@@ -194,7 +194,6 @@
     </div>
   </div>
 
-  <!-- İstersen boş gün göstergesi -->
   <div
     v-if="!day.appointments || day.appointments.length === 0"
     class="no-event-placeholder"
@@ -239,10 +238,12 @@
           <img :src="selectedVisit.imageUrl" alt="Ziyaret görseli" />
         </div>
 
-        <!-- İŞLEM DURUMU -->
         <hr class="divider" />
 
-        <div class="status-row">
+        <div
+          v-if="canEditIslemDurumu"
+          class="status-row"
+        >
           <div class="status-text">
             <strong>İşlem durumu:</strong>
             <span>Bu işlem işleme alındı mı?</span>
@@ -262,9 +263,10 @@
             >
               Yapıldı
             </button>
-
           </div>
         </div>
+
+
         <!-- VERESİYE GÖRÜNÜMÜ + EDİT -->
         <div class="credit-row">
           <div class="credit-text">
@@ -503,6 +505,11 @@ const selectedDoctorId = ref(null)
 const creditEditOpen = ref(false)
 const creditAmount = ref('')
 const savingCredit = ref(false)
+const rawUser = getUser()
+
+const canEditIslemDurumu = computed(() =>
+  rawUser && ['BullBoss', 'sila'].includes(rawUser.username)
+)
 
 onMounted(async () => {
   await loadSummary()
