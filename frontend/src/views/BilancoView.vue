@@ -7,7 +7,7 @@
       </p>
     </header>
 
-    <!-- ÜST ÖZET KUTULARI -->
+    <!-- ÜST ÖZET KUTULARI (manuel gelir/gider) -->
     <section class="cards">
       <div class="card kpi income">
         <h2>Toplam Gelir</h2>
@@ -23,7 +23,7 @@
       </div>
     </section>
 
-    <!-- FİLTRE + TARİH ARALIĞI -->
+    <!-- FİLTRE + TARİH ARALIĞI (TEK FİLTRE BURASI) -->
     <section class="card controls">
       <div class="date-range">
         <div class="field">
@@ -37,7 +37,7 @@
         <div class="buttons">
           <button class="btn" @click="setToday">Bugün</button>
           <button class="btn" @click="setThisWeek">Bu Hafta</button>
-          <button class="btn primary" @click="loadLedger">Yenile</button>
+          <button class="btn primary" @click="loadLedger">Getir</button>
         </div>
       </div>
     </section>
@@ -118,66 +118,73 @@
       </form>
     </section>
 
-    <div class="filters">
-  <input type="date" v-model="from" />
-  <input type="date" v-model="to" />
-  <button @click="loadLedger">Getir</button>
-</div>
-
-<!-- Özet kutular -->
+    <!-- ZİYARETLERDEN GELEN ÖZET -->
 <div v-if="summary" class="cards summary-cards">
-  <div class="card">
-    <h3>Toplam Tutar</h3>
-    <p>{{ summary.totalAmount.toLocaleString('tr-TR') }} TL</p>
+  <div class="card summary-card">
+    <h3>Ziyaret Toplam Tutar</h3>
+    <p class="summary-subtitle">Ziyaret kartlarındaki işlem tutarları</p>
+    <p class="summary-value">
+      {{ summary.totalAmount.toLocaleString('tr-TR') }} TL
+    </p>
   </div>
-  <div class="card">
-    <h3>Tahsil Edilen</h3>
-    <p>{{ summary.totalCollected.toLocaleString('tr-TR') }} TL</p>
+  <div class="card summary-card">
+    <h3>Ziyaret Tahsil</h3>
+    <p class="summary-subtitle">“Ne kadar alındı” alanlarının toplamı</p>
+    <p class="summary-value">
+      {{ summary.totalCollected.toLocaleString('tr-TR') }} TL
+    </p>
   </div>
-  <div class="card">
-    <h3>Veresiye</h3>
-    <p>{{ summary.totalCredit.toLocaleString('tr-TR') }} TL</p>
+  <div class="card summary-card">
+    <h3>Ziyaret Veresiye</h3>
+    <p class="summary-subtitle">Veresiye kalan tutar</p>
+    <p class="summary-value">
+      {{ summary.totalCredit.toLocaleString('tr-TR') }} TL
+    </p>
   </div>
-  <div class="card">
-    <h3>İşlem Sayısı</h3>
-    <p>{{ summary.visitCount }}</p>
+  <div class="card summary-card">
+    <h3>Ziyaret Sayısı</h3>
+    <p class="summary-subtitle">Seçili aralıktaki toplam ziyaret</p>
+    <p class="summary-value">
+      {{ summary.visitCount }}
+    </p>
   </div>
 </div>
 
-<!-- Ziyaret gelir detayı -->
-<section v-if="rows.length" class="card detail-card">
-  <div class="card-header">
-    <h2>Ziyaretlerden Oluşan Gelirler</h2>
-    <span class="small">({{ from }} – {{ to }})</span>
-  </div>
 
-  <table class="table detail-table">
-    <thead>
-      <tr>
-        <th>Tarih</th>
-        <th>Hasta</th>
-        <th>Sahip</th>
-        <th class="amount">Toplam</th>
-        <th class="amount">Alınan</th>
-        <th class="amount">Veresiye</th>
-        <th>Ekleyen</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="r in rows" :key="r.visitId">
-        <td>{{ new Date(r.performedAt).toLocaleDateString('tr-TR') }}</td>
-        <td>{{ r.petName }}</td>
-        <td>{{ r.ownerName }}</td>
-        <td class="amount">{{ r.totalAmount.toLocaleString('tr-TR') }} TL</td>
-        <td class="amount">{{ r.collectedAmount.toLocaleString('tr-TR') }} TL</td>
-        <td class="amount">{{ r.creditAmount.toLocaleString('tr-TR') }} TL</td>
-        <td>{{ r.createdByName || r.createdByUsername }}</td>
-      </tr>
-    </tbody>
-  </table>
-</section>
+    <!-- ZİYARET GELİR DETAY TABLOSU -->
+    <section v-if="rows.length" class="card detail-card">
+      <div class="card-header">
+        <h2>Ziyaretlerden Oluşan Gelirler</h2>
+        <span class="small">({{ from }} – {{ to }})</span>
+      </div>
 
-    <!-- LİSTE -->
+      <table class="table detail-table">
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Hasta</th>
+            <th>Sahip</th>
+            <th class="amount">Toplam</th>
+            <th class="amount">Alınan</th>
+            <th class="amount">Veresiye</th>
+            <th>Ekleyen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in rows" :key="r.visitId">
+            <td>{{ new Date(r.performedAt).toLocaleDateString('tr-TR') }}</td>
+            <td>{{ r.petName }}</td>
+            <td>{{ r.ownerName }}</td>
+            <td class="amount">{{ r.totalAmount.toLocaleString('tr-TR') }} TL</td>
+            <td class="amount">{{ r.collectedAmount.toLocaleString('tr-TR') }} TL</td>
+            <td class="amount">{{ r.creditAmount.toLocaleString('tr-TR') }} TL</td>
+            <td>{{ r.createdByName || r.createdByUsername }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- MANUEL GELİR/GİDER LİSTESİ -->
     <section class="card list-card">
       <div class="card-header">
         <h2>
@@ -232,18 +239,18 @@ import {
   fetchLedgerSummary,
   fetchLedgerItems,
   createLedgerEntry,
-  fetchLedgerRange, // İleride lazım olur diye bıraktım, istersen silebilirsin
+  fetchLedgerRange,
 } from '@/api/ledger'
 
 // === GENEL STATE ===
-const entries = ref([])      // Manuel gelir/gider kayıtları (istersek kullanırız)
+const entries = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
 
 // Ziyaret bazlı özetler
-const summary = ref(null)    // { totalAmount, totalCollected, totalCredit, visitCount }
-const rows = ref([])         // visit-items tablosu
+const summary = ref(null)
+const rows = ref([])
 
 // --- TARİH ARALIĞI ---
 function toIsoDate(date) {
@@ -258,7 +265,7 @@ const to = ref(toIsoDate(today))
 const form = ref({
   date: toIsoDate(today),
   amount: null,
-  type: 'income', // 'income' | 'expense'
+  type: 'income',
   category: '',
   note: '',
 })
@@ -296,7 +303,7 @@ function setToday() {
 
 function setThisWeek() {
   const now = new Date()
-  const day = now.getDay() || 7 // pazarı 7 say
+  const day = now.getDay() || 7 // Pazar 0 -> 7
   const monday = new Date(now)
   monday.setDate(now.getDate() - (day - 1))
   const sunday = new Date(monday)
@@ -313,14 +320,12 @@ async function loadLedger() {
   error.value = ''
 
   try {
-    // 1) Ziyaretlerden üretilen bilanço özetleri
     const s = await fetchLedgerSummary(from.value, to.value)
     const list = await fetchLedgerItems(from.value, to.value)
 
     summary.value = s
     rows.value = list
 
-    // 2) (İstersen) manuel ledger kayıtlarını da çekelim
     const rangeData = await fetchLedgerRange(from.value, to.value)
     entries.value = rangeData
   } catch (e) {
@@ -350,12 +355,10 @@ async function submitEntry() {
   try {
     const created = await createLedgerEntry(payload)
 
-    // Tarih aralığı içindeyse local listeye ekle
     if (created.date >= from.value && created.date <= to.value) {
       entries.value.unshift(created)
     }
 
-    // Formu sıfırla (tarih bugünde kalsın)
     form.value.amount = null
     form.value.category = ''
     form.value.note = ''
@@ -370,7 +373,6 @@ async function submitEntry() {
 
 // === SAYFA AÇILIRKEN ===
 onMounted(() => {
-  // Açılışta bu ay
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth(), 1)
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
@@ -523,28 +525,17 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-/* LİSTE */
-.list-card {
-  margin-top: 1rem;
+/* ORTA ÖZET VE DETAY */
+.summary-cards {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
-.card-header {
-  margin-bottom: 0.5rem;
-  display: flex;
-  justify-content: space-between;
+.detail-card {
+  margin-top: 0.5rem;
 }
 
-.card-header .small {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.state {
-  font-size: 0.9rem;
-  color: #6b7280;
-  padding: 0.4rem 0;
-}
-
+/* ORTAK TABLO STİLLERİ */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -569,6 +560,44 @@ onMounted(() => {
   text-align: right;
 }
 
+Detay tablosu için ekstra dokunuş
+.detail-table thead tr {
+  background: #f3f4f6;
+}
+
+.detail-table th.amount,
+.detail-table td.amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table tbody tr:nth-child(odd) {
+  background: #f9fafb;
+}
+
+/* LİSTE KARTI */
+.list-card {
+  margin-top: 1rem;
+}
+
+.card-header {
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.card-header .small {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.state {
+  font-size: 0.9rem;
+  color: #6b7280;
+  padding: 0.4rem 0;
+}
+
+/* BADGE’LER */
 .badge {
   display: inline-block;
   padding: 0.1rem 0.4rem;
@@ -596,44 +625,4 @@ onMounted(() => {
     align-items: stretch;
   }
 }
-/* Özet + detay aralarına nefes */
-.summary-cards {
-  margin-top: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-/* Ziyaret detay kartı */
-.detail-card {
-  margin-top: 0.5rem;
-}
-
-/* Detay tablosu, mevcut .table ile aynı çizgide */
-.detail-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.detail-table thead tr {
-  background: #f3f4f6;
-}
-
-.detail-table th,
-.detail-table td {
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-/* Para kolonlarını sağa hizala ve tek satırda tut */
-.detail-table th.amount,
-.detail-table td.amount {
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* Satırlar arasında hafif zebra efekti */
-.detail-table tbody tr:nth-child(odd) {
-  background: #f9fafb;
-}
-
 </style>

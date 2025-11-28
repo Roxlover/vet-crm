@@ -450,7 +450,7 @@
 
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed  } from 'vue'
 import {  fetchReminderSummary,
   fetchReminders,
   fetchVisitDetail,
@@ -461,6 +461,8 @@ import {  fetchReminderSummary,
   searchOwners, } from '../api/dashboard'
 import { http } from '@/api/http'
 import { useRouter } from 'vue-router'
+import { getUser } from '@/utils/auth'
+
 
 
 const activeView = ref('list')          // 'list' | 'calendar' notunu istersen yorumda yaz
