@@ -33,3 +33,35 @@ public class CreateLedgerEntryDto
     public int? VisitId { get; set; }
     public int? CreatedByUserId { get; set; }  // şimdilik manuel 1 gönderebiliriz
 }
+
+public class LedgerSummaryDto
+{
+    // Toplam yazılan işlem tutarı (fatura/fiş gibi düşün)
+    public decimal TotalAmount { get; set; }
+
+    // Tahsil edilen (nakit/kart)
+    public decimal TotalCollected { get; set; }
+
+    // Halen veresiye kalan
+    public decimal TotalCredit { get; set; }
+
+    // Ziyaret adedi
+    public int VisitCount { get; set; }
+}
+
+public class LedgerItemDto
+{
+    public int VisitId { get; set; }
+    public DateTime PerformedAt { get; set; }
+
+    public string PetName { get; set; } = null!;
+    public string OwnerName { get; set; } = null!;
+    public string? OwnerPhoneE164 { get; set; }
+
+    public decimal TotalAmount { get; set; }
+    public decimal CollectedAmount { get; set; }
+    public decimal CreditAmount { get; set; }
+
+    public string? CreatedByUsername { get; set; }
+    public string? CreatedByName { get; set; }
+}

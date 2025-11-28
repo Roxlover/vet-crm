@@ -118,6 +118,65 @@
       </form>
     </section>
 
+    <div class="filters">
+  <input type="date" v-model="from" />
+  <input type="date" v-model="to" />
+  <button @click="loadLedger">Getir</button>
+</div>
+
+<!-- Özet kutular -->
+<div v-if="summary" class="cards summary-cards">
+  <div class="card">
+    <h3>Toplam Tutar</h3>
+    <p>{{ summary.totalAmount.toLocaleString('tr-TR') }} TL</p>
+  </div>
+  <div class="card">
+    <h3>Tahsil Edilen</h3>
+    <p>{{ summary.totalCollected.toLocaleString('tr-TR') }} TL</p>
+  </div>
+  <div class="card">
+    <h3>Veresiye</h3>
+    <p>{{ summary.totalCredit.toLocaleString('tr-TR') }} TL</p>
+  </div>
+  <div class="card">
+    <h3>İşlem Sayısı</h3>
+    <p>{{ summary.visitCount }}</p>
+  </div>
+</div>
+
+<!-- Ziyaret gelir detayı -->
+<section v-if="rows.length" class="card detail-card">
+  <div class="card-header">
+    <h2>Ziyaretlerden Oluşan Gelirler</h2>
+    <span class="small">({{ from }} – {{ to }})</span>
+  </div>
+
+  <table class="table detail-table">
+    <thead>
+      <tr>
+        <th>Tarih</th>
+        <th>Hasta</th>
+        <th>Sahip</th>
+        <th class="amount">Toplam</th>
+        <th class="amount">Alınan</th>
+        <th class="amount">Veresiye</th>
+        <th>Ekleyen</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="r in rows" :key="r.visitId">
+        <td>{{ new Date(r.performedAt).toLocaleDateString('tr-TR') }}</td>
+        <td>{{ r.petName }}</td>
+        <td>{{ r.ownerName }}</td>
+        <td class="amount">{{ r.totalAmount.toLocaleString('tr-TR') }} TL</td>
+        <td class="amount">{{ r.collectedAmount.toLocaleString('tr-TR') }} TL</td>
+        <td class="amount">{{ r.creditAmount.toLocaleString('tr-TR') }} TL</td>
+        <td>{{ r.createdByName || r.createdByUsername }}</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
     <!-- LİSTE -->
     <section class="card list-card">
       <div class="card-header">
@@ -169,44 +228,57 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { fetchLedgerRange, createLedgerEntry } from '@/api/ledger'
+import {
+  fetchLedgerSummary,
+  fetchLedgerItems,
+  createLedgerEntry,
+  fetchLedgerRange, // İleride lazım olur diye bıraktım, istersen silebilirsin
+} from '@/api/ledger'
 
-// === STATE ===
-const entries = ref([])          // API'den gelen düz array
+// === GENEL STATE ===
+const entries = ref([])      // Manuel gelir/gider kayıtları (istersek kullanırız)
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
 
-// Tarih aralığı (default: bugün)
-const todayIso = new Date().toISOString().slice(0, 10)
-const from = ref(todayIso)
-const to = ref(todayIso)
+// Ziyaret bazlı özetler
+const summary = ref(null)    // { totalAmount, totalCollected, totalCredit, visitCount }
+const rows = ref([])         // visit-items tablosu
 
-// Form state
+// --- TARİH ARALIĞI ---
+function toIsoDate(date) {
+  return date.toISOString().slice(0, 10)
+}
+
+const today = new Date()
+const from = ref(toIsoDate(today))
+const to = ref(toIsoDate(today))
+
+// FORM STATE
 const form = ref({
-  date: todayIso,
+  date: toIsoDate(today),
   amount: null,
-  type: 'income',   // 'income' | 'expense'
+  type: 'income', // 'income' | 'expense'
   category: '',
   note: '',
 })
 
-// === COMPUTED TOPLU HESAPLAR ===
+// === COMPUTED TOPLAM GELİR / GİDER (manuel ledger kayıtlarından) ===
 const totalIncome = computed(() =>
   entries.value
     .filter(e => e.isIncome)
-    .reduce((sum, e) => sum + Number(e.amount || 0), 0)
+    .reduce((sum, e) => sum + Number(e.amount || 0), 0),
 )
 
 const totalExpense = computed(() =>
   entries.value
     .filter(e => !e.isIncome)
-    .reduce((sum, e) => sum + Number(e.amount || 0), 0)
+    .reduce((sum, e) => sum + Number(e.amount || 0), 0),
 )
 
 const netTotal = computed(() => totalIncome.value - totalExpense.value)
 
-// === HELPERS ===
+// === HELPERLAR ===
 function formatAmount(value) {
   return Number(value || 0).toLocaleString('tr-TR', {
     minimumFractionDigits: 2,
@@ -215,47 +287,51 @@ function formatAmount(value) {
 }
 
 function setToday() {
-  const t = new Date().toISOString().slice(0, 10)
-  from.value = t
-  to.value = t
+  const d = new Date()
+  const iso = toIsoDate(d)
+  from.value = iso
+  to.value = iso
   loadLedger()
 }
 
 function setThisWeek() {
   const now = new Date()
-  const day = now.getDay() || 7 // Pazarı 7 say
+  const day = now.getDay() || 7 // pazarı 7 say
   const monday = new Date(now)
   monday.setDate(now.getDate() - (day - 1))
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
 
-  from.value = monday.toISOString().slice(0, 10)
-  to.value = sunday.toISOString().slice(0, 10)
+  from.value = toIsoDate(monday)
+  to.value = toIsoDate(sunday)
   loadLedger()
 }
 
-// === API ÇAĞRILARI ===
+// === BACKEND'TEN VERİ ÇEKME ===
 async function loadLedger() {
   loading.value = true
   error.value = ''
+
   try {
-    const params = { from: from.value, to: to.value }
-    console.log('LEDGER RANGE PARAMS >>>', params)
+    // 1) Ziyaretlerden üretilen bilanço özetleri
+    const s = await fetchLedgerSummary(from.value, to.value)
+    const list = await fetchLedgerItems(from.value, to.value)
 
-    const data = await fetchLedgerRange(from.value, to.value)
-    console.log('LEDGER RANGE OK >>>', data)
+    summary.value = s
+    rows.value = list
 
-    // API düz array döndürdüğü için direkt atıyoruz
-    entries.value = Array.isArray(data) ? data : []
+    // 2) (İstersen) manuel ledger kayıtlarını da çekelim
+    const rangeData = await fetchLedgerRange(from.value, to.value)
+    entries.value = rangeData
   } catch (e) {
-    console.error('ledger load error', e)
-    error.value = 'Bilanço verileri yüklenirken hata oluştu.'
-    entries.value = []
+    console.error('loadLedger hata', e)
+    error.value = 'Bilanço verileri yüklenirken bir hata oluştu.'
   } finally {
     loading.value = false
   }
 }
 
+// === YENİ MANUEL GELİR/GİDER KAYDI ===
 async function submitEntry() {
   if (!form.value.date || !form.value.amount) {
     alert('Tarih ve tutar zorunlu.')
@@ -267,24 +343,19 @@ async function submitEntry() {
     amount: Number(form.value.amount),
     isIncome: form.value.type === 'income',
     category: form.value.category || null,
-    description: form.value.note || null,
+    note: form.value.note || null,
   }
-
-  console.log('LEDGER PAYLOAD >>>', payload)
 
   saving.value = true
   try {
     const created = await createLedgerEntry(payload)
-    console.log('LEDGER OK >>>', created)
 
-    // Aralıkta ise listeye ekle, yoksa sadece reload
+    // Tarih aralığı içindeyse local listeye ekle
     if (created.date >= from.value && created.date <= to.value) {
       entries.value.unshift(created)
-    } else {
-      await loadLedger()
     }
 
-    // Formu sıfırla (tarihi bugünde bırak)
+    // Formu sıfırla (tarih bugünde kalsın)
     form.value.amount = null
     form.value.category = ''
     form.value.note = ''
@@ -297,8 +368,16 @@ async function submitEntry() {
   }
 }
 
-// İlk açılışta bugünün hareketlerini getir
+// === SAYFA AÇILIRKEN ===
 onMounted(() => {
+  // Açılışta bu ay
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth(), 1)
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+  from.value = toIsoDate(start)
+  to.value = toIsoDate(end)
+
   loadLedger()
 })
 </script>
@@ -517,4 +596,44 @@ onMounted(() => {
     align-items: stretch;
   }
 }
+/* Özet + detay aralarına nefes */
+.summary-cards {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Ziyaret detay kartı */
+.detail-card {
+  margin-top: 0.5rem;
+}
+
+/* Detay tablosu, mevcut .table ile aynı çizgide */
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.detail-table thead tr {
+  background: #f3f4f6;
+}
+
+.detail-table th,
+.detail-table td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Para kolonlarını sağa hizala ve tek satırda tut */
+.detail-table th.amount,
+.detail-table td.amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Satırlar arasında hafif zebra efekti */
+.detail-table tbody tr:nth-child(odd) {
+  background: #f9fafb;
+}
+
 </style>

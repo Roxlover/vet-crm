@@ -1,7 +1,16 @@
-// frontend/src/api/ledger.js
 import { http } from '@/api/http'
 
-// Günlük / haftalık / aylık kayıtları çeken fonksiyon
+export async function fetchLedgerSummary(from, to) {
+  const { data } = await http.get('/ledger/summary', { params: { from, to } })
+  return data
+}
+
+export async function fetchLedgerItems(from, to) {
+  const { data } = await http.get('/ledger/visit-items', { params: { from, to } })
+  return data
+}
+
+
 export async function fetchLedgerRange(from, to) {
   console.log('LEDGER RANGE PARAMS >>>', { from, to })
 
@@ -21,7 +30,6 @@ export async function fetchLedgerRange(from, to) {
   }
 }
 
-// Yeni gelir/gider satırı ekleyen fonksiyon
 export async function createLedgerEntry(payload) {
   console.log('LEDGER PAYLOAD >>>', payload)
   try {
