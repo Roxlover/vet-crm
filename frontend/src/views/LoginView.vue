@@ -35,7 +35,7 @@ async function onSubmit() {
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h1 class="title">BullVet</h1>
+      <h1 class="title">NL</h1>
       <p class="subtitle">Kullanıcı adı ve şifrenizle giriş yapın</p>
 
       <form @submit.prevent="onSubmit">

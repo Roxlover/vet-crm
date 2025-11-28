@@ -19,4 +19,5 @@ public class VisitDto
     public decimal? CreditAmountTl { get; set; }
     public string? CreatedByUsername { get; set; }
     public string? CreatedByName { get; set; }
+    public int? CreatedByUserId { get; internal set; }
 }

@@ -9,7 +9,7 @@
 
     </span>
     <div class="logo-text">
-      <div class="title">BullVet</div>
+      <div class="title">NL</div>
       <div class="subtitle">Klinik Paneli</div>
     </div>
   </div>
@@ -53,7 +53,7 @@
     <main class="main">
       <header class="topbar">
         <div class="topbar-title">
-          BullVet – Veteriner Aşı Takip Paneli
+          NL – Veteriner Aşı Takip Paneli
         </div>
       </header>
 

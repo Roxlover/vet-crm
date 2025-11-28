@@ -18,6 +18,8 @@ public class Visit
     public int? DoctorId { get; set; }
     public User? Doctor { get; set; }
     public int? CreatedByUserId { get; set; }
-    public User? CreatedByUser { get; set; }
+    public string? CreatedByUsername { get; set; }
+    public string? CreatedByName { get; set; }
+    public User? CreatedByUser { get; set; }    
     public decimal? CreditAmountTl { get; set; }
 }

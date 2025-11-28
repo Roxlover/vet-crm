@@ -74,10 +74,9 @@ public class VisitsController : ControllerBase
                 AmountTl = v.AmountTl,
                 Notes = v.Notes,
                 NextDate = v.NextDate,
-
-                // 🔴 ekleyen
-                CreatedByUsername = v.CreatedByUser != null ? v.CreatedByUser.Username : null,
-                CreatedByName     = v.CreatedByUser != null ? v.CreatedByUser.FullName : null
+                CreatedByUserId = v.CreatedByUserId,
+                CreatedByUsername = v.CreatedByUsername,
+                CreatedByName = v.CreatedByName
             })
             .ToListAsync();
 
@@ -104,9 +103,9 @@ public class VisitsController : ControllerBase
                 AmountTl = v.AmountTl,
                 Notes = v.Notes,
                 NextDate = v.NextDate,
-
-                CreatedByUsername = v.CreatedByUser != null ? v.CreatedByUser.Username : null,
-                CreatedByName     = v.CreatedByUser != null ? v.CreatedByUser.FullName : null
+                CreatedByUserId = v.CreatedByUserId,
+                CreatedByUsername = v.CreatedByUsername,
+                CreatedByName = v.CreatedByName
             })
             .FirstOrDefaultAsync();
 
@@ -134,22 +133,22 @@ public class VisitsController : ControllerBase
             AmountTl = dto.AmountTl,
             Notes = dto.Notes,
             NextDate = dto.NextDate,
-            Purpose = dto.Purpose
+            Purpose = dto.Purpose,
         };
 
         // 🔴 Giriş yapan kullanıcıyı bağla
         var userId = _currentUser.UserId;
         if (userId.HasValue)
-        {
             visit.CreatedByUserId = userId.Value;
-        }
+
+        visit.CreatedByUsername = _currentUser.Username;
+        visit.CreatedByName = _currentUser.FullName;
 
         _db.Visits.Add(visit);
         await _db.SaveChangesAsync();
 
         SyncReminderForVisit(visit);
         await _db.SaveChangesAsync();
-
         var result = new VisitDto
         {
             Id = visit.Id,
@@ -162,10 +161,9 @@ public class VisitsController : ControllerBase
             AmountTl = visit.AmountTl,
             Notes = visit.Notes,
             NextDate = visit.NextDate,
-
-            // 🔴 geri dönerken de ekleyen bilgisini dolduralım
-            CreatedByUsername = _currentUser.Username,
-            CreatedByName     = _currentUser.FullName
+            CreatedByUserId = visit.CreatedByUserId,
+            CreatedByUsername = visit.CreatedByUsername,
+            CreatedByName = visit.CreatedByName
         };
 
         return CreatedAtAction(nameof(GetVisit), new { id = visit.Id }, result);
