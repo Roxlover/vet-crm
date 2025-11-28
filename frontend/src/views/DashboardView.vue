@@ -802,23 +802,25 @@ async function saveCredit() {
 }
 
 
+
 async function markReminder(completed) {
   if (!selectedReminderId.value) return
 
+  statusSaving.value = true
   try {
     await http.patch(`/reminders/${selectedReminderId.value}/status`, {
       completed,
       markAsOverdue: !completed,
     })
 
-    // Özet ve listeyi tazele
     await loadSummary()
     await loadList(completed ? 'done' : 'overdue')
 
-    // Modalı kapat
     closeDetail()
   } catch (e) {
-    console.error(e)
+    console.error('markReminder error >>>', e)
+  } finally {
+    statusSaving.value = false
   }
 }
 
