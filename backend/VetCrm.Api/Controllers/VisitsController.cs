@@ -74,9 +74,11 @@ public class VisitsController : ControllerBase
                 AmountTl = v.AmountTl,
                 Notes = v.Notes,
                 NextDate = v.NextDate,
-                CreatedByUserId = v.CreatedByUserId,
+                DoctorId = v.DoctorId,
+                DoctorName = v.Doctor != null ? v.Doctor.FullName : null,
+                CreatedByUserId   = v.CreatedByUserId,
                 CreatedByUsername = v.CreatedByUsername,
-                CreatedByName = v.CreatedByName
+                CreatedByName     = v.CreatedByName
             })
             .ToListAsync();
 
@@ -89,7 +91,8 @@ public class VisitsController : ControllerBase
         var visit = await _db.Visits
             .Include(v => v.Pet)
                 .ThenInclude(p => p.Owner)
-            .Include(v => v.CreatedByUser)               // 🔴
+            .Include(v => v.CreatedByUser)
+            .Include(v => v.Doctor) 
             .Where(v => v.Id == id)
             .Select(v => new VisitDto
             {
@@ -134,6 +137,10 @@ public class VisitsController : ControllerBase
             Notes = dto.Notes,
             NextDate = dto.NextDate,
             Purpose = dto.Purpose,
+            // DoctorId = dto.DoctorId, 
+            CreatedByUserId   = _currentUser.UserId,
+            CreatedByUsername = _currentUser.Username,
+            CreatedByName     = _currentUser.FullName
         };
 
         // 🔴 Giriş yapan kullanıcıyı bağla
@@ -161,6 +168,7 @@ public class VisitsController : ControllerBase
             AmountTl = visit.AmountTl,
             Notes = visit.Notes,
             NextDate = visit.NextDate,
+            DoctorName = visit.Doctor != null ? visit.Doctor.FullName : null,
             CreatedByUserId = visit.CreatedByUserId,
             CreatedByUsername = visit.CreatedByUsername,
             CreatedByName = visit.CreatedByName

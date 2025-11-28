@@ -59,7 +59,11 @@ public class CalendarController : ControllerBase
             CreatedByName = v.CreatedByUser != null ? v.CreatedByUser.FullName : null,
             CreditAmountTl = v.CreditAmountTl,
 
-        }).ToList();
+        })
+        .OrderBy(a => a.ScheduledAt)
+        .ThenBy(a => a.OwnerName)
+        .ThenBy(a => a.PetName)
+        .ToList();
 
         return Ok(dtos);
     }

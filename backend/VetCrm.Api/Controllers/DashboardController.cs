@@ -188,36 +188,39 @@ public async Task<ActionResult<List<ReminderItemDto>>> GetReminders(
 
     // ============= ZİYARET DETAYI (modal için) =============
     [HttpGet("visit/{id:int}")]
-    public async Task<ActionResult<VisitDetailDto>> GetVisitDetail(int id)
-    {
-        var v = await _db.Visits
-            .Include(x => x.Pet)!.ThenInclude(p => p.Owner)
-            .FirstOrDefaultAsync(x => x.Id == id);
-
-        if (v == null)
-            return NotFound();
-
-       var dto = new VisitDetailDto
+public async Task<ActionResult<DashboardVisitDetailDto>> GetVisitDetail(int id)
+{
+    var dto = await _db.Visits
+        .Include(v => v.Pet).ThenInclude(p => p.Owner)
+        .Include(v => v.Doctor)
+        .Where(v => v.Id == id)
+        .Select(v => new DashboardVisitDetailDto
         {
             Id = v.Id,
-            PetId = v.PetId,                           // 🔴
-            OwnerId = v.Pet.OwnerId,                   // 🔴
-            PetName = v.Pet!.Name,
-            OwnerName = v.Pet.Owner!.FullName,
+            PetId = v.PetId,
+            PetName = v.Pet.Name,
+            OwnerId = v.Pet.OwnerId,
+            OwnerName = v.Pet.Owner.FullName,
             PerformedAt = v.PerformedAt,
-            NextDate = v.NextDate.HasValue
-                ? v.NextDate.Value.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero))
-                : (DateTime?)null,
+            NextDate = v.NextDate,
             Purpose = v.Purpose,
-            Procedures = v.Procedures ?? string.Empty,
+            Procedures = v.Procedures,
             AmountTl = v.AmountTl,
-            Notes = v.Notes ?? string.Empty,
-            ImageUrl = v.ImageUrl,
-            CreatedByUsername = v.CreatedByUser != null ? v.CreatedByUser.Username : null,
-            CreatedByName = v.CreatedByUser != null ? v.CreatedByUser.FullName : null,
+            Notes = v.Notes,
             CreditAmountTl = v.CreditAmountTl,
-        };
+            ImageUrl = v.ImageUrl,
 
-        return Ok(dto);
-    }
+            DoctorId = v.DoctorId,
+            DoctorName = v.Doctor != null ? v.Doctor.FullName : null,
+
+            CreatedByUserId   = v.CreatedByUserId,
+            CreatedByUsername = v.CreatedByUsername,
+            CreatedByName     = v.CreatedByName
+        })
+        .FirstOrDefaultAsync();
+
+    if (dto == null) return NotFound();
+    return Ok(dto);
+}
+
 }

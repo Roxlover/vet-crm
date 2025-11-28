@@ -20,4 +20,6 @@ public class VisitDto
     public string? CreatedByUsername { get; set; }
     public string? CreatedByName { get; set; }
     public int? CreatedByUserId { get; internal set; }
+    public int? DoctorId { get; set; }
+    public string? DoctorName { get; set; }
 }
