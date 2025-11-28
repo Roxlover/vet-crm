@@ -28,14 +28,23 @@ a {
 /* Sidebar */
 
 .sidebar {
-  width: 240px;
-  background: #585e68;
-  /* background: #111827; */
-  color: #e5e7eb;
-  padding: 1.25rem 1rem;
-  display: flex;
-  flex-direction: column;
+    width: 240px;
+    background-color: #020617;
+
+    background-image:
+        radial-gradient(1px 1px at 10px 10px, #ffffff 0, transparent 50%),
+        radial-gradient(1px 1px at 30px 40px, #ffffff 0, transparent 50%),
+        radial-gradient(1px 1px at 50px 20px, #ffffff 0, transparent 50%),
+        radial-gradient(1px 1px at 70px 50px, #ffffff 0, transparent 50%);
+
+    background-size: 80px 80px;
+
+    color: #e5e7eb;
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
 }
+
 
 .logo {
   display: flex;
