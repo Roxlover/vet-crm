@@ -234,10 +234,6 @@
           {{ selectedVisit.createdByUsername || selectedVisit.createdByName }}
         </p>
 
-        <div v-if="selectedVisit.imageUrl" class="image-box">
-          <img :src="selectedVisit.imageUrl" alt="Ziyaret görseli" />
-        </div>
-
         <hr class="divider" />
 
         <div
@@ -265,6 +261,63 @@
             </button>
           </div>
         </div>
+
+<!-- Görsel alanı -->
+<div v-if="selectedVisit">
+  <div
+    v-if="selectedVisit.imageUrl"
+    class="visit-image-block"
+  >
+    <button
+      type="button"
+      class="btn-secondary"
+      @click="showImagePreview = !showImagePreview"
+    >
+      {{ showImagePreview ? 'Görseli gizle' : 'Son eklenen görseli göster' }}
+    </button>
+
+    <div v-if="showImagePreview" class="visit-image-preview">
+      <div v-if="selectedVisit.imageUrl">
+  <button @click="showImage = !showImage" class="btn-small">
+    {{ showImage ? 'Görseli gizle' : 'Görseli göster' }}
+  </button>
+
+      <div v-if="showImage" class="visit-image-thumb">
+        <img
+          :src="visitImageSrc"
+          alt="Ziyaret görseli"
+          @click="openImageModal"
+        />
+      </div>
+    </div>
+
+
+
+    </div>
+  </div>
+  <!-- TAM EKRAN GÖRSEL MODALI -->
+<div
+  v-if="showImageModal"
+  class="image-modal-backdrop"
+  @click.self="closeImageModal"
+>
+  <div class="image-modal-content">
+    <img :src="visitImageSrc" alt="Ziyaret görseli" />
+    <button class="image-modal-close" @click="closeImageModal">
+      ✕
+    </button>
+  </div>
+</div>
+
+  <div v-else class="visit-image-empty">
+    Bu ziyarete ait kayıtlı görsel bulunmuyor.
+  </div>
+</div>
+
+
+
+
+
 
 
         <!-- VERESİYE GÖRÜNÜMÜ + EDİT -->
@@ -464,6 +517,7 @@ import {  fetchReminderSummary,
 import { http } from '@/api/http'
 import { useRouter } from 'vue-router'
 import { getUser } from '@/utils/auth'
+import { API_BASE } from '@/api/http'
 
 
 
@@ -506,10 +560,21 @@ const creditEditOpen = ref(false)
 const creditAmount = ref('')
 const savingCredit = ref(false)
 const rawUser = getUser()
-
+const showImagePreview = ref(false)
 const canEditIslemDurumu = computed(() =>
   rawUser && ['BullBoss', 'sila'].includes(rawUser.username)
 )
+const showImage = ref(false) 
+const showImageModal = ref(false) 
+
+const visitImageSrc = computed(() => {
+  if (!selectedVisit.value?.imageUrl) return ''
+
+  const url = selectedVisit.value.imageUrl
+  return url.startsWith('http') ? url : API_BASE + url
+})
+
+
 
 onMounted(async () => {
   await loadSummary()
@@ -524,6 +589,14 @@ async function showCalendar() {
   }
 }
 
+function openImageModal() {
+  if (!visitImageSrc.value) return
+  showImageModal.value = true
+}
+
+function closeImageModal() {
+  showImageModal.value = false
+}
 function toIsoDate(d) {
   return d.toISOString().slice(0, 10) // YYYY-MM-DD
 }
@@ -718,6 +791,7 @@ function formatTime(iso) {
 
 async function openVisit(item) {
   console.log('openVisit item >>>', item)
+  showImagePreview.value = false
   showDetail.value = true
   detailLoading.value = true
   selectedVisit.value = null
@@ -1310,6 +1384,55 @@ function titleForFilter() {
   cursor: default;
 }
 
+.visit-image-thumb img {
+  max-width: 100%;
+  max-height: 120px;
+  border-radius: 8px;
+  cursor: pointer;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+/* MODAL ARKA PLAN */
+.image-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* MODAL İÇİ */
+.image-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.image-modal-content img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* KAPAT BUTONU */
+.image-modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 16px;
+}
 
 .calendar-card {
   margin-top: 0.5rem;
@@ -1532,6 +1655,47 @@ section.calendar-section {
   background: #fef3c7;
   color: #92400e;
   font-size: 0.72rem;
+}
+
+.image-box {
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #eee;
+  max-height: 260px;
+}
+
+.image-box img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.visit-image-block {
+  margin-top: 12px;
+}
+
+.visit-image-preview {
+  margin-top: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e5e5;
+  max-height: 260px;
+  background: #f7f7f7;
+}
+
+.visit-image-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.visit-image-empty {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #999;
 }
 
 </style>

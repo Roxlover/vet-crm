@@ -104,14 +104,26 @@
           <textarea v-model="form.notes" rows="3" />
         </div>
 
-        <div class="field">
-          <label>Görsel ekleme</label>
-          <input type="file" @change="onFileChange" />
-          <small class="hint">
-            Örn: yara fotoğrafı, faturanın görüntüsü vb. (şimdilik sadece
-            tutulmuyor).
-          </small>
-        </div>
+<div class="field">
+  <label>Görsel çek / ekle</label>
+
+  <input
+    type="file"
+    accept="image/*"
+    capture="environment"
+    @change="onFileChange"
+  />
+
+  <small class="hint">
+    Örn: yara fotoğrafı, faturanın görüntüsü vb.
+  </small>
+
+  <div v-if="form.imagePreview" class="visit-image-preview">
+    <img :src="form.imagePreview" alt="Seçilen görsel" />
+  </div>
+</div>
+
+
 
         <p v-if="error" class="state state-error">{{ error }}</p>
         <p v-if="success" class="state state-success">{{ success }}</p>
@@ -131,6 +143,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { fetchOwners } from '../api/owners'
 import { fetchPetsByOwner } from '../api/pets'
 import { createVisit } from '../api/visits'
+import { http } from '@/api/http'
 
 const owners = ref([])
 const pets = ref([])
@@ -156,7 +169,8 @@ const form = reactive({
   ownerStatus: '',
   notes: '',
   imageFile: null,
-})
+  imagePreview: '',
+  })
 
 // Seçilen sahip için pet listesi
 const petsForSelectedOwner = computed(() =>
@@ -207,8 +221,17 @@ watch(selectedPetId, (newId) => {
 })
 
 function onFileChange(event) {
-  const file = event.target.files?.[0]
-  form.imageFile = file || null
+  const input = event.target
+  const file = input.files?.[0]
+
+  if (!file) {
+    form.imageFile = null
+    form.imagePreview = ''
+    return
+  }
+
+  form.imageFile = file
+  form.imagePreview = URL.createObjectURL(file)
 }
 
 async function handleSave() {
@@ -228,7 +251,7 @@ async function handleSave() {
   saving.value = true
 
   try {
-    // backend için alanları birleştir
+    // 1) Metin alanlarını birleştir
     const proceduresText = form.vaccines
       ? `${form.procedures || ''}\nAşılar: ${form.vaccines}`
       : form.procedures || ''
@@ -238,36 +261,74 @@ async function handleSave() {
     if (form.notes) notesParts.push(form.notes)
     const notesText = notesParts.join('\n')
 
+    // 2) Ziyaret payload
     const payload = {
       petId: Number(selectedPetId.value),
-      performedAt: new Date(form.performedAt).toISOString(), // backend UTC bekliyordu
+      performedAt: new Date(form.performedAt).toISOString(),
       procedures: proceduresText,
       amountTl: form.amountTl ?? 0,
       notes: notesText,
-      nextDate: form.nextDate || null, // DateOnly gibi '2025-11-20' formatı
-      purpose: form.purpose,
+      nextDate: form.nextDate || null,
+      purpose: form.purpose || null,
     }
 
-    await createVisit(payload)
+    // 3) ZİYARET OLUŞTUR
+    const res = await http.post('/visits', payload)
+    const createdVisit = res.data
+    const visitId = createdVisit.id
 
-    success.value = 'Ziyaret kaydı başarıyla oluşturuldu.'
+    // 4) GÖRSEL VARSA, AYRI TRY/CATCH İÇİNDE YÜKLE
+    // 4) GÖRSEL VARSA, AYRI ENDPOINT'E YÜKLE
+if (form.imageFile && visitId) {
+  const fd = new FormData()
+  fd.append('file', form.imageFile)
 
-    // Formu kısmen temizle (sahip/hasta seçimi kalsın istersen)
+  console.log('IMAGE UPLOAD START', {
+    visitId,
+    fileName: form.imageFile.name,
+    size: form.imageFile.size,
+    type: form.imageFile.type,
+  })
+
+  try {
+    const resUpload = await http.post(`/visits/${visitId}/image`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+
+    console.log('IMAGE UPLOAD OK', resUpload.status, resUpload.data)
+  } catch (e) {
+    console.error(
+      'image upload error',
+      e.response?.status,
+      e.response?.data || e.message
+    )
+  }
+}
+
+
+    success.value = 'Ziyaret kaydedildi.'
+
+    // 5) Form temizliği
     form.procedures = ''
     form.vaccines = ''
     form.performedAt = ''
     form.amountTl = null
     form.nextDate = ''
+    form.purpose = ''
     form.ownerStatus = ''
     form.notes = ''
     form.imageFile = null
+    form.imagePreview = ''
   } catch (e) {
-    console.error(e)
-    error.value = 'Kayıt oluşturulurken bir hata oluştu.'
+    console.error('visit save error', e)
+    error.value = 'Ziyaret kaydedilirken bir hata oluştu.'
   } finally {
     saving.value = false
   }
 }
+
+
+
 </script>
 
 <style scoped>

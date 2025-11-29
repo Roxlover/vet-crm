@@ -4,22 +4,23 @@ using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using VetCrm.Api.Options;
 using VetCrm.Api.Services;
+using VetCrm.Api.Storage;
 using VetCrm.Infrastructure.Data;
+using VetCrm.Infrastructure.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CORS için policy adı
 const string FrontendCorsPolicy = "FrontendCors";
 
-// DbContext
+// DB
 builder.Services.AddDbContext<VetCrmDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ReminderProcessor DI
-builder.Services.AddScoped<ReminderProcessor>();
 
-// Hangfire ayarı
+// Hangfire
+builder.Services.AddScoped<ReminderProcessor>();
 builder.Services.AddHangfire(config =>
     config
         .UseSimpleAssemblyNameTypeSerializer()
@@ -29,10 +30,11 @@ builder.Services.AddHangfire(config =>
             options.UseNpgsqlConnection(
                 builder.Configuration.GetConnectionString("DefaultConnection"));
         }));
-
 builder.Services.AddHangfireServer();
 
-// CORS kaydı
+// 🔹 Görsel depolama: local
+builder.Services.AddScoped<IR2Storage, LocalVisitImageStorage>();
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
@@ -46,18 +48,15 @@ builder.Services.AddCors(options =>
 
 // ---------- JWT & CURRENT USER ----------
 
-// appsettings.json → "Jwt" bölümünü JwtSettings ile bağla
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-// JWT ayarlarını al
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
 var keyBytes = Encoding.UTF8.GetBytes(jwtSettings.Key);
 
-// Authentication
 builder.Services
     .AddAuthentication(options =>
     {
@@ -72,33 +71,13 @@ builder.Services
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
-
             ValidateIssuer = false,
             ValidateAudience = false,
-
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
-
-        // 🔴 BURASI YENİ: Hata sebebini console'a yaz
-        options.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = ctx =>
-            {
-                Console.WriteLine("JWT FAILED >> " + ctx.Exception.Message);
-                if (ctx.Exception.InnerException != null)
-                    Console.WriteLine("INNER >> " + ctx.Exception.InnerException.Message);
-                return Task.CompletedTask;
-            },
-            OnMessageReceived = ctx =>
-            {
-                Console.WriteLine("JWT HEADER >> " + ctx.Request.Headers["Authorization"]);
-                return Task.CompletedTask;
-            }
-        };
     });
 
-// Authorization – Bilanço sadece BullBoss
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("BullBossOnly", policy =>
@@ -115,7 +94,6 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-// MVC + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -130,18 +108,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHangfireDashboard("/hangfire");
 
+// 🔹 wwwroot içinden dosya servis et
+app.UseStaticFiles();
+
 app.UseHttpsRedirection();
-
-// CORS
 app.UseCors(FrontendCorsPolicy);
-app.Use(async (context, next) =>
-{
-    var auth = context.Request.Headers["Authorization"].ToString();
-    Console.WriteLine($"[AUTH HEADER] {auth}");
-    await next();
-});
 
-// *** SIRA ÖNEMLİ ***: önce Authentication, sonra Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 

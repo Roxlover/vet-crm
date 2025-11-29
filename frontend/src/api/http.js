@@ -2,9 +2,11 @@
 import axios from 'axios'
 import { getToken, clearAuth } from '../utils/auth'
 
+
 export const http = axios.create({
   baseURL: 'http://localhost:5239/api',
 })
+export const API_BASE = 'http://localhost:5239'
 
 // REQUEST interceptor – header'a token ekle
 http.interceptors.request.use((config) => {

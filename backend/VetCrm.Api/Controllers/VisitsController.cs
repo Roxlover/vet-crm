@@ -1,10 +1,12 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VetCrm.Api.Dtos;
+using VetCrm.Api.Services;
 using VetCrm.Domain.Entities;
 using VetCrm.Infrastructure.Data;
-using Microsoft.AspNetCore.Authorization;
-using VetCrm.Api.Services;   // 🔴 eklendi
+using VetCrm.Infrastructure.Storage;
 
 namespace VetCrm.Api.Controllers;
 
@@ -14,12 +16,17 @@ namespace VetCrm.Api.Controllers;
 public class VisitsController : ControllerBase
 {
     private readonly VetCrmDbContext _db;
-    private readonly ICurrentUserService _currentUser;   // 🔴 eklendi
+    private readonly ICurrentUserService _currentUser;
+    private readonly IR2Storage _storage;
 
-    public VisitsController(VetCrmDbContext db, ICurrentUserService currentUser)
+    public VisitsController(
+        VetCrmDbContext db,
+        ICurrentUserService currentUser,
+        IR2Storage storage)
     {
         _db = db;
-        _currentUser = currentUser;                     // 🔴 eklendi
+        _currentUser = currentUser;
+        _storage = storage;
     }
 
     private void SyncReminderForVisit(Visit visit)
@@ -51,7 +58,7 @@ public class VisitsController : ControllerBase
         var query = _db.Visits
             .Include(v => v.Pet)
                 .ThenInclude(p => p.Owner)
-            .Include(v => v.CreatedByUser)                 // 🔴 ekleyen kullanıcıyı include et
+            .Include(v => v.CreatedByUser)
             .AsQueryable();
 
         if (ownerId.HasValue)
@@ -78,7 +85,8 @@ public class VisitsController : ControllerBase
                 DoctorName = v.Doctor != null ? v.Doctor.FullName : null,
                 CreatedByUserId   = v.CreatedByUserId,
                 CreatedByUsername = v.CreatedByUsername,
-                CreatedByName     = v.CreatedByName
+                CreatedByName     = v.CreatedByName,
+                ImageUrl          = v.ImageUrl
             })
             .ToListAsync();
 
@@ -92,7 +100,7 @@ public class VisitsController : ControllerBase
             .Include(v => v.Pet)
                 .ThenInclude(p => p.Owner)
             .Include(v => v.CreatedByUser)
-            .Include(v => v.Doctor) 
+            .Include(v => v.Doctor)
             .Where(v => v.Id == id)
             .Select(v => new VisitDto
             {
@@ -106,9 +114,10 @@ public class VisitsController : ControllerBase
                 AmountTl = v.AmountTl,
                 Notes = v.Notes,
                 NextDate = v.NextDate,
-                CreatedByUserId = v.CreatedByUserId,
+                CreatedByUserId   = v.CreatedByUserId,
                 CreatedByUsername = v.CreatedByUsername,
-                CreatedByName = v.CreatedByName
+                CreatedByName     = v.CreatedByName,
+                ImageUrl          = v.ImageUrl
             })
             .FirstOrDefaultAsync();
 
@@ -121,60 +130,77 @@ public class VisitsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<VisitDto>> CreateVisit([FromBody] VisitCreateDto dto)
     {
-        var pet = await _db.Pets
-            .Include(p => p.Owner)
-            .FirstOrDefaultAsync(p => p.Id == dto.PetId);
+        Console.WriteLine("===== CreateVisit CALLED =====");
 
-        if (pet is null)
-            return BadRequest($"Pet with id {dto.PetId} not found.");
-
-        var visit = new Visit
+        try
         {
-            PetId = dto.PetId,
-            PerformedAt = dto.PerformedAt ?? DateTime.UtcNow,
-            Procedures = dto.Procedures,
-            AmountTl = dto.AmountTl,
-            Notes = dto.Notes,
-            NextDate = dto.NextDate,
-            Purpose = dto.Purpose,
-            // DoctorId = dto.DoctorId, 
-            CreatedByUserId   = _currentUser.UserId,
-            CreatedByUsername = _currentUser.Username,
-            CreatedByName     = _currentUser.FullName
-        };
+            Console.WriteLine("DTO: " + JsonSerializer.Serialize(dto));
 
-        // 🔴 Giriş yapan kullanıcıyı bağla
-        var userId = _currentUser.UserId;
-        if (userId.HasValue)
-            visit.CreatedByUserId = userId.Value;
+            if (dto == null)
+                return BadRequest("Body boş.");
 
-        visit.CreatedByUsername = _currentUser.Username;
-        visit.CreatedByName = _currentUser.FullName;
+            if (dto.PetId <= 0)
+                return BadRequest("Geçersiz PetId.");
 
-        _db.Visits.Add(visit);
-        await _db.SaveChangesAsync();
+            var pet = await _db.Pets
+                .Include(p => p.Owner)
+                .FirstOrDefaultAsync(p => p.Id == dto.PetId);
 
-        SyncReminderForVisit(visit);
-        await _db.SaveChangesAsync();
-        var result = new VisitDto
+            if (pet is null)
+                return BadRequest($"Pet with id {dto.PetId} not found.");
+
+            var visit = new Visit
+            {
+                PetId       = dto.PetId,
+                PerformedAt = dto.PerformedAt ?? DateTime.UtcNow,
+                Procedures  = dto.Procedures,
+                AmountTl    = dto.AmountTl,
+                Notes       = dto.Notes,
+                NextDate    = dto.NextDate,
+                Purpose     = dto.Purpose,
+                CreatedByUserId   = _currentUser.UserId,
+                CreatedByUsername = _currentUser.Username,
+                CreatedByName     = _currentUser.FullName
+            };
+
+            var userId = _currentUser.UserId;
+            if (userId.HasValue)
+                visit.CreatedByUserId = userId.Value;
+
+            _db.Visits.Add(visit);
+            await _db.SaveChangesAsync();
+
+            SyncReminderForVisit(visit);
+            await _db.SaveChangesAsync();
+
+            var result = new VisitDto
+            {
+                Id         = visit.Id,
+                PetId      = visit.PetId,
+                PetName    = pet.Name,
+                OwnerId    = pet.OwnerId,
+                OwnerName  = pet.Owner.FullName,
+                PerformedAt = visit.PerformedAt,
+                Procedures  = visit.Procedures,
+                AmountTl    = visit.AmountTl,
+                Notes       = visit.Notes,
+                NextDate    = visit.NextDate,
+                DoctorName  = visit.Doctor != null ? visit.Doctor.FullName : null,
+                CreatedByUserId   = visit.CreatedByUserId,
+                CreatedByUsername = visit.CreatedByUsername,
+                CreatedByName     = visit.CreatedByName,
+                ImageUrl          = visit.ImageUrl
+            };
+
+            Console.WriteLine("===== CreateVisit SUCCESS =====");
+            return CreatedAtAction(nameof(GetVisit), new { id = visit.Id }, result);
+        }
+        catch (Exception ex)
         {
-            Id = visit.Id,
-            PetId = visit.PetId,
-            PetName = pet.Name,
-            OwnerId = pet.OwnerId,
-            OwnerName = pet.Owner.FullName,
-            PerformedAt = visit.PerformedAt,
-            Procedures = visit.Procedures,
-            AmountTl = visit.AmountTl,
-            Notes = visit.Notes,
-            NextDate = visit.NextDate,
-            DoctorName = visit.Doctor != null ? visit.Doctor.FullName : null,
-            CreatedByUserId = visit.CreatedByUserId,
-            CreatedByUsername = visit.CreatedByUsername,
-            CreatedByName = visit.CreatedByName
-        };
-
-        return CreatedAtAction(nameof(GetVisit), new { id = visit.Id }, result);
+            Console.WriteLine("===== CreateVisit ERROR =====");
+            Console.WriteLine(ex.ToString());
+            return StatusCode(500, "CreateVisit ERROR: " + ex.Message);
+        }
     }
 
     [HttpPut("{id:int}")]
@@ -185,13 +211,11 @@ public class VisitsController : ControllerBase
             return NotFound();
 
         visit.PerformedAt = dto.PerformedAt;
-        visit.Procedures = dto.Procedures;
-        visit.AmountTl = dto.AmountTl;
-        visit.Notes = dto.Notes;
-        visit.NextDate = dto.NextDate;
-        visit.Purpose = dto.Purpose;
-
-        // NOT: CreatedByUserId’i değiştirmiyoruz; ilk ekleyen kimse o kalsın.
+        visit.Procedures  = dto.Procedures;
+        visit.AmountTl    = dto.AmountTl;
+        visit.Notes       = dto.Notes;
+        visit.NextDate    = dto.NextDate;
+        visit.Purpose     = dto.Purpose;
 
         SyncReminderForVisit(visit);
 
@@ -219,7 +243,7 @@ public class VisitsController : ControllerBase
     [HttpGet("upcoming")]
     public async Task<ActionResult<IEnumerable<UpcomingVisitDto>>> GetUpcoming([FromQuery] int days = 1)
     {
-        var today = DateOnly.FromDateTime(DateTime.Now.Date);
+        var today  = DateOnly.FromDateTime(DateTime.Now.Date);
         var target = today.AddDays(days);
 
         var upcoming = await _db.Visits
@@ -228,20 +252,50 @@ public class VisitsController : ControllerBase
             .Where(v => v.NextDate == target)
             .Select(v => new UpcomingVisitDto
             {
-                VisitId = v.Id,
-                PetId = v.PetId,
-                PetName = v.Pet.Name,
-                OwnerId = v.Pet.OwnerId,
-                OwnerName = v.Pet.Owner.FullName,
+                VisitId        = v.Id,
+                PetId          = v.PetId,
+                PetName        = v.Pet.Name,
+                OwnerId        = v.Pet.OwnerId,
+                OwnerName      = v.Pet.Owner.FullName,
                 OwnerPhoneE164 = v.Pet.Owner.PhoneE164,
-                VisitDate = v.NextDate!.Value,
-                Procedures = v.Procedures,
-                WhatsAppSent = false
+                VisitDate      = v.NextDate!.Value,
+                Procedures     = v.Procedures,
+                WhatsAppSent   = false
             })
             .OrderBy(u => u.OwnerName)
             .ThenBy(u => u.PetName)
             .ToListAsync();
 
         return Ok(upcoming);
+    }
+
+    // ---------- LOCAL IMAGE UPLOAD ----------
+
+    [HttpPost("{id:int}/image")]
+    public async Task<ActionResult<VisitImageDto>> UploadImage(int id, IFormFile file)
+    {
+        Console.WriteLine("=== UploadImage CALLED === id=" + id);
+        Console.WriteLine($"File? name={file?.FileName}, len={file?.Length}");
+
+        var visit = await _db.Visits.FindAsync(id);
+        if (visit is null)
+            return NotFound();
+
+        if (file == null || file.Length == 0)
+            return BadRequest("Dosya yok.");
+
+        await using var stream = file.OpenReadStream();
+        var url = await _storage.UploadVisitImageAsync(
+            visitId: visit.Id,
+            stream: stream,
+            contentType: file.ContentType ?? "image/jpeg"
+        );
+
+        visit.ImageUrl = url;
+        await _db.SaveChangesAsync();
+
+        Console.WriteLine("[UploadImage] SUCCESS, url=" + url);
+
+        return Ok(new VisitImageDto { ImageUrl = url });
     }
 }

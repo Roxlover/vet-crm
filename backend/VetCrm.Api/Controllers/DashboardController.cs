@@ -208,7 +208,7 @@ public async Task<ActionResult<DashboardVisitDetailDto>> GetVisitDetail(int id)
             AmountTl = v.AmountTl,
             Notes = v.Notes,
             CreditAmountTl = v.CreditAmountTl,
-            ImageUrl = v.ImageUrl,
+            ImageUrl = v.ImageUrl ,
 
             DoctorId = v.DoctorId,
             DoctorName = v.Doctor != null ? v.Doctor.FullName : null,
