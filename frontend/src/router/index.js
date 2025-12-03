@@ -68,7 +68,7 @@ router.beforeEach((to, from, next) => {
 
   // Bilanço sadece BullBoss
   if (to.path === '/bilanco' && (!user || user.username !== 'BullBoss')) {
-    return next('/')
+    return next('/') 
   }
 
   // if (to.path === '/bilanco') {

@@ -46,9 +46,16 @@ export async function fetchDoctors() {
 }
 
 // Hatırlatma durumunu güncelle (Yapıldı / Yapılmadı)
-export async function updateReminderStatus(id, isCompleted) {
-  await http.post(`/reminders/${id}/status`, { isCompleted })
+// src/api/dashboard.js
+// Hatırlatma durumunu güncelle (Yapıldı / Yapılmadı)
+export async function updateReminderStatus(id, completed, markAsOverdue = false) {
+  await http.patch(`/reminders/${id}/status`, {
+    completed,
+    markAsOverdue,
+  })
 }
+
+
 export async function searchOwners(query) {
   const { data } = await http.get('/owners/search', {
     params: { query },

@@ -1,22 +1,33 @@
 import { http } from '@/api/http'
 
-export async function fetchLedgerSummary(from, to) {
-  const { data } = await http.get('/ledger/summary', { params: { from, to } })
+export async function fetchLedgerSummary(from, to, doctorId) {
+  const params = { from, to }
+  if (doctorId) params.doctorId = doctorId
+
+  const { data } = await http.get('/ledger/summary', { params })
   return data
 }
 
-export async function fetchLedgerItems(from, to) {
-  const { data } = await http.get('/ledger/visit-items', { params: { from, to } })
+
+export async function fetchLedgerItems(from, to, doctorId) {
+  const params = { from, to }
+  if (doctorId) params.doctorId = doctorId
+
+  const { data } = await http.get('/ledger/visit-items', { params })
   return data
 }
 
 
-export async function fetchLedgerRange(from, to) {
-  console.log('LEDGER RANGE PARAMS >>>', { from, to })
+
+export async function fetchLedgerRange(from, to, doctorId) {
+  console.log('LEDGER RANGE PARAMS >>>', { from, to, doctorId })
 
   try {
+    const params = { from, to }
+    if (doctorId) params.doctorId = doctorId
+
     const { data } = await http.get('/ledger', {
-      params: { from, to },
+      params,
     })
     console.log('LEDGER RANGE OK >>>', data)
     return data
@@ -28,6 +39,16 @@ export async function fetchLedgerRange(from, to) {
     }
     throw err
   }
+}
+export async function fetchLedgerByUser(from, to) {
+  console.log('LEDGER BY USER PARAMS >>>', { from, to })
+
+  const { data } = await http.get('/ledger/by-user', {
+    params: { from, to },
+  })
+
+  console.log('LEDGER BY USER OK >>>', data)
+  return data
 }
 
 export async function createLedgerEntry(payload) {

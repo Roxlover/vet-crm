@@ -277,9 +277,11 @@ onMounted(loadOwners)
 
 <style scoped>
 .page {
-  padding: 0.5rem 0.5rem 1.5rem;
+  width: 100%;
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 1rem; /* her sayfada ihtiyacına göre değiştirirsin */
 }
-
 .page-header {
   display: flex;
   justify-content: space-between;

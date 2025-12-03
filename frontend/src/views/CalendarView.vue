@@ -127,7 +127,10 @@ onMounted(() => {
 
 <style scoped>
 .page {
-  padding: 1.5rem;
+  width: 100%;
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 1rem; /* her sayfada ihtiyacına göre değiştirirsin */
 }
 
 .page-header {

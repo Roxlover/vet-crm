@@ -10,25 +10,24 @@
     <!-- LİSTE / TAKVİM SEKMELERİ -->
     <section class="view-tabs">
       <button
-  class="tab-btn"
-  :class="{ active: activeView === 'list' }"
-  @click="activeView = 'list'"
-  >
-    Liste
-  </button>
-  <button
-    class="tab-btn"
-    :class="{ active: activeView === 'calendar' }"
-    @click="showCalendar"
-  >
-    Takvim
-  </button>
-
+        class="tab-btn"
+        :class="{ active: activeView === 'list' }"
+        @click="activeView = 'list'"
+      >
+        Liste
+      </button>
+      <button
+        class="tab-btn"
+        :class="{ active: activeView === 'calendar' }"
+        @click="showCalendar"
+      >
+        Takvim
+      </button>
     </section>
 
-    <!-- LISTE GÖRÜNÜMÜ -->
+    <!-- LİSTE GÖRÜNÜMÜ -->
     <section v-if="activeView === 'list'">
-      <!-- 3 KUTU -->
+      <!-- 4 KUTU -->
       <section class="cards">
         <div
           class="card kpi today"
@@ -71,13 +70,15 @@
         </div>
       </section>
 
-      <!-- AŞAĞIDAKİ TABLO -->
+      <!-- TABLO -->
       <section class="card upcoming">
         <div class="card-header">
           <h2>{{ titleForFilter() }}</h2>
         </div>
 
-        <div v-if="listLoading" class="state">Yükleniyor...</div>
+        <div v-if="listLoading" class="state">
+          Yükleniyor...
+        </div>
 
         <div
           v-else-if="!reminderList || reminderList.length === 0"
@@ -86,130 +87,157 @@
           Kayıt bulunamadı.
         </div>
 
-        <table v-else class="table">
-          <thead>
-            <tr>
-              <th>Hatırlatma</th>
-              <th>Randevu</th>
-              <th>Hasta</th>
-              <th>Sahip</th>
-              <th>İşlem</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in reminderList"
-              :key="item.id"
-              @click="openVisit(item)"
-              class="clickable-row"
-            >
-              <td>{{ formatDate(item.reminderDate) }}</td>
-              <td>{{ formatDate(item.appointmentDate) }}</td>
-              <td>{{ item.petName }}</td>
-              <td>{{ item.ownerName }}</td>
-              <td class="procedure-cell">
-                {{ item.procedures }}
-                <span v-if="item.creditAmountTl" class="credit-pill">
-                  • Veresiye: {{ item.creditAmountTl }} TL
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div v-else class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Hatırlatma</th>
+                <th>Randevu</th>
+                <th>Hasta</th>
+                <th>Sahip</th>
+                <th>İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="item in reminderList"
+                :key="item.id"
+                @click="openVisit(item)"
+                class="clickable-row"
+              >
+                <td>{{ formatDate(item.reminderDate) }}</td>
+                <td>{{ formatDate(item.appointmentDate) }}</td>
+                <td>{{ item.petName }}</td>
+                <td>{{ item.ownerName }}</td>
+                <td class="procedure-cell">
+                  {{ item.procedures }}
+                  <span
+                    v-if="item.creditAmountTl"
+                    class="credit-pill"
+                  >
+                    • Veresiye: {{ item.creditAmountTl }} TL
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </section>
 
     <!-- TAKVİM GÖRÜNÜMÜ -->
-<!-- TAKVİM GÖRÜNÜMÜ -->
-<section v-else class="calendar-section">
-  <section class="card calendar-card">
-    <div class="calendar-header">
-      <div class="calendar-nav">
-        <button class="icon-btn" @click="goToPrevMonth">‹</button>
-        <div class="month-title">{{ formatMonthYear(currentMonth) }}</div>
-        <button class="icon-btn" @click="goToNextMonth">›</button>
-      </div>
-      <button class="btn-today" @click="goToToday">Bugün</button>
-    </div>
-
-    <div v-if="calendarLoading" class="state">Yükleniyor...</div>
-
-    <div v-else class="calendar-grid">
-      <!-- Gün isimleri -->
-      <div class="calendar-weekdays">
-        <div
-          v-for="d in weekdayLabels"
-          :key="d"
-          class="weekday"
-        >
-          {{ d }}
+    <section v-else class="calendar-section">
+      <section class="card calendar-card">
+        <div class="calendar-header">
+          <div class="calendar-nav">
+            <button class="icon-btn" @click="goToPrevMonth">‹</button>
+            <div class="month-title">
+              {{ formatMonthYear(currentMonth) }}
+            </div>
+            <button class="icon-btn" @click="goToNextMonth">›</button>
+          </div>
+          <button class="btn-today" @click="goToToday">
+            Bugün
+          </button>
         </div>
-      </div>
 
-      <!-- Haftalar -->
-      <div class="calendar-weeks">
-        <div
-          v-for="(week, wi) in calendarWeeks"
-          :key="wi"
-          class="calendar-week"
-        >
+        <div v-if="calendarLoading" class="state">
+          Yükleniyor...
+        </div>
+
+        <div v-else class="calendar-grid">
+          <!-- Gün isimleri -->
+          <div class="calendar-weekdays">
             <div
-              v-for="day in week"
-              :key="day.iso"
-              class="calendar-day"
-              :class="{
-                'other-month': !day.inCurrentMonth,
-                'today': day.isToday
-              }"
-              @click="openNewAppointmentFromCalendar(day)"
+              v-for="d in weekdayLabels"
+              :key="d"
+              class="weekday"
             >
-       <div class="day-number">{{ day.date.getDate() }}</div>
+              {{ d }}
+            </div>
+          </div>
 
-<div class="day-events">
-  <div
-    v-for="appt in day.appointments"
-    :key="appt?.visitId"
-    class="event-pill"
-    @click.stop="openVisitFromCalendar(appt)"
-  >
-    <span class="event-time" v-if="appt?.scheduledAt">
-      {{ formatTime(appt.scheduledAt) }}
-    </span>
+          <!-- Haftalar -->
+          <div class="calendar-weeks">
+            <div
+              v-for="(week, wi) in calendarWeeks"
+              :key="wi"
+              class="calendar-week"
+            >
+              <div
+                v-for="day in week"
+                :key="day.iso"
+                class="calendar-day"
+                :class="{
+                  'other-month': !day.inCurrentMonth,
+                  today: day.isToday,
+                }"
+                @click="openNewAppointmentFromCalendar(day)"
+              >
+                <div class="day-number">
+                  {{ day.date.getDate() }}
+                </div>
 
-    <span class="event-text">
-      {{ appt?.petName }} – {{ appt?.ownerName }}
-    </span>
+                <div class="day-events">
+                  <div
+                    v-for="appt in day.appointments"
+                    :key="appt?.visitId"
+                    class="event-pill"
+                    @click.stop="openVisitFromCalendar(appt)"
+                  >
+                    <span
+                      class="event-time"
+                      v-if="appt?.scheduledAt"
+                    >
+                      {{ formatTime(appt.scheduledAt) }}
+                    </span>
 
-    <span v-if="appt?.purpose" class="event-purpose">
-      {{ appt.purpose }}
-    </span>
+                    <span class="event-text">
+                      {{ appt?.petName }} – {{ appt?.ownerName }}
+                    </span>
 
-    <div class="event-meta">
-      <span v-if="appt?.doctorName">
-        Dr: {{ appt.doctorName }}
-      </span>
-      <span v-if="appt?.createdByUsername || appt?.createdByName">
-        • Ekleyen: {{ appt.createdByUsername || appt.createdByName }}
-      </span>
-    </div>
-  </div>
+                    <span
+                      v-if="appt?.purpose"
+                      class="event-purpose"
+                    >
+                      {{ appt.purpose }}
+                    </span>
 
-  <div
-    v-if="!day.appointments || day.appointments.length === 0"
-    class="no-event-placeholder"
-  >
-    —
-  </div>
-</div>
+                    <div class="event-meta">
+                      <span v-if="appt?.doctorName">
+                        Dr: {{ appt.doctorName }}
+                      </span>
+                      <span
+                        v-if="
+                          appt?.createdByUsername ||
+                          appt?.createdByName
+                        "
+                      >
+                        • Ekleyen:
+                        {{
+                          appt.createdByUsername ||
+                          appt.createdByName
+                        }}
+                      </span>
+                    </div>
+                  </div>
 
-
+                  <div
+                    v-if="
+                      !day.appointments ||
+                      day.appointments.length === 0
+                    "
+                    class="no-event-placeholder"
+                  >
+                    —
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
-</section>
-
+      </section>
+    </section>
   </div>
 
   <!-- MODAL -->
@@ -236,6 +264,7 @@
 
         <hr class="divider" />
 
+        <!-- İŞLEM DURUMU (Yapıldı / Yapılmadı) -->
         <div
           v-if="canEditIslemDurumu"
           class="status-row"
@@ -262,69 +291,51 @@
           </div>
         </div>
 
-<!-- Görsel alanı -->
-<div v-if="selectedVisit">
-  <div
-    v-if="selectedVisit.imageUrl"
-    class="visit-image-block"
-  >
-    <button
-      type="button"
-      class="btn-secondary"
-      @click="showImagePreview = !showImagePreview"
-    >
-      {{ showImagePreview ? 'Görseli gizle' : 'Son eklenen görseli göster' }}
-    </button>
+        <!-- GÖRSEL ALANI -->
+        <div v-if="selectedVisit">
+          <div v-if="selectedVisit.imageUrl" class="visit-image-block">
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="showImagePreview = !showImagePreview"
+            >
+              {{ showImagePreview ? 'Görseli gizle' : 'Son eklenen görseli göster' }}
+            </button>
 
-    <div v-if="showImagePreview" class="visit-image-preview">
-      <div v-if="selectedVisit.imageUrl">
-  <button @click="showImage = !showImage" class="btn-small">
-    {{ showImage ? 'Görseli gizle' : 'Görseli göster' }}
-  </button>
+            <div v-if="showImagePreview" class="visit-image-preview">
+              <div class="visit-image-thumb">
+                <img
+                  :src="visitImageSrc"
+                  alt="Ziyaret görseli"
+                  @click="openImageModal"
+                />
+              </div>
+            </div>
+          </div>
+          <div v-else class="visit-image-empty">
+            Bu ziyarete ait kayıtlı görsel bulunmuyor.
+          </div>
+        </div>
 
-      <div v-if="showImage" class="visit-image-thumb">
-        <img
-          :src="visitImageSrc"
-          alt="Ziyaret görseli"
-          @click="openImageModal"
-        />
-      </div>
-    </div>
-
-
-
-    </div>
-  </div>
-  <!-- TAM EKRAN GÖRSEL MODALI -->
-<div
-  v-if="showImageModal"
-  class="image-modal-backdrop"
-  @click.self="closeImageModal"
->
-  <div class="image-modal-content">
-    <img :src="visitImageSrc" alt="Ziyaret görseli" />
-    <button class="image-modal-close" @click="closeImageModal">
-      ✕
-    </button>
-  </div>
-</div>
-
-  <div v-else class="visit-image-empty">
-    Bu ziyarete ait kayıtlı görsel bulunmuyor.
-  </div>
-</div>
-
-
-
-
-
-
+        <!-- TAM EKRAN GÖRSEL MODALI -->
+        <div
+          v-if="showImageModal"
+          class="image-modal-backdrop"
+          @click.self="closeImageModal"
+        >
+          <div class="image-modal-content">
+            <img :src="visitImageSrc" alt="Ziyaret görseli" />
+            <button class="image-modal-close" @click="closeImageModal">
+              ✕
+            </button>
+          </div>
+        </div>
 
         <!-- VERESİYE GÖRÜNÜMÜ + EDİT -->
         <div class="credit-row">
           <div class="credit-text">
             <strong>Veresiye:</strong>
-            <span v-if="selectedVisit?.creditAmountTl">
+            <span v-if="selectedVisit && selectedVisit.creditAmountTl != null">
               {{ selectedVisit.creditAmountTl }} TL
             </span>
             <span v-else>Yok</span>
@@ -359,7 +370,6 @@
           </button>
         </div>
 
-
         <!-- YENİ RANDEVU FORMU -->
         <hr class="divider" />
 
@@ -383,9 +393,8 @@
               v-model="appointmentTime"
               min="10:30"
               max="19:30"
-              step="900"  
+              step="900"
             />
-
           </div>
 
           <!-- Açıklama -->
@@ -412,6 +421,7 @@
               </option>
             </select>
           </div>
+
           <!-- Hasta sahibi arama -->
           <div class="field-row owner-search" @click.stop>
             <label>Hasta Sahibi</label>
@@ -442,6 +452,7 @@
               Önce hasta sahibini seçin, ardından hayvan(lar)ı işaretleyin.
             </p>
           </div>
+
           <!-- Hayvan seçimi -->
           <div class="field-row">
             <label>Hayvan(lar)</label>
@@ -503,78 +514,85 @@
   </div>
 </template>
 
-
 <script setup>
-import { onMounted, ref, computed  } from 'vue'
-import {  fetchReminderSummary,
+import { onMounted, ref, computed } from 'vue'
+import {
+  fetchReminderSummary,
   fetchReminders,
   fetchVisitDetail,
   fetchDoctors,
   fetchOwnerPets,
   createAppointment,
   fetchCalendarAppointments,
-  searchOwners, } from '../api/dashboard'
-import { http } from '@/api/http'
+  searchOwners,
+} from '../api/dashboard'
+import { http, API_BASE } from '@/api/http'
 import { useRouter } from 'vue-router'
 import { getUser } from '@/utils/auth'
-import { API_BASE } from '@/api/http'
 
-
-
-const activeView = ref('list')          // 'list' | 'calendar' notunu istersen yorumda yaz
-const selectedReminderId = ref(null) 
-const statusSaving = ref(false)
 const router = useRouter()
+
+const activeView = ref('list')          // 'list' | 'calendar'
+const selectedReminderId = ref(null)
+const statusSaving = ref(false)
+
 const loading = ref(false)
 const error = ref('')
 const summary = ref(null)
-const visitDetail = ref(null)
-const showDetailModal = ref(false)
+
+const visitDetail = ref(null)           // (şimdilik kullanılmıyor)
+const showDetailModal = ref(false)      // (şimdilik kullanılmıyor)
+
 const showDetail = ref(false)
 const detailLoading = ref(false)
 const selectedVisit = ref(null)
+
 const listLoading = ref(false)
 const reminderList = ref([])
 const activeFilter = ref('upcoming')
-const ownerPets = ref([])       
-const showNewAppointment = ref(false)   
-const appointmentDate = ref('')     
-const appointmentTime = ref('')        
+
+const ownerPets = ref([])
+const showNewAppointment = ref(false)
+const appointmentDate = ref('')
+const appointmentTime = ref('')
 const appointmentPurpose = ref('')
-const selectedPetIds = ref([])          
-const appointmentMode = ref('multiple')  
+const selectedPetIds = ref([])
+const appointmentMode = ref('multiple')
+
 const currentMonth = ref(new Date())
 const calendarLoading = ref(false)
 const calendarAppointments = ref([])
 const calendarWeeks = ref([])
 const weekdayLabels = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
+
 const selectedOwnerId = ref(null)
 const selectedOwnerLabel = ref('')
 const ownerQuery = ref('')
 const ownerResults = ref([])
 const ownerSearchOpen = ref(false)
 let ownerSearchTimeout = null
+
 const doctors = ref([])
 const selectedDoctorId = ref(null)
+
 const creditEditOpen = ref(false)
 const creditAmount = ref('')
 const savingCredit = ref(false)
-const rawUser = getUser()
+
 const showImagePreview = ref(false)
-const canEditIslemDurumu = computed(() =>
-  rawUser && ['BullBoss', 'sila'].includes(rawUser.username)
-)
-const showImage = ref(false) 
-const showImageModal = ref(false) 
+const showImageModal = ref(false)
+
+const rawUser = getUser()
+
+// Artık giriş yapmış herkes "Yapılmadı / Yapıldı" butonlarını görebilir
+const canEditIslemDurumu = computed(() => !!rawUser)
+
 
 const visitImageSrc = computed(() => {
   if (!selectedVisit.value?.imageUrl) return ''
-
   const url = selectedVisit.value.imageUrl
   return url.startsWith('http') ? url : API_BASE + url
 })
-
-
 
 onMounted(async () => {
   await loadSummary()
@@ -583,7 +601,6 @@ onMounted(async () => {
 
 async function showCalendar() {
   activeView.value = 'calendar'
-  // İlk kez açılıyorsa bu ayı yükle
   if (calendarWeeks.value.length === 0) {
     await goToToday()
   }
@@ -597,6 +614,7 @@ function openImageModal() {
 function closeImageModal() {
   showImageModal.value = false
 }
+
 function toIsoDate(d) {
   return d.toISOString().slice(0, 10) // YYYY-MM-DD
 }
@@ -608,7 +626,6 @@ function onOwnerQueryInput() {
     clearTimeout(ownerSearchTimeout)
   }
 
-  // 300ms debounce
   ownerSearchTimeout = setTimeout(async () => {
     const q = ownerQuery.value.trim()
     if (!q) {
@@ -629,7 +646,6 @@ async function selectOwner(owner) {
   ownerQuery.value = selectedOwnerLabel.value
   ownerSearchOpen.value = false
 
-  // bu owner'a ait hayvanları yükle
   try {
     ownerPets.value = await fetchOwnerPets(owner.id)
   } catch (e) {
@@ -637,7 +653,6 @@ async function selectOwner(owner) {
     ownerPets.value = []
   }
 
-  // önceki seçimleri sıfırla
   selectedPetIds.value = []
 }
 
@@ -645,33 +660,38 @@ function closeOwnerSearch() {
   ownerSearchOpen.value = false
 }
 
-
-// Aylık görünüm için 6 haftalık grid başlangıç/bitişi
+// --- Takvim yardımcıları ---
 function startOfCalendarGrid(date) {
   const first = new Date(date.getFullYear(), date.getMonth(), 1)
   const day = first.getDay() || 7 // Paz=7, Pzt=1
-  const diff = day - 1 // Pazartesi ile başlat
+  const diff = day - 1
   first.setDate(first.getDate() - diff)
   return first
 }
 
+function endOfCalendarGrid(date) {
+  const start = startOfCalendarGrid(date)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6 * 7 - 1)
+  return end
+}
+
 async function openVisitFromCalendar(event) {
-  // calendarAppointments içindeki event -> VisitId var
   const fakeItem = {
-    id: null,                // reminder yok, sadece visit var
+    id: null,
     visitId: event.visitId,
   }
-
   await openVisit(fakeItem)
 }
+
 function openNewAppointmentFromCalendar(day) {
   showDetail.value = true
   detailLoading.value = false
   selectedVisit.value = null
   selectedReminderId.value = null
   showNewAppointment.value = true
-  appointmentDate.value = day.iso      // YYYY-MM-DD
-  appointmentTime.value = ''           // kullanıcı seçecek
+  appointmentDate.value = day.iso
+  appointmentTime.value = ''
   appointmentPurpose.value = ''
   selectedDoctorId.value = null
   selectedPetIds.value = []
@@ -683,14 +703,6 @@ function openNewAppointmentFromCalendar(day) {
   ownerResults.value = []
 }
 
-function endOfCalendarGrid(date) {
-  const start = startOfCalendarGrid(date)
-  const end = new Date(start)
-  end.setDate(start.getDate() + 6 * 7 - 1) // 6 hafta
-  return end
-}
-
-// API'den randevuları çekip haftalık yapıya çevir
 async function loadCalendarForMonth(baseDate) {
   calendarLoading.value = true
   try {
@@ -713,14 +725,13 @@ function buildCalendarWeeks(baseDate, appointments) {
   const start = startOfCalendarGrid(baseDate)
   const weeks = []
 
-  // 🔹 Bozuk / eksik kayıtları ele
   const safeAppointments = (appointments || []).filter(
     (a) => a && a.scheduledAt
   )
 
   const byDate = {}
   safeAppointments.forEach((a) => {
-    const iso = a.scheduledAt.slice(0, 10) // YYYY-MM-DD
+    const iso = a.scheduledAt.slice(0, 10)
     if (!byDate[iso]) byDate[iso] = []
     byDate[iso].push(a)
   })
@@ -747,13 +758,11 @@ function buildCalendarWeeks(baseDate, appointments) {
   calendarWeeks.value = weeks
 }
 
-
-// Ay navigasyonu
 async function goToPrevMonth() {
   currentMonth.value = new Date(
     currentMonth.value.getFullYear(),
     currentMonth.value.getMonth() - 1,
-    1
+    1,
   )
   await loadCalendarForMonth(currentMonth.value)
 }
@@ -762,7 +771,7 @@ async function goToNextMonth() {
   currentMonth.value = new Date(
     currentMonth.value.getFullYear(),
     currentMonth.value.getMonth() + 1,
-    1
+    1,
   )
   await loadCalendarForMonth(currentMonth.value)
 }
@@ -772,7 +781,6 @@ async function goToToday() {
   await loadCalendarForMonth(currentMonth.value)
 }
 
-// Görsel formatlar
 function formatMonthYear(date) {
   return date.toLocaleDateString('tr-TR', {
     month: 'long',
@@ -788,7 +796,7 @@ function formatTime(iso) {
   })
 }
 
-
+// --- Detay açma ---
 async function openVisit(item) {
   console.log('openVisit item >>>', item)
   showImagePreview.value = false
@@ -798,14 +806,14 @@ async function openVisit(item) {
   selectedReminderId.value = item.id ?? null
 
   try {
-    const detail = await fetchVisitDetail(item.visitId)   // 🔴 detay değişkeni
+    const detail = await fetchVisitDetail(item.visitId)
     selectedVisit.value = detail
     console.log('visitDetail >>>', detail)
+
     creditAmount.value = detail.creditAmountTl != null
       ? detail.creditAmountTl.toString()
       : ''
     creditEditOpen.value = false
-    
 
     if (detail.ownerId) {
       selectedOwnerId.value = detail.ownerId
@@ -825,7 +833,6 @@ async function openVisit(item) {
     detailLoading.value = false
   }
 
-  // Doktor listesi
   try {
     doctors.value = await fetchDoctors()
   } catch (e) {
@@ -846,14 +853,13 @@ async function saveCredit() {
     alert('Geçerli bir veresiye tutarı girin.')
     return
   }
-  
+
   console.log('[CREDIT] PATCH isteği gönderiliyor...')
   console.log('[CREDIT] reminderId =', selectedReminderId.value)
   console.log('[CREDIT] body       =', { creditAmountTl: val })
 
-
   try {
-    await http.patch(`/reminders/${selectedReminderId.value}/credit`, {
+    const res = await http.patch(`/reminders/${selectedReminderId.value}/credit`, {
       creditAmountTl: val,
     })
 
@@ -863,7 +869,6 @@ async function saveCredit() {
       selectedVisit.value.creditAmountTl = val
     }
 
-    // listeler de güncellensin ki randevu satırında görünsün
     await loadSummary()
     await loadList(activeFilter.value)
 
@@ -874,8 +879,6 @@ async function saveCredit() {
     alert('Veresiye kaydedilirken bir hata oluştu.')
   }
 }
-
-
 
 async function markReminder(completed) {
   if (!selectedReminderId.value) return
@@ -898,9 +901,6 @@ async function markReminder(completed) {
   }
 }
 
-
-
-
 async function openVisitDetail(item) {
   try {
     detailLoading.value = true
@@ -910,20 +910,23 @@ async function openVisitDetail(item) {
     detailLoading.value = false
   }
 }
+
 function formatDateTime(dt) {
   if (!dt) return '—'
   const d = new Date(dt)
   return d.toLocaleDateString('tr-TR')
 }
 
-function closeDetail() {showDetail.value = false}
+function closeDetail() {
+  showDetail.value = false
+}
 
 async function loadSummary() {
   loading.value = true
   error.value = ''
   try {
     const result = await fetchReminderSummary()
-    console.log('SUMMARY FROM API >>>', result) // 🔴 DEBUG satırı
+    console.log('SUMMARY FROM API >>>', result)
     summary.value = result
   } catch (e) {
     console.error(e)
@@ -943,7 +946,7 @@ function isTimeWithinWorkingHours(timeStr) {
 }
 
 async function submitAppointment() {
-  const currentUser = getCurrentUser()
+  const currentUser = getUser()
   if (!currentUser) {
     alert('Oturumunuz sona erdi, lütfen tekrar giriş yapın.')
     router.push('/login')
@@ -963,7 +966,6 @@ async function submitAppointment() {
     return
   }
 
-  // 🔹 Saat kontrolü
   if (!isTimeWithinWorkingHours(appointmentTime.value)) {
     alert('Randevu saati 10:30 - 19:30 arasında olmalıdır.')
     return
@@ -991,7 +993,6 @@ async function submitAppointment() {
     console.error('createAppointment error', e)
   }
 }
-
 
 async function loadList(filter) {
   activeFilter.value = filter
@@ -1025,12 +1026,14 @@ function titleForFilter() {
       return 'Yaklaşan hatırlatmalar'
   }
 }
-
 </script>
 
 <style scoped>
 .page {
-  padding: 1.5rem;
+  width: 100%;
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 1rem 1rem 1.5rem;
 }
 
 .page-header {
@@ -1061,7 +1064,6 @@ function titleForFilter() {
     grid-template-columns: 1fr;
   }
 }
-
 
 .card {
   background: #ffffff;
@@ -1130,10 +1132,16 @@ function titleForFilter() {
   padding: 0.4rem 0;
 }
 
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+  min-width: 640px;
 }
 
 .table th,
@@ -1156,10 +1164,10 @@ function titleForFilter() {
   text-overflow: ellipsis;
 }
 
-
 .clickable-row {
   cursor: pointer;
 }
+
 .clickable-row:hover {
   background: #f9fafb;
 }
@@ -1184,45 +1192,6 @@ function titleForFilter() {
   overflow-y: auto;
   position: relative;
 }
-.status-row {
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-}
-
-.actions-row {
-  margin-top: 0.5rem;
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn-success,
-.btn-fail {
-  border: none;
-  border-radius: 999px;
-  padding: 0.35rem 0.9rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.btn-success {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.btn-success:hover {
-  background: #bbf7d0;
-}
-
-.btn-fail {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.btn-fail:hover {
-  background: #fecaca;
-}
-
 
 .modal .close {
   position: absolute;
@@ -1234,14 +1203,60 @@ function titleForFilter() {
   cursor: pointer;
 }
 
-.image-box {
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
   margin-top: 0.75rem;
 }
-.image-box img {
-  max-width: 100%;
-  border-radius: 0.5rem;
+
+.status-text span {
+  margin-left: 0.25rem;
+  font-size: 0.85rem;
+  color: #4b5563;
 }
 
+.status-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-success,
+.btn-fail {
+  border: none;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-success {
+  background: #22c55e;
+  color: #fff;
+}
+
+.btn-fail {
+  background: #ef4444;
+  color: #fff;
+}
+
+.btn-success:disabled,
+.btn-fail:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-secondary {
+  border: none;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #111827;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
 
 .divider {
   margin: 0.75rem 0;
@@ -1313,12 +1328,14 @@ function titleForFilter() {
   font-size: 0.8rem;
   color: #6b7280;
 }
+
 .new-appointment select {
   border-radius: 0.5rem;
   border: 1px solid #d1d5db;
   padding: 0.35rem 0.5rem;
   font-size: 0.85rem;
 }
+
 .view-tabs {
   display: flex;
   gap: 0.5rem;
@@ -1339,51 +1356,6 @@ function titleForFilter() {
   color: #fff;
 }
 
-.status-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 0.75rem;
-}
-
-.status-text span {
-  margin-left: 0.25rem;
-  font-size: 0.85rem;
-  color: #4b5563;
-}
-
-.status-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn-success {
-  border: none;
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  background: #22c55e;
-  color: #fff;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.btn-fail {
-  border: none;
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  background: #ef4444;
-  color: #fff;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.btn-success:disabled,
-.btn-fail:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 .visit-image-thumb img {
   max-width: 100%;
   max-height: 120px;
@@ -1393,7 +1365,7 @@ function titleForFilter() {
   border: 1px solid #e5e7eb;
 }
 
-/* MODAL ARKA PLAN */
+/* TAM EKRAN GÖRSEL MODAL */
 .image-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1404,7 +1376,6 @@ function titleForFilter() {
   z-index: 9999;
 }
 
-/* MODAL İÇİ */
 .image-modal-content {
   position: relative;
   max-width: 90vw;
@@ -1419,7 +1390,6 @@ function titleForFilter() {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
 }
 
-/* KAPAT BUTONU */
 .image-modal-close {
   position: absolute;
   top: 8px;
@@ -1434,15 +1404,17 @@ function titleForFilter() {
   font-size: 16px;
 }
 
+/* Takvim */
 .calendar-card {
   margin-top: 0.5rem;
+  overflow-x: auto;
 }
+
 .event-purpose {
   display: block;
   font-size: 0.68rem;
   color: #111827;
 }
-
 
 .calendar-header {
   display: flex;
@@ -1548,10 +1520,6 @@ function titleForFilter() {
   color: #d1d5db;
 }
 
-section.calendar-section {
-    width: 1100px;
-}
-
 .event-text {
   display: block;
 }
@@ -1560,6 +1528,7 @@ section.calendar-section {
   font-size: 0.65rem;
   color: #6b7280;
 }
+
 .owner-search {
   position: relative;
 }
@@ -1609,7 +1578,6 @@ section.calendar-section {
   color: #6b7280;
 }
 
-
 .credit-row {
   margin-top: 0.75rem;
   display: flex;
@@ -1657,21 +1625,6 @@ section.calendar-section {
   font-size: 0.72rem;
 }
 
-.image-box {
-  margin-bottom: 1rem;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #eee;
-  max-height: 260px;
-}
-
-.image-box img {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-}
-
 .visit-image-block {
   margin-top: 12px;
 }
@@ -1698,4 +1651,52 @@ section.calendar-section {
   color: #999;
 }
 
+@media (max-width: 768px) {
+  .page {
+    padding: 1rem;
+  }
+
+  .calendar-day {
+    min-height: 72px;
+    padding: 0.2rem;
+  }
+
+  .day-number {
+    font-size: 0.7rem;
+  }
+
+  .event-pill {
+    font-size: 0.65rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page {
+    padding-bottom: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 0.75rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.1rem;
+  }
+
+  .subtitle {
+    font-size: 0.8rem;
+  }
+
+  .cards {
+    gap: 0.75rem;
+  }
+
+  .modal {
+    max-width: 100%;
+    margin: 0 8px;
+    padding: 1rem;
+  }
+}
 </style>

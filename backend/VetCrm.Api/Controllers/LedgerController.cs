@@ -35,8 +35,20 @@ public class LedgerController : ControllerBase
     // -------------------------------------------------
     //  DTO'lar
     // -------------------------------------------------
+// Kullanıcı bazlı grup DTO'su
+    public class LedgerUserGroupDto
+    {
+        public int? UserId { get; set; }
+        public string? Username { get; set; }
+        public string? FullName { get; set; }
 
-    // Mevcut manuel ledger entry DTO'ların
+        // Bu kullanıcının özet bilgisi
+        public LedgerSummaryDto Summary { get; set; } = new();
+
+        // Bu kullanıcının ziyaret satırları
+        public List<LedgerVisitItemDto> Items { get; set; } = new();
+    }
+
     public class LedgerEntryDto
     {
         public int Id { get; set; }
@@ -154,98 +166,176 @@ public class LedgerController : ControllerBase
     // -------------------------------------------------
 
     // GET /api/ledger/summary?from=2025-11-01&to=2025-11-30
-    // -> Ziyaretlerin toplu özeti (toplam tutar, tahsil, veresiye)
-    [HttpGet("summary")]
-    public async Task<ActionResult<LedgerSummaryDto>> GetVisitSummary(
-        [FromQuery] DateOnly from,
-        [FromQuery] DateOnly to)
+// GET /api/ledger/summary?from=...&to=...&doctorId=7
+[HttpGet("summary")]
+public async Task<ActionResult<LedgerSummaryDto>> GetVisitSummary(
+    [FromQuery] DateOnly from,
+    [FromQuery] DateOnly to)
+{
+    if (to < from)
     {
-        if (to < from)
-        {
-            var tmp = from;
-            from = to;
-            to = tmp;
-        }
-
-        var visits = await _db.Visits
-            .Where(v =>
-                DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
-                DateOnly.FromDateTime(v.PerformedAt.Date) <= to)
-            .Select(v => new
-            {
-                v.AmountTl,
-                v.CreditAmountTl
-            })
-            .ToListAsync();
-
-        decimal totalAmount = 0m;
-        decimal totalCollected = 0m;
-        decimal totalCredit = 0m;
-
-        foreach (var v in visits)
-        {
-            var (t, c, cr) = CalcAmounts(v.AmountTl, v.CreditAmountTl);
-            totalAmount += t;
-            totalCollected += c;
-            totalCredit += cr;
-        }
-
-        var dto = new LedgerSummaryDto
-        {
-            TotalAmount = totalAmount,
-            TotalCollected = totalCollected,
-            TotalCredit = totalCredit,
-            VisitCount = visits.Count
-        };
-
-        return Ok(dto);
+        var tmp = from;
+        from = to;
+        to = tmp;
     }
 
-    // GET /api/ledger/visit-items?from=2025-11-01&to=2025-11-30
-    // -> Her ziyaret için "toplam / alınan / veresiye + ekleyen kullanıcı"
-    [HttpGet("visit-items")]
-    public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
-        [FromQuery] DateOnly from,
-        [FromQuery] DateOnly to)
-    {
-        if (to < from)
+    // Temel ziyaret sorgusu
+    var query = _db.Visits
+        .Where(v =>
+            DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
+            DateOnly.FromDateTime(v.PerformedAt.Date) <= to);
+
+    // 🔴 Sadece hatırlatması "Yapıldı" olan ziyaretler
+    query = query.Where(v =>
+        _db.Reminders.Any(r => r.VisitId == v.Id && r.IsCompleted));
+
+    var visits = await query
+        .Select(v => new
         {
-            var tmp = from;
-            from = to;
-            to = tmp;
-        }
+            v.AmountTl,
+            v.CreditAmountTl
+        })
+        .ToListAsync();
 
-        var data = await _db.Visits
-            .Include(v => v.Pet)
-                .ThenInclude(p => p.Owner)
-            .Where(v =>
-                DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
-                DateOnly.FromDateTime(v.PerformedAt.Date) <= to)
-            .Select(v => new
+    decimal totalAmount = 0m;
+    decimal totalCollected = 0m;
+    decimal totalCredit = 0m;
+
+    foreach (var v in visits)
+    {
+        var (t, c, cr) = CalcAmounts(v.AmountTl, v.CreditAmountTl);
+        totalAmount += t;
+        totalCollected += c;
+        totalCredit += cr;
+    }
+
+    var dto = new LedgerSummaryDto
+    {
+        TotalAmount = totalAmount,
+        TotalCollected = totalCollected,
+        TotalCredit = totalCredit,
+        VisitCount = visits.Count
+    };
+
+    return Ok(dto);
+}
+
+[HttpGet("visit-items")]
+public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
+    [FromQuery] DateOnly from,
+    [FromQuery] DateOnly to)
+{
+    if (to < from)
+    {
+        var tmp = from;
+        from = to;
+        to = tmp;
+    }
+
+    var baseQuery = _db.Visits
+        .Include(v => v.Pet)
+            .ThenInclude(p => p.Owner)
+        .Where(v =>
+            DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
+            DateOnly.FromDateTime(v.PerformedAt.Date) <= to);
+
+    // 🔴 Yine: sadece hatırlatması "Yapıldı" olan ziyaretler
+    baseQuery = baseQuery.Where(v =>
+        _db.Reminders.Any(r => r.VisitId == v.Id && r.IsCompleted));
+
+    var data = await baseQuery
+        .Select(v => new
+        {
+            v.Id,
+            v.PerformedAt,
+            v.AmountTl,
+            v.CreditAmountTl,
+            PetName = v.Pet.Name,
+            OwnerName = v.Pet.Owner.FullName,
+            v.Pet.Owner.PhoneE164,
+            v.CreatedByUsername,
+            v.CreatedByName
+        })
+        .ToListAsync();
+
+    var result = data
+        .Select(v =>
+        {
+            var (total, collected, credit) = CalcAmounts(v.AmountTl, v.CreditAmountTl);
+            return new LedgerVisitItemDto
             {
-                v.Id,
-                v.PerformedAt,
-                v.AmountTl,
-                v.CreditAmountTl,
-                PetName = v.Pet.Name,
-                OwnerName = v.Pet.Owner.FullName,
-                v.Pet.Owner.PhoneE164,
-                v.CreatedByUsername,
-                v.CreatedByName
-            })
-            .ToListAsync();
+                VisitId = v.Id,
+                PerformedAt = v.PerformedAt,
+                PetName = v.PetName,
+                OwnerName = v.OwnerName,
+                OwnerPhoneE164 = v.PhoneE164,
+                TotalAmount = total,
+                CollectedAmount = collected,
+                CreditAmount = credit,
+                CreatedByUsername = v.CreatedByUsername,
+                CreatedByName = v.CreatedByName
+            };
+        })
+        .OrderByDescending(x => x.PerformedAt)
+        .ThenBy(x => x.OwnerName)
+        .ThenBy(x => x.PetName)
+        .ToList();
 
-        var result = data
-            .Select(v =>
+    return Ok(result);
+}
+
+
+
+[HttpGet("by-user")]
+public async Task<ActionResult<List<LedgerUserGroupDto>>> GetByUser(
+    [FromQuery] DateOnly from,
+    [FromQuery] DateOnly to)
+{
+    if (to < from)
+    {
+        var tmp = from;
+        from = to;
+        to = tmp;
+    }
+
+    // Ziyaretleri tarih aralığına göre çek
+    var visits = await _db.Visits
+        .Include(v => v.Pet)
+            .ThenInclude(p => p.Owner)
+        .Where(v =>
+            DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
+            DateOnly.FromDateTime(v.PerformedAt.Date) <= to)
+        .ToListAsync();
+
+    // Kullanıcıya göre grupla (kim eklediyse)
+    var groups = visits
+        .GroupBy(v => new
+        {
+            v.CreatedByUserId,
+            v.CreatedByUsername,
+            v.CreatedByName
+        })
+        .Select(g =>
+        {
+            decimal totalAmount = 0m;
+            decimal totalCollected = 0m;
+            decimal totalCredit = 0m;
+
+            // Her visit'ten LedgerVisitItemDto üret
+            var items = g.Select(v =>
             {
                 var (total, collected, credit) = CalcAmounts(v.AmountTl, v.CreditAmountTl);
+                totalAmount += total;
+                totalCollected += collected;
+                totalCredit += credit;
+
                 return new LedgerVisitItemDto
                 {
                     VisitId = v.Id,
                     PerformedAt = v.PerformedAt,
-                    PetName = v.PetName,
-                    OwnerName = v.OwnerName,
-                    OwnerPhoneE164 = v.PhoneE164,
+                    PetName = v.Pet!.Name,
+                    OwnerName = v.Pet.Owner!.FullName,
+                    OwnerPhoneE164 = v.Pet.Owner.PhoneE164,
                     TotalAmount = total,
                     CollectedAmount = collected,
                     CreditAmount = credit,
@@ -258,6 +348,26 @@ public class LedgerController : ControllerBase
             .ThenBy(x => x.PetName)
             .ToList();
 
-        return Ok(result);
-    }
+            return new LedgerUserGroupDto
+            {
+                UserId = g.Key.CreatedByUserId,
+                Username = g.Key.CreatedByUsername,
+                FullName = g.Key.CreatedByName,
+                Summary = new LedgerSummaryDto
+                {
+                    TotalAmount = totalAmount,
+                    TotalCollected = totalCollected,
+                    TotalCredit = totalCredit,
+                    VisitCount = items.Count
+                },
+                Items = items
+            };
+        })
+        // Null user ( CreatedByUserId=null ) varsa en sona at
+        .OrderBy(g => g.UserId.HasValue ? 0 : 1)
+        .ThenBy(g => g.FullName ?? g.Username)
+        .ToList();
+
+    return Ok(groups);
+}
 }

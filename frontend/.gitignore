@@ -22,3 +22,32 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# ---- GENEL ----
+node_modules/
+dist/
+wwwroot/
+.env
+.env.*
+
+# .NET backend
+**/bin/
+**/obj/
+
+# ---- ANDROID (Capacitor) ----
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/app/build/
+frontend/android/.idea/
+frontend/android/captures/
+frontend/android/.cxx/
+
+# ---- iOS (Capacitor) ----
+frontend/ios/App/build/
+frontend/ios/DerivedData/
+frontend/ios/Pods/
+frontend/ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+frontend/ios/App/App.xcodeproj/xcuserdata/
+frontend/ios/App/App.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store

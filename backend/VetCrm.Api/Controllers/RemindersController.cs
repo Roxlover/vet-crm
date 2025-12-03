@@ -18,34 +18,36 @@ public class RemindersController : ControllerBase
         _db = db;
     }
 
- [HttpPatch("{id:int}/status")]
-    public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateReminderStatusRequest request)
+//  [HttpPatch("{id:int}/status")]
+[HttpPost("{id:int}/status")]
+public async Task<IActionResult> UpdateStatus(
+    int id,
+    [FromBody] UpdateReminderStatusRequest request)
+{
+    var reminder = await _db.Reminders.FirstOrDefaultAsync(r => r.Id == id);
+    if (reminder == null)
+        return NotFound();
+
+    var today = DateOnly.FromDateTime(DateTime.Today);
+
+    if (request.Completed)
     {
-        var reminder = await _db.Reminders.FirstOrDefaultAsync(r => r.Id == id);
-        if (reminder == null)
-            return NotFound();
-
-        var today = DateOnly.FromDateTime(DateTime.Today);
-
-        if (request.Completed)
-        {
-            reminder.IsCompleted = true;
-            reminder.CompletedAt = DateTime.UtcNow;
-        }
-        else
-        {
-            reminder.IsCompleted = false;
-
-            if (request.MarkAsOverdue && reminder.DueDate >= today)
-            {
-                // bugünden sonrayı "geciken"e çekmek için:
-                reminder.DueDate = today.AddDays(-1);
-            }
-        }
-
-        await _db.SaveChangesAsync();
-        return NoContent();
+        reminder.IsCompleted = true;
+        reminder.CompletedAt = DateTime.UtcNow;
     }
+    else
+    {
+        reminder.IsCompleted = false;
+
+        if (request.MarkAsOverdue && reminder.DueDate >= today)
+        {
+            reminder.DueDate = today.AddDays(-1);
+        }
+    }
+
+    await _db.SaveChangesAsync();
+    return NoContent();
+}
 [HttpPatch("{id:int}/credit")]
 public async Task<IActionResult> UpdateCredit(
     int id,

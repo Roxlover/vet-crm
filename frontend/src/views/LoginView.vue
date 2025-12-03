@@ -1,31 +1,37 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { login } from '../api/auth'   // ✅ DİKKAT: ../api/auth
+import { login } from '@/api/auth'
 
 const router = useRouter()
 
-const username = ref('')
-const password = ref('')
-const loading = ref(false)
-const error = ref('')
+const form = ref({
+  username: '',
+  password: '',
+})
 
-async function onSubmit() {
-  error.value = ''
-  loading.value = true
+const loading = ref(false)
+const errorMessage = ref('')
+
+const handleSubmit = async () => {
+  errorMessage.value = ''
+  if (!form.value.username || !form.value.password) {
+    errorMessage.value = 'Kullanıcı adı ve şifre zorunludur.'
+    return
+  }
 
   try {
-    const user = await login({
-      username: username.value,
-      password: password.value,
+    loading.value = true
+
+    await login({
+      username: form.value.username,
+      password: form.value.password,
     })
 
-    console.log('Giriş başarılı, kullanıcı:', user)
-
-    router.push({ name: 'dashboard' })
-  } catch (e) {
-    console.error(e)
-    error.value = 'Kullanıcı adı veya şifre hatalı.'
+    // Başarılı giriş → dashboard'a yönlendir
+    await router.push({ name: 'dashboard' })
+  } catch (err) {
+    errorMessage.value = 'Kullanıcı adı veya şifre hatalı.'
   } finally {
     loading.value = false
   }
@@ -35,37 +41,38 @@ async function onSubmit() {
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h1 class="title">NL</h1>
-      <p class="subtitle">Kullanıcı adı ve şifrenizle giriş yapın</p>
+      <div class="login-header">
+        <h1 class="login-title">NL</h1>
+        <p class="login-subtitle">Kullanıcı adı ve şifrenizle giriş yapın</p>
+      </div>
 
-      <form @submit.prevent="onSubmit">
-        <div class="field">
-          <label for="username">Kullanıcı adı</label>
+      <form class="login-form" @submit.prevent="handleSubmit">
+        <label class="field">
+          <span class="field-label">Kullanıcı adı</span>
           <input
-            id="username"
-            v-model="username"
+            v-model="form.username"
             type="text"
             autocomplete="username"
-            required
+            class="field-input"
           />
-        </div>
+        </label>
 
-        <div class="field">
-          <label for="password">Şifre</label>
+        <label class="field">
+          <span class="field-label">Şifre</span>
           <input
-            id="password"
-            v-model="password"
+            v-model="form.password"
             type="password"
             autocomplete="current-password"
-            required
+            class="field-input"
           />
-        </div>
+        </label>
 
-        <p v-if="error" class="error">{{ error }}</p>
+        <p v-if="errorMessage" class="error-text">
+          {{ errorMessage }}
+        </p>
 
-        <button class="btn-login" type="submit" :disabled="loading">
-          <span v-if="loading">Giriş yapılıyor...</span>
-          <span v-else>Giriş yap</span>
+        <button class="login-button" type="submit" :disabled="loading">
+          {{ loading ? 'Giriş yapılıyor...' : 'Giriş yap' }}
         </button>
       </form>
     </div>
@@ -73,84 +80,135 @@ async function onSubmit() {
 </template>
 
 <style scoped>
+/* Sayfa: login kartını ortalamak için */
 .login-page {
+  width: 100%;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0f172a;
-  padding: 1.5rem;
+  padding: 16px;
+
+  /* 🌌 YILDIZLI GECE ARKA PLAN */
+  background-color: #020617;
+  background-image:
+    radial-gradient(1.5px 1.5px at 10px 10px, #ffffff 0, transparent 55%),
+    radial-gradient(1.5px 1.5px at 30px 40px, #ffffff 0, transparent 55%),
+    radial-gradient(1.5px 1.5px at 50px 20px, #ffffff 0, transparent 55%),
+    radial-gradient(1.5px 1.5px at 70px 50px, #ffffff 0, transparent 55%);
+  background-size: 80px 80px;
+  background-repeat: repeat;
 }
 
+
+/* Kart */
 .login-card {
   width: 100%;
-  max-width: 360px;
-  background: #ffffff;
-  border-radius: 0.9rem;
-  padding: 1.5rem 1.75rem;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.35);
+  max-width: 420px;
+  padding: 24px 20px;
+  border-radius: 16px;
+  background: #f9fafb;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.4);
 }
 
-.title {
-  margin: 0;
-  font-size: 1.4rem;
+/* Başlık */
+.login-header {
+  margin-bottom: 20px;
+}
+
+.login-title {
+  margin: 0 0 4px;
+  font-size: 28px;
   font-weight: 700;
-  color: #111827;
+  color: #020617;
 }
 
-.subtitle {
-  margin: 0.2rem 0 1.2rem;
-  font-size: 0.9rem;
+.login-subtitle {
+  margin: 0;
+  font-size: 14px;
   color: #6b7280;
+}
+
+/* Form alanları */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.9rem;
-  font-size: 0.85rem;
+  gap: 4px;
 }
 
-.field label {
-  font-weight: 600;
-  color: #374151;
+.field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
 }
 
-.field input {
-  border-radius: 0.55rem;
+.field-input {
+  height: 40px;
+  border-radius: 10px;
   border: 1px solid #d1d5db;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.9rem;
+  padding: 0 12px;
+  font-size: 14px;
   outline: none;
+  background: white;
 }
 
-.field input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+.field-input:focus {
+  border-color: #111827;
+  box-shadow: 0 0 0 1px #11182733;
 }
 
-.btn-login {
+/* Hata yazısı */
+.error-text {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #dc2626;
+}
+
+/* Buton */
+.login-button {
+  margin-top: 8px;
   width: 100%;
-  border: none;
+  height: 42px;
   border-radius: 999px;
-  padding: 0.55rem 0.9rem;
-  margin-top: 0.4rem;
-  background: #111827;
-  color: #ffffff;
-  font-size: 0.9rem;
+  border: none;
+  font-size: 15px;
   font-weight: 600;
+  color: white;
+  background: #020617;
   cursor: pointer;
+  transition: filter 0.15s ease, transform 0.12s ease;
 }
 
-.btn-login:disabled {
-  opacity: 0.7;
+.login-button:hover:not(:disabled) {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.login-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-button:disabled {
+  opacity: 0.6;
   cursor: default;
 }
 
-.error {
-  margin: 0.25rem 0 0;
-  font-size: 0.8rem;
-  color: #dc2626;
+/* Küçük ekranlarda padding ve radius ayarı */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.4);
+  }
+
+  .login-title {
+    font-size: 24px;
+  }
 }
 </style>

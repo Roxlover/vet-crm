@@ -23,7 +23,7 @@
       </div>
     </section>
 
-    <!-- FİLTRE + TARİH ARALIĞI (TEK FİLTRE BURASI) -->
+    <!-- FİLTRE + TARİH ARALIĞI -->
     <section class="card controls">
       <div class="date-range">
         <div class="field">
@@ -42,7 +42,7 @@
       </div>
     </section>
 
-    <!-- YENİ KAYIT FORMU -->
+    <!-- YENİ KAYIT FORMU (manuel gelir/gider) -->
     <section class="card form-card">
       <h2>Yeni Kayıt Ekle</h2>
 
@@ -119,69 +119,113 @@
     </section>
 
     <!-- ZİYARETLERDEN GELEN ÖZET -->
-<div v-if="summary" class="cards summary-cards">
-  <div class="card summary-card">
-    <h3>Ziyaret Toplam Tutar</h3>
-    <p class="summary-subtitle">Ziyaret kartlarındaki işlem tutarları</p>
-    <p class="summary-value">
-      {{ summary.totalAmount.toLocaleString('tr-TR') }} TL
-    </p>
-  </div>
-  <div class="card summary-card">
-    <h3>Ziyaret Tahsil</h3>
-    <p class="summary-subtitle">“Ne kadar alındı” alanlarının toplamı</p>
-    <p class="summary-value">
-      {{ summary.totalCollected.toLocaleString('tr-TR') }} TL
-    </p>
-  </div>
-  <div class="card summary-card">
-    <h3>Ziyaret Veresiye</h3>
-    <p class="summary-subtitle">Veresiye kalan tutar</p>
-    <p class="summary-value">
-      {{ summary.totalCredit.toLocaleString('tr-TR') }} TL
-    </p>
-  </div>
-  <div class="card summary-card">
-    <h3>Ziyaret Sayısı</h3>
-    <p class="summary-subtitle">Seçili aralıktaki toplam ziyaret</p>
-    <p class="summary-value">
-      {{ summary.visitCount }}
-    </p>
-  </div>
-</div>
-
-
-    <!-- ZİYARET GELİR DETAY TABLOSU -->
-    <section v-if="rows.length" class="card detail-card">
-      <div class="card-header">
-        <h2>Ziyaretlerden Oluşan Gelirler</h2>
-        <span class="small">({{ from }} – {{ to }})</span>
+    <div v-if="summary" class="cards summary-cards">
+      <div class="card summary-card">
+        <h3>Ziyaret Toplam Tutar</h3>
+        <p class="summary-subtitle">Ziyaret kartlarındaki işlem tutarları</p>
+        <p class="summary-value">
+          {{ summary.totalAmount.toLocaleString('tr-TR') }} TL
+        </p>
       </div>
+      <div class="card summary-card">
+        <h3>Ziyaret Tahsil</h3>
+        <p class="summary-subtitle">“Ne kadar alındı” alanlarının toplamı</p>
+        <p class="summary-value">
+          {{ summary.totalCollected.toLocaleString('tr-TR') }} TL
+        </p>
+      </div>
+      <div class="card summary-card">
+        <h3>Ziyaret Veresiye</h3>
+        <p class="summary-subtitle">Veresiye kalan tutar</p>
+        <p class="summary-value">
+          {{ summary.totalCredit.toLocaleString('tr-TR') }} TL
+        </p>
+      </div>
+      <div class="card summary-card">
+        <h3>Ziyaret Sayısı</h3>
+        <p class="summary-subtitle">Seçili aralıktaki toplam ziyaret</p>
+        <p class="summary-value">
+          {{ summary.visitCount }}
+        </p>
+      </div>
+    </div>
 
-      <table class="table detail-table">
-        <thead>
-          <tr>
-            <th>Tarih</th>
-            <th>Hasta</th>
-            <th>Sahip</th>
-            <th class="amount">Toplam</th>
-            <th class="amount">Alınan</th>
-            <th class="amount">Veresiye</th>
-            <th>Ekleyen</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="r in rows" :key="r.visitId">
-            <td>{{ new Date(r.performedAt).toLocaleDateString('tr-TR') }}</td>
-            <td>{{ r.petName }}</td>
-            <td>{{ r.ownerName }}</td>
-            <td class="amount">{{ r.totalAmount.toLocaleString('tr-TR') }} TL</td>
-            <td class="amount">{{ r.collectedAmount.toLocaleString('tr-TR') }} TL</td>
-            <td class="amount">{{ r.creditAmount.toLocaleString('tr-TR') }} TL</td>
-            <td>{{ r.createdByName || r.createdByUsername }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- ZİYARETLERDEN GELİR DETAY TABLOLARI – EKLEYEN KULLANICIYA GÖRE -->
+    <section v-if="isBullBoss" class="doctor-grid">
+      <div
+        v-for="group in visitUserGroups"
+        :key="group.username"
+        class="card detail-card doctor-card"
+      >
+        <div class="card-header">
+          <div>
+            <h2>{{ group.fullName }}</h2>
+            <span class="small">({{ from }} – {{ to }})</span>
+          </div>
+          <p class="doctor-subtitle">Ziyaretlerden Oluşan Gelirler</p>
+        </div>
+
+        <div class="doctor-summary-row">
+          <div class="summary-pill">
+            Toplam: {{ formatAmount(group.summary.totalAmount) }} TL
+          </div>
+          <div class="summary-pill">
+            Tahsil: {{ formatAmount(group.summary.totalCollected) }} TL
+          </div>
+          <div class="summary-pill">
+            Veresiye: {{ formatAmount(group.summary.totalCredit) }} TL
+          </div>
+          <div class="summary-pill">
+            Ziyaret: {{ group.summary.visitCount }}
+          </div>
+        </div>
+
+        <table
+          v-if="group.items && group.items.length"
+          class="table detail-table"
+        >
+          <thead>
+            <tr>
+              <th>Tarih</th>
+              <th>Hasta</th>
+              <th>Sahip</th>
+              <th class="amount">Toplam</th>
+              <th class="amount">Alınan</th>
+              <th class="amount">Veresiye</th>
+              <th>Ekleyen</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in group.items" :key="r.visitId">
+              <td data-label="Tarih">
+                {{ new Date(r.performedAt).toLocaleDateString('tr-TR') }}
+              </td>
+              <td data-label="Hasta">
+                {{ r.petName }}
+              </td>
+              <td data-label="Sahip">
+                {{ r.ownerName }}
+              </td>
+              <td class="amount" data-label="Toplam">
+                {{ r.totalAmount.toLocaleString('tr-TR') }} TL
+              </td>
+              <td class="amount" data-label="Alınan">
+                {{ r.collectedAmount.toLocaleString('tr-TR') }} TL
+              </td>
+              <td class="amount" data-label="Veresiye">
+                {{ r.creditAmount.toLocaleString('tr-TR') }} TL
+              </td>
+              <td data-label="Ekleyen">
+                {{ r.createdByName || r.createdByUsername }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div v-else class="state">
+          Bu aralıkta kayıt yok.
+        </div>
+      </div>
     </section>
 
     <!-- MANUEL GELİR/GİDER LİSTESİ -->
@@ -235,6 +279,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { getUser } from '@/utils/auth'
 import {
   fetchLedgerSummary,
   fetchLedgerItems,
@@ -242,15 +288,22 @@ import {
   fetchLedgerRange,
 } from '@/api/ledger'
 
-// === GENEL STATE ===
+const router = useRouter()
+
+const rawUser = getUser()
+const isBullBoss = computed(() => rawUser?.username === 'BullBoss')
+
+// --- GENEL STATE ---
 const entries = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
 
-// Ziyaret bazlı özetler
+// Ziyaret özeti (tüm ziyaretler)
 const summary = ref(null)
-const rows = ref([])
+
+// Tüm ziyaret satırları (ekleyen kullanıcıya göre gruplayacağız)
+const allVisitItems = ref([])
 
 // --- TARİH ARALIĞI ---
 function toIsoDate(date) {
@@ -261,7 +314,7 @@ const today = new Date()
 const from = ref(toIsoDate(today))
 const to = ref(toIsoDate(today))
 
-// FORM STATE
+// FORM STATE (manuel gelir/gider)
 const form = ref({
   date: toIsoDate(today),
   amount: null,
@@ -284,6 +337,54 @@ const totalExpense = computed(() =>
 )
 
 const netTotal = computed(() => totalIncome.value - totalExpense.value)
+
+// === ZİYARETLERİ EKLEYEN KULLANICIYA GÖRE GRUPLA ===
+const visitUserGroups = computed(() => {
+  const map = new Map()
+
+  for (const row of allVisitItems.value) {
+    const key = row.createdByUsername || 'unknown'
+    const fullName = row.createdByName || row.createdByUsername || 'Bilinmiyor'
+
+    if (!map.has(key)) {
+      map.set(key, {
+        username: key,
+        fullName,
+        items: [],
+      })
+    }
+    map.get(key).items.push(row)
+  }
+
+  const result = []
+
+  for (const group of map.values()) {
+    let totalAmount = 0
+    let totalCollected = 0
+    let totalCredit = 0
+
+    for (const v of group.items) {
+      totalAmount += v.totalAmount || 0
+      totalCollected += v.collectedAmount || 0
+      totalCredit += v.creditAmount || 0
+    }
+
+    result.push({
+      ...group,
+      summary: {
+        totalAmount,
+        totalCollected,
+        totalCredit,
+        visitCount: group.items.length,
+      },
+    })
+  }
+
+  // İsimlere göre sırala
+  return result.sort((a, b) =>
+    a.fullName.localeCompare(b.fullName, 'tr'),
+  )
+})
 
 // === HELPERLAR ===
 function formatAmount(value) {
@@ -316,17 +417,25 @@ function setThisWeek() {
 
 // === BACKEND'TEN VERİ ÇEKME ===
 async function loadLedger() {
+  // Sadece BullBoss bu sayfayı kullanacağı için,
+  // yine de güvenlik için kontrol.
+  if (!isBullBoss.value) {
+    loading.value = false
+    return
+  }
+
   loading.value = true
   error.value = ''
 
   try {
-    const s = await fetchLedgerSummary(from.value, to.value)
-    const list = await fetchLedgerItems(from.value, to.value)
+    const [summaryRes, visitItems, rangeData] = await Promise.all([
+      fetchLedgerSummary(from.value, to.value),
+      fetchLedgerItems(from.value, to.value),
+      fetchLedgerRange(from.value, to.value),
+    ])
 
-    summary.value = s
-    rows.value = list
-
-    const rangeData = await fetchLedgerRange(from.value, to.value)
+    summary.value = summaryRes
+    allVisitItems.value = visitItems
     entries.value = rangeData
   } catch (e) {
     console.error('loadLedger hata', e)
@@ -373,6 +482,12 @@ async function submitEntry() {
 
 // === SAYFA AÇILIRKEN ===
 onMounted(() => {
+  // Sadece BullBoss bu sayfayı görebilsin
+  if (!isBullBoss.value) {
+    router.push({ name: 'dashboard' })
+    return
+  }
+
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth(), 1)
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
@@ -386,7 +501,10 @@ onMounted(() => {
 
 <style scoped>
 .page {
-  padding: 1.5rem;
+  width: 100%;
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 1rem;
 }
 
 .page-header {
@@ -451,7 +569,8 @@ onMounted(() => {
 }
 
 .field {
-  display: flex;
+  display: flex
+;
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.85rem;
@@ -560,7 +679,6 @@ onMounted(() => {
   text-align: right;
 }
 
-Detay tablosu için ekstra dokunuş
 .detail-table thead tr {
   background: #f3f4f6;
 }
@@ -615,6 +733,40 @@ Detay tablosu için ekstra dokunuş
   color: #b91c1c;
 }
 
+/* DOKTOR/KULLANICI TABLOLARI GRIDİ */
+.doctor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.doctor-card {
+  padding: 0.9rem;
+}
+
+.doctor-subtitle {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.doctor-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.summary-pill {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
 /* RESPONSIVE */
 @media (max-width: 900px) {
   .cards {
@@ -623,6 +775,57 @@ Detay tablosu için ekstra dokunuş
 
   .controls .date-range {
     align-items: stretch;
+  }
+
+  .doctor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .detail-card {
+    padding: 0.75rem;
+  }
+
+  .detail-table {
+    border: 0;
+  }
+
+  .detail-table thead {
+    display: none;
+  }
+
+  .detail-table tbody tr {
+    display: block;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 0.75rem;
+    background: #f9fafb;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  }
+
+  .detail-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .detail-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: none;
+    padding: 0.15rem 0;
+    font-size: 0.8rem;
+  }
+
+  .detail-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6b7280;
+    margin-right: 0.75rem;
+  }
+
+  .detail-table td.amount {
+    font-variant-numeric: tabular-nums;
   }
 }
 </style>
