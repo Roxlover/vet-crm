@@ -50,6 +50,9 @@ public class VisitsController : ControllerBase
         _db.Reminders.Add(reminder);
     }
 
+    // --------------------------------------------------------------------
+    // GET /api/visits?ownerId=&petId=
+    // --------------------------------------------------------------------
     [HttpGet]
     public async Task<ActionResult<IEnumerable<VisitDto>>> GetVisits(
         [FromQuery] int? ownerId,
@@ -59,6 +62,7 @@ public class VisitsController : ControllerBase
             .Include(v => v.Pet)
                 .ThenInclude(p => p.Owner)
             .Include(v => v.CreatedByUser)
+            .Include(v => v.Images) // 🔹 çoklu görsel
             .AsQueryable();
 
         if (ownerId.HasValue)
@@ -86,21 +90,45 @@ public class VisitsController : ControllerBase
                 CreatedByUserId   = v.CreatedByUserId,
                 CreatedByUsername = v.CreatedByUsername,
                 CreatedByName     = v.CreatedByName,
-                ImageUrl          = v.ImageUrl
+
+                // Eski tekli alan (thumbnail gibi)
+                ImageUrl = v.ImageUrl,
+
+                // 🔹 Çoklu görseller
+                Images = v.Images
+                    .OrderByDescending(i => i.CreatedAt)
+                    .Select(i => new VisitImageDto
+                    {
+                        Id = i.Id,
+                        ImageUrl = i.ImageUrl,
+                        CreatedAt = i.CreatedAt
+                    })
+                    .ToList(),
             })
             .ToListAsync();
+
+        // ImageUrl boş olanlara, ilk görseli fallback olarak yaz
+        foreach (var dto in visits)
+        {
+            if (dto.ImageUrl == null)
+                dto.ImageUrl = dto.Images.FirstOrDefault()?.ImageUrl;
+        }
 
         return Ok(visits);
     }
 
+    // --------------------------------------------------------------------
+    // GET /api/visits/{id}
+    // --------------------------------------------------------------------
     [HttpGet("{id:int}")]
     public async Task<ActionResult<VisitDto>> GetVisit(int id)
     {
-        var visit = await _db.Visits
+        var dto = await _db.Visits
             .Include(v => v.Pet)
                 .ThenInclude(p => p.Owner)
             .Include(v => v.CreatedByUser)
             .Include(v => v.Doctor)
+            .Include(v => v.Images) // 🔹 çoklu görsel
             .Where(v => v.Id == id)
             .Select(v => new VisitDto
             {
@@ -117,16 +145,36 @@ public class VisitsController : ControllerBase
                 CreatedByUserId   = v.CreatedByUserId,
                 CreatedByUsername = v.CreatedByUsername,
                 CreatedByName     = v.CreatedByName,
-                ImageUrl          = v.ImageUrl
+                DoctorId          = v.DoctorId,
+                DoctorName        = v.Doctor != null ? v.Doctor.FullName : null,
+
+                ImageUrl = v.ImageUrl,
+
+                Images = v.Images
+                    .OrderByDescending(i => i.CreatedAt)
+                    .Select(i => new VisitImageDto
+                    {
+                        Id = i.Id,
+                        ImageUrl = i.ImageUrl,
+                        CreatedAt = i.CreatedAt
+                    })
+                    .ToList(),
             })
             .FirstOrDefaultAsync();
 
-        if (visit is null)
+        if (dto is null)
             return NotFound();
 
-        return Ok(visit);
+        if (dto.ImageUrl == null)
+            dto.ImageUrl = dto.Images.FirstOrDefault()?.ImageUrl;
+
+        return Ok(dto);
     }
 
+
+    // --------------------------------------------------------------------
+    // POST /api/visits
+    // --------------------------------------------------------------------
     [HttpPost]
     public async Task<ActionResult<VisitDto>> CreateVisit([FromBody] VisitCreateDto dto)
     {
@@ -175,11 +223,11 @@ public class VisitsController : ControllerBase
 
             var result = new VisitDto
             {
-                Id         = visit.Id,
-                PetId      = visit.PetId,
-                PetName    = pet.Name,
-                OwnerId    = pet.OwnerId,
-                OwnerName  = pet.Owner.FullName,
+                Id          = visit.Id,
+                PetId       = visit.PetId,
+                PetName     = pet.Name,
+                OwnerId     = pet.OwnerId,
+                OwnerName   = pet.Owner.FullName,
                 PerformedAt = visit.PerformedAt,
                 Procedures  = visit.Procedures,
                 AmountTl    = visit.AmountTl,
@@ -269,21 +317,26 @@ public class VisitsController : ControllerBase
         return Ok(upcoming);
     }
 
-    // ---------- LOCAL IMAGE UPLOAD ----------
+    // --------------------------------------------------------------------
+    // ÇOKLU GÖRSEL UPLOAD
+    // POST /api/visits/{id}/images
+    // --------------------------------------------------------------------
+    [HttpPost("{id:int}/images")]
+public async Task<ActionResult<List<VisitImageDto>>> UploadImages(
+    int id,
+    [FromForm] List<IFormFile> files)
+{
+    var visit = await _db.Visits.FindAsync(id);
+    if (visit is null)
+        return NotFound();
 
-    [HttpPost("{id:int}/image")]
-    public async Task<ActionResult<VisitImageDto>> UploadImage(int id, IFormFile file)
+    if (files == null || files.Count == 0)
+        return BadRequest("Dosya yok.");
+
+    var results = new List<VisitImageDto>();
+
+    foreach (var file in files)
     {
-        Console.WriteLine("=== UploadImage CALLED === id=" + id);
-        Console.WriteLine($"File? name={file?.FileName}, len={file?.Length}");
-
-        var visit = await _db.Visits.FindAsync(id);
-        if (visit is null)
-            return NotFound();
-
-        if (file == null || file.Length == 0)
-            return BadRequest("Dosya yok.");
-
         await using var stream = file.OpenReadStream();
         var url = await _storage.UploadVisitImageAsync(
             visitId: visit.Id,
@@ -291,11 +344,36 @@ public class VisitsController : ControllerBase
             contentType: file.ContentType ?? "image/jpeg"
         );
 
-        visit.ImageUrl = url;
-        await _db.SaveChangesAsync();
+        var image = new VisitImage
+        {
+            VisitId = visit.Id,
+            ImageUrl = url,
+            CreatedAt = DateTime.UtcNow
+        };
 
-        Console.WriteLine("[UploadImage] SUCCESS, url=" + url);
+        _db.VisitImages.Add(image);
 
-        return Ok(new VisitImageDto { ImageUrl = url });
+        results.Add(new VisitImageDto
+        {
+            Id = image.Id,
+            ImageUrl = url,
+            CreatedAt = image.CreatedAt
+        });
     }
+
+    await _db.SaveChangesAsync();
+    return Ok(results);
+}
+
+
+    // Eski tekli endpoint’i istersen bir süre daha tutabilirsin:
+    /*
+    [HttpPost("{id:int}/image")]
+    public async Task<ActionResult<VisitImageDto>> UploadImage(int id, IFormFile file)
+    {
+        if (file == null) return BadRequest("Dosya yok.");
+        return await UploadImages(id, new List<IFormFile> { file })
+            .ContinueWith<ActionResult<List<VisitImageDto>>>(t => t.Result);
+    }
+    */
 }

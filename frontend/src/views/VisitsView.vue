@@ -110,16 +110,25 @@
   <input
     type="file"
     accept="image/*"
-    capture="environment"
-    @change="onFileChange"
+    multiple
+    @change="onFilesChange"
   />
 
   <small class="hint">
     Örn: yara fotoğrafı, faturanın görüntüsü vb.
   </small>
 
-  <div v-if="form.imagePreview" class="visit-image-preview">
-    <img :src="form.imagePreview" alt="Seçilen görsel" />
+  <div
+    v-if="form.imagePreviews && form.imagePreviews.length"
+    class="visit-image-preview-grid"
+  >
+    <div
+      v-for="(src, idx) in form.imagePreviews"
+      :key="idx"
+      class="visit-image-thumb"
+    >
+      <img :src="src" :alt="`Görsel ${idx + 1}`" />
+    </div>
   </div>
 </div>
 
@@ -145,6 +154,7 @@ import { fetchPetsByOwner } from '../api/pets'
 import { createVisit } from '../api/visits'
 import { http } from '@/api/http'
 
+
 const owners = ref([])
 const pets = ref([])
 
@@ -168,9 +178,10 @@ const form = reactive({
   purpose: '',
   ownerStatus: '',
   notes: '',
-  imageFile: null,
-  imagePreview: '',
-  })
+  imageFiles: [],      // 🔹 birden fazla dosya
+  imagePreviews: [],   // 🔹 birden fazla preview
+})
+
 
 // Seçilen sahip için pet listesi
 const petsForSelectedOwner = computed(() =>
@@ -208,6 +219,44 @@ watch(selectedOwnerId, (newId) => {
   }
   selectedPetId.value = '' // sahib değişince hasta sıfırlansın
 })
+const showImagePreview = ref(false)
+const showImage = ref(false)
+const showImageModal = ref(false)
+const activeImageIndex = ref(0)
+
+// selectedVisit.images varsa onu kullan, yoksa tekil imageUrl'den array üret
+const visitImages = computed(() => {
+  const v = selectedVisit.value
+  if (!v) return []
+
+  if (Array.isArray(v.images) && v.images.length) {
+    return v.images
+  }
+
+  if (v.imageUrl) {
+    return [{ id: 0, imageUrl: v.imageUrl }]
+  }
+
+  return []
+})
+
+const visitImageSrc = computed(() => {
+  if (!visitImages.value.length) return ''
+
+  const img = visitImages.value[activeImageIndex.value] || visitImages.value[0]
+  const url = img?.imageUrl
+  if (!url) return ''
+
+  return url.startsWith('http') ? url : API_BASE + url
+})
+
+// seçili ziyaret değişince ilk görsele dön, preview/modalları kapat
+watch(selectedVisit, () => {
+  activeImageIndex.value = 0
+  showImagePreview.value = false
+  showImage.value = false
+  showImageModal.value = false
+})
 
 // Pet seçilince: pet adını doldur
 watch(selectedPetId, (newId) => {
@@ -219,20 +268,21 @@ watch(selectedPetId, (newId) => {
     petName.value = ''
   }
 })
+function onFilesChange(event) {
+  const files = Array.from(event.target.files || [])
 
-function onFileChange(event) {
-  const input = event.target
-  const file = input.files?.[0]
+  console.log('SEÇİLEN DOSYA SAYISI >>>', files.length)
 
-  if (!file) {
-    form.imageFile = null
-    form.imagePreview = ''
+  if (!files.length) {
+    form.imageFiles = []
+    form.imagePreviews = []
     return
   }
 
-  form.imageFile = file
-  form.imagePreview = URL.createObjectURL(file)
+  form.imageFiles = files
+  form.imagePreviews = files.map(f => URL.createObjectURL(f))
 }
+
 
 async function handleSave() {
   error.value = ''
@@ -275,35 +325,44 @@ async function handleSave() {
     // 3) ZİYARET OLUŞTUR
     const res = await http.post('/visits', payload)
     const createdVisit = res.data
-    const visitId = createdVisit.id
+    const visitId = createdVisit.id || createdVisit.Id
 
     // 4) GÖRSEL VARSA, AYRI TRY/CATCH İÇİNDE YÜKLE
     // 4) GÖRSEL VARSA, AYRI ENDPOINT'E YÜKLE
-if (form.imageFile && visitId) {
+// 4) GÖRSELLER VARSA, ÇOKLU ENDPOINT'E YÜKLE
+// 4) GÖRSELLER VARSA, HER BİRİNİ AYRI ENDPOINT'E YÜKLE
+if (form.imageFiles.length && visitId) {
   const fd = new FormData()
-  fd.append('file', form.imageFile)
+
+  // backend parametresi: List<IFormFile> files => alan adı "files" olmalı
+  form.imageFiles.forEach((file) => {
+    fd.append('files', file)
+  })
 
   console.log('IMAGE UPLOAD START', {
     visitId,
-    fileName: form.imageFile.name,
-    size: form.imageFile.size,
-    type: form.imageFile.type,
+    count: form.imageFiles.length,
   })
 
   try {
-    const resUpload = await http.post(`/visits/${visitId}/image`, fd, {
+    const resUpload = await http.post(`/visits/${visitId}/images`, fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-
     console.log('IMAGE UPLOAD OK', resUpload.status, resUpload.data)
   } catch (e) {
     console.error(
       'image upload error',
       e.response?.status,
-      e.response?.data || e.message
+      e.response?.data || e.message,
     )
   }
+
+  // İş bittikten sonra temizle
+  form.imageFiles = []
+  form.imagePreviews = []
 }
+
+
 
 
     success.value = 'Ziyaret kaydedildi.'

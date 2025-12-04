@@ -15,6 +15,7 @@ public class Visit
     public decimal? AmountTl { get; set; }
     public string? Notes { get; set; }
     public string? ImageUrl { get; set; }
+    public ICollection<VisitImage> Images { get; set; } = new List<VisitImage>();
     public int? DoctorId { get; set; }
     public User? Doctor { get; set; }
     public int? CreatedByUserId { get; set; }

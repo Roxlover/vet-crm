@@ -1,3 +1,5 @@
+using VetCrm.Api.Dtos;
+
 public class VisitDetailDto
 {
     public int Id { get; set; }
@@ -18,6 +20,8 @@ public class VisitDetailDto
     public string? CreatedByName { get; set; }
     public string? CreatedByUsername { get; set; }
    public decimal? CreditAmountTl { get; set; }
+    public List<VisitImageDto> Images { get; set; } = new();
+
 }
 
 

@@ -28,4 +28,6 @@ public class DashboardVisitDetailDto
     public int? CreatedByUserId { get; set; }
     public string? CreatedByUsername { get; set; }
     public string? CreatedByName { get; set; }
+    public List<VisitImageDto> Images { get; set; } = new();
+
 }

@@ -23,4 +23,6 @@ public class VisitDto
     public int? DoctorId { get; set; }
     public string? DoctorName { get; set; }
     public string? ImageUrl { get; set; }
+    public List<VisitImageDto> Images { get; set; } = new();
+
 }

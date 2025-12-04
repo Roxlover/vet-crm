@@ -10,10 +10,10 @@ public class VetCrmDbContext : DbContext
     {
     }
 
-    // 🔴 Her entity için TEK DbSet, hepsi auto-property
     public DbSet<Owner> Owners { get; set; } = null!;
     public DbSet<Pet> Pets { get; set; } = null!;
     public DbSet<Visit> Visits { get; set; } = null!;
+    public DbSet<VisitImage> VisitImages { get; set; } = null!;
     public DbSet<Reminder> Reminders { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<LedgerEntry> LedgerEntries { get; set; } = null!;
@@ -92,8 +92,22 @@ public class VetCrmDbContext : DbContext
             b.Property(n => n.Type).IsRequired().HasMaxLength(50);
             b.Property(n => n.Message).IsRequired().HasMaxLength(500);
             b.HasOne(n => n.User)
-                .WithMany() // istersen User.Notifications koleksiyonu da ekleyebilirsin
+                .WithMany() 
                 .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        
+        modelBuilder.Entity<VisitImage>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.ImageUrl)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            b.HasOne(x => x.Visit)
+                .WithMany(v => v.Images)
+                .HasForeignKey(x => x.VisitId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

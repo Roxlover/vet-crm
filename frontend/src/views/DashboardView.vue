@@ -291,34 +291,77 @@
           </div>
         </div>
 
-        <!-- GÖRSEL ALANI -->
-        <div v-if="selectedVisit">
-          <div v-if="selectedVisit.imageUrl" class="visit-image-block">
-            <button
-              type="button"
-              class="btn-secondary"
-              @click="showImagePreview = !showImagePreview"
-            >
-              {{ showImagePreview ? 'Görseli gizle' : 'Son eklenen görseli göster' }}
-            </button>
+<!-- Görsel alanı (çoklu) -->
+<div v-if="selectedVisit">
+  <div
+    v-if="visitImages.length"
+    class="visit-image-block"
+  >
+    <button
+      type="button"
+      class="btn-secondary"
+      @click="showImagePreview = !showImagePreview"
+    >
+      {{ showImagePreview ? 'Görselleri gizle' : 'Görselleri göster' }}
+    </button>
 
-            <div v-if="showImagePreview" class="visit-image-preview">
-              <div class="visit-image-thumb">
-                <img
-                  :src="visitImageSrc"
-                  alt="Ziyaret görseli"
-                  @click="openImageModal"
-                />
-              </div>
-            </div>
-          </div>
-          <div v-else class="visit-image-empty">
-            Bu ziyarete ait kayıtlı görsel bulunmuyor.
-          </div>
-        </div>
+    <div v-if="showImagePreview" class="visit-image-preview">
+      <!-- Büyük ana görsel -->
+      <div
+        v-if="visitImageSrc"
+        class="visit-image-main"
+      >
+        <img
+          :src="visitImageSrc"
+          alt="Ziyaret görseli"
+          @click="openImageModal"
+        />
+      </div>
+
+      <!-- Thumbnail listesi -->
+      <div
+        v-if="visitImages.length > 1"
+        class="visit-image-thumbs"
+      >
+        <button
+          v-for="(img, idx) in visitImages"
+          :key="img.id || idx"
+          type="button"
+          class="thumb"
+          :class="{ active: idx === activeImageIndex }"
+          @click="activeImageIndex = idx"
+        >
+          <img
+            :src="img.imageUrl.startsWith('http') ? img.imageUrl : API_BASE + img.imageUrl"
+            :alt="`Görsel ${idx + 1}`"
+          />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div v-else class="visit-image-empty">
+    Bu ziyarete ait kayıtlı görsel bulunmuyor.
+  </div>
+</div>
+
+<!-- TAM EKRAN GÖRSEL MODALI (aynen kalabilir, sadece visitImageSrc kullanıyor) -->
+<div
+  v-if="showImageModal"
+  class="image-modal-backdrop"
+  @click.self="closeImageModal"
+>
+  <div class="image-modal-content">
+    <img :src="visitImageSrc" alt="Ziyaret görseli" />
+    <button class="image-modal-close" @click="closeImageModal">
+      ✕
+    </button>
+  </div>
+</div> 
+
 
         <!-- TAM EKRAN GÖRSEL MODALI -->
-        <div
+        <!-- <div
           v-if="showImageModal"
           class="image-modal-backdrop"
           @click.self="closeImageModal"
@@ -329,7 +372,7 @@
               ✕
             </button>
           </div>
-        </div>
+        </div> -->
 
         <!-- VERESİYE GÖRÜNÜMÜ + EDİT -->
         <div class="credit-row">
@@ -588,11 +631,38 @@ const rawUser = getUser()
 const canEditIslemDurumu = computed(() => !!rawUser)
 
 
+const visitImages = computed(() => {
+  const v = selectedVisit.value
+  if (!v) return []
+
+  // API'den nasıl gelirse yakalayalım:
+  const rawImages = v.images || v.Images || []
+
+  if (Array.isArray(rawImages) && rawImages.length) {
+    return rawImages
+  }
+
+  // Eski tekli imageUrl desteği
+  if (v.imageUrl) {
+    return [{ id: 0, imageUrl: v.imageUrl }]
+  }
+
+  return []
+})
+
+const activeImageIndex = ref(0)
+
 const visitImageSrc = computed(() => {
-  if (!selectedVisit.value?.imageUrl) return ''
-  const url = selectedVisit.value.imageUrl
+  if (!visitImages.value.length) return ''
+
+  const img = visitImages.value[activeImageIndex.value] || visitImages.value[0]
+  const url = img?.imageUrl
+  if (!url) return ''
+
   return url.startsWith('http') ? url : API_BASE + url
 })
+
+
 
 onMounted(async () => {
   await loadSummary()
@@ -687,7 +757,7 @@ async function openVisitFromCalendar(event) {
 function openNewAppointmentFromCalendar(day) {
   showDetail.value = true
   detailLoading.value = false
-  selectedVisit.value = null
+  // selectedVisit.value = null
   selectedReminderId.value = null
   showNewAppointment.value = true
   appointmentDate.value = day.iso
@@ -701,6 +771,9 @@ function openNewAppointmentFromCalendar(day) {
   selectedOwnerLabel.value = ''
   ownerQuery.value = ''
   ownerResults.value = []
+  showImagePreview.value = false
+  selectedVisit.value = detail
+  activeImageIndex.value = 0
 }
 
 async function loadCalendarForMonth(baseDate) {
@@ -796,9 +869,9 @@ function formatTime(iso) {
   })
 }
 
-// --- Detay açma ---
 async function openVisit(item) {
   console.log('openVisit item >>>', item)
+
   showImagePreview.value = false
   showDetail.value = true
   detailLoading.value = true
@@ -806,15 +879,22 @@ async function openVisit(item) {
   selectedReminderId.value = item.id ?? null
 
   try {
+    // 🔹 DETAYI ÇEK
     const detail = await fetchVisitDetail(item.visitId)
-    selectedVisit.value = detail
-    console.log('visitDetail >>>', detail)
 
-    creditAmount.value = detail.creditAmountTl != null
-      ? detail.creditAmountTl.toString()
-      : ''
+    console.log('VISIT DETAIL >>>', detail)
+    console.log('images >>>', detail.images, detail.Images)
+
+    // 🔹 MODALDA KULLANILACAK KAYIT
+    selectedVisit.value = detail
+    activeImageIndex.value = 0
+
+    // 🔹 Veresiye input’u
+    creditAmount.value =
+      detail.creditAmountTl != null ? detail.creditAmountTl.toString() : ''
     creditEditOpen.value = false
 
+    // 🔹 Owner bilgileri (yeni randevu formu için)
     if (detail.ownerId) {
       selectedOwnerId.value = detail.ownerId
       selectedOwnerLabel.value = `${detail.ownerName}`
@@ -833,12 +913,14 @@ async function openVisit(item) {
     detailLoading.value = false
   }
 
+  // 🔹 Doktor drop-down
   try {
     doctors.value = await fetchDoctors()
   } catch (e) {
     console.error('Doktorlar yüklenirken hata:', e)
   }
 }
+
 
 async function saveCredit() {
   if (!selectedReminderId.value) {
@@ -919,6 +1001,9 @@ function formatDateTime(dt) {
 
 function closeDetail() {
   showDetail.value = false
+  showImagePreview.value = false
+  showImageModal.value = false
+  activeImageIndex.value = 0
 }
 
 async function loadSummary() {
@@ -1699,4 +1784,40 @@ function titleForFilter() {
     padding: 1rem;
   }
 }
+.visit-image-main img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.visit-image-thumbs {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.visit-image-thumbs .thumb {
+  border: none;
+  padding: 0;
+  background: transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.visit-image-thumbs .thumb.active {
+  border-color: #0ea5e9;
+}
+
+.visit-image-thumbs img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  display: block;
+}
+
 </style>
