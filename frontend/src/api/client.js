@@ -1,9 +1,3 @@
-import axios from 'axios'
+import { http } from './http'
 
-const apiClient = axios.create({
-  // baseURL: 'http://localhost:5239/api',
-  baseURL: 'http://192.168.1.134:5239/api',
-  timeout: 10000,
-})
-
-export default apiClient
+export default http

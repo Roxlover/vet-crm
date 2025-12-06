@@ -23,4 +23,5 @@ public class Visit
     public string? CreatedByName { get; set; }
     public User? CreatedByUser { get; set; }    
     public decimal? CreditAmountTl { get; set; }
+    public string? MicrochipNumber { get; set; } 
 }

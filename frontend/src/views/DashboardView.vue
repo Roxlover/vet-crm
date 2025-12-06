@@ -254,6 +254,7 @@
         <p><strong>Yapılan işlem tarihi:</strong> {{ selectedVisit.performedAt }}</p>
         <p><strong>Ne zaman gelecek? :</strong> {{ formatDateTime(selectedVisit.nextDate) }}</p>
         <p><strong>Ne için gelecek? :</strong> {{ selectedVisit.purpose || '—' }}</p>
+        <p><strong>Mikroçip numarası:</strong> {{ selectedVisit.microchipNumber || '—' }}</p>
         <p><strong>İşlem(ler):</strong> {{ selectedVisit.procedures || '—' }}</p>
         <p><strong>Tutar:</strong> {{ selectedVisit.amountTl ?? '—' }} TL</p>
         <p><strong>Hasta sahibine not:</strong> {{ selectedVisit.notes || '—' }}</p>
@@ -448,6 +449,15 @@
               rows="2"
               placeholder="Örn: Karma aşı, kontrol, tırnak kesimi..."
             ></textarea>
+          </div>
+
+          <div class="field">
+            <label>Mikroçip numarası</label>
+            <input
+              type="text"
+              v-model="form.microchipNumber"
+              placeholder="Örn: 981000123456789"
+            />
           </div>
 
           <!-- Doktor -->

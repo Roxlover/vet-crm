@@ -1,4 +1,4 @@
-import { http } from './http'
+import { http } from '@/api/http'
 
 export async function fetchVisits(params) {
   const { data } = await http.get('/visits', { params })
@@ -21,12 +21,12 @@ export async function deleteVisit(id) {
 export async function uploadVisitImages(visitId, files) {
   const fd = new FormData()
   files.forEach(file => {
-    fd.append('files', file)           // 🔹 backend [FromForm] List<IFormFile> files ile eşleşiyor
+    fd.append('files', file)          
   })
 
   const res = await http.post(`/visits/${visitId}/images`, fd, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 
-  return res.data                      // => List<VisitImageDto>
+  return res.data              
 }

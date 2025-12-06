@@ -1,5 +1,8 @@
 {
   "appId": "com.bullrealboss.crm",
   "appName": "NL",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http"
+  }
 }

@@ -14,13 +14,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 const string FrontendCorsPolicy = "FrontendCors";
 
+// =====================
 // DB
+// =====================
 builder.Services.AddDbContext<VetCrmDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
+// =====================
 // Hangfire
+// =====================
 builder.Services.AddScoped<ReminderProcessor>();
+
 builder.Services.AddHangfire(config =>
     config
         .UseSimpleAssemblyNameTypeSerializer()
@@ -30,24 +34,43 @@ builder.Services.AddHangfire(config =>
             options.UseNpgsqlConnection(
                 builder.Configuration.GetConnectionString("DefaultConnection"));
         }));
+
 builder.Services.AddHangfireServer();
 
-// 🔹 Görsel depolama: local
+// =====================
+// Görsel depolama (şimdilik local)
+// =====================
 builder.Services.AddScoped<IR2Storage, LocalVisitImageStorage>();
+
+// =====================
 // CORS
+// =====================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://localhost",
+                "http://192.168.1.107:5173",
+                "capacitor://localhost"
+                // ileride web deploy yaparsak:
+                // "https://app.e-bullvet.com"
+            )
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
             .AllowAnyHeader()
+            .AllowCredentials()
             .AllowAnyMethod();
     });
 });
 
-// ---------- JWT & CURRENT USER ----------
+// API'yı 0.0.0.0:5239'da dinlet
+builder.WebHost.UseSetting(WebHostDefaults.ServerUrlsKey, "http://0.0.0.0:5239");
 
+// =====================
+// JWT & CURRENT USER
+// =====================
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.AddScoped<ITokenService, TokenService>();
 
@@ -94,24 +117,29 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
+// =====================
+// MVC + Swagger
+// =====================
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen();   // 🔹 basit Swagger, ekstra config yok
 
 var app = builder.Build();
 
+// Swagger'ı hep açık tutmak istersen if'i kaldırabilirsin.
+// Şimdilik Dev'de zaten açık olacak.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// =====================
+// Middleware pipeline
+// =====================
 app.UseHangfireDashboard("/hangfire");
-
-// 🔹 wwwroot içinden dosya servis et
 app.UseStaticFiles();
 
-app.UseHttpsRedirection();
 app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthentication();
@@ -119,7 +147,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Hatırlatma job'u
+// =====================
+// Hangfire job
+// =====================
 RecurringJob.AddOrUpdate<ReminderProcessor>(
     "process-reminders",
     rp => rp.ProcessDueRemindersAsync(),

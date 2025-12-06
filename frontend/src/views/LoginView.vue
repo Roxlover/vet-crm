@@ -13,30 +13,39 @@ const form = ref({
 const loading = ref(false)
 const errorMessage = ref('')
 
-const handleSubmit = async () => {
+async function handleSubmit() {
   errorMessage.value = ''
+
   if (!form.value.username || !form.value.password) {
     errorMessage.value = 'Kullanıcı adı ve şifre zorunludur.'
     return
   }
 
+  const credentials = {
+    username: form.value.username.trim(),
+    password: form.value.password,
+  }
+
+  console.log('[LOGIN][FORM]', credentials)
+
   try {
     loading.value = true
 
-    await login({
-      username: form.value.username,
-      password: form.value.password,
-    })
+    const data = await login(credentials)
 
-    // Başarılı giriş → dashboard'a yönlendir
+    console.log('[LOGIN][OK]', data)
+
     await router.push({ name: 'dashboard' })
   } catch (err) {
+    console.error('[LOGIN][ERROR]', err)
     errorMessage.value = 'Kullanıcı adı veya şifre hatalı.'
   } finally {
     loading.value = false
   }
 }
 </script>
+
+
 
 <template>
   <div class="login-page">

@@ -29,5 +29,6 @@ public class DashboardVisitDetailDto
     public string? CreatedByUsername { get; set; }
     public string? CreatedByName { get; set; }
     public List<VisitImageDto> Images { get; set; } = new();
+    public string? MicrochipNumber { get; set; }
 
 }

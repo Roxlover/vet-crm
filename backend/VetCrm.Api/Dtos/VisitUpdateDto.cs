@@ -9,4 +9,5 @@ public class VisitUpdateDto
     public string? Purpose { get; set; }
 
     public DateOnly? NextDate { get; set; }
+    public string? MicrochipNumber { get; set; } 
 }

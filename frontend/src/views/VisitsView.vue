@@ -88,11 +88,18 @@
             <input
               type="text"
               v-model="form.purpose"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Mikroçip numarası</label>
+            <input
+              type="text"
+              v-model="form.microchipNumber"
 
             />
           </div>
         </div>
-
 
         <div class="field">
           <label>Hasta sahibi durumu</label>
@@ -104,35 +111,34 @@
           <textarea v-model="form.notes" rows="3" />
         </div>
 
-<div class="field">
-  <label>Görsel çek / ekle</label>
+        <!-- Çoklu görsel alanı -->
+        <div class="field">
+          <label>Görsel çek / ekle</label>
 
-  <input
-    type="file"
-    accept="image/*"
-    multiple
-    @change="onFilesChange"
-  />
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            @change="onFilesChange"
+          />
 
-  <small class="hint">
-    Örn: yara fotoğrafı, faturanın görüntüsü vb.
-  </small>
+          <small class="hint">
+            Örn: yara fotoğrafı, faturanın görüntüsü vb.
+          </small>
 
-  <div
-    v-if="form.imagePreviews && form.imagePreviews.length"
-    class="visit-image-preview-grid"
-  >
-    <div
-      v-for="(src, idx) in form.imagePreviews"
-      :key="idx"
-      class="visit-image-thumb"
-    >
-      <img :src="src" :alt="`Görsel ${idx + 1}`" />
-    </div>
-  </div>
-</div>
-
-
+          <div
+            v-if="form.imagePreviews && form.imagePreviews.length"
+            class="visit-image-preview-grid"
+          >
+            <div
+              v-for="(src, idx) in form.imagePreviews"
+              :key="idx"
+              class="visit-image-thumb"
+            >
+              <img :src="src" :alt="`Görsel ${idx + 1}`" />
+            </div>
+          </div>
+        </div>
 
         <p v-if="error" class="state state-error">{{ error }}</p>
         <p v-if="success" class="state state-success">{{ success }}</p>
@@ -151,9 +157,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { fetchOwners } from '../api/owners'
 import { fetchPetsByOwner } from '../api/pets'
-import { createVisit } from '../api/visits'
 import { http } from '@/api/http'
-
 
 const owners = ref([])
 const pets = ref([])
@@ -178,10 +182,10 @@ const form = reactive({
   purpose: '',
   ownerStatus: '',
   notes: '',
-  imageFiles: [],      // 🔹 birden fazla dosya
-  imagePreviews: [],   // 🔹 birden fazla preview
+  imageFiles: [],      // çoklu dosya
+  imagePreviews: [],   // çoklu preview
+  microchipNumber: '', // mikroçip
 })
-
 
 // Seçilen sahip için pet listesi
 const petsForSelectedOwner = computed(() =>
@@ -217,57 +221,16 @@ watch(selectedOwnerId, (newId) => {
     ownerName.value = ''
     ownerPhone.value = ''
   }
-  selectedPetId.value = '' // sahib değişince hasta sıfırlansın
-})
-const showImagePreview = ref(false)
-const showImage = ref(false)
-const showImageModal = ref(false)
-const activeImageIndex = ref(0)
-
-// selectedVisit.images varsa onu kullan, yoksa tekil imageUrl'den array üret
-const visitImages = computed(() => {
-  const v = selectedVisit.value
-  if (!v) return []
-
-  if (Array.isArray(v.images) && v.images.length) {
-    return v.images
-  }
-
-  if (v.imageUrl) {
-    return [{ id: 0, imageUrl: v.imageUrl }]
-  }
-
-  return []
-})
-
-const visitImageSrc = computed(() => {
-  if (!visitImages.value.length) return ''
-
-  const img = visitImages.value[activeImageIndex.value] || visitImages.value[0]
-  const url = img?.imageUrl
-  if (!url) return ''
-
-  return url.startsWith('http') ? url : API_BASE + url
-})
-
-// seçili ziyaret değişince ilk görsele dön, preview/modalları kapat
-watch(selectedVisit, () => {
-  activeImageIndex.value = 0
-  showImagePreview.value = false
-  showImage.value = false
-  showImageModal.value = false
+  selectedPetId.value = '' // sahip değişince hasta sıfırlansın
 })
 
 // Pet seçilince: pet adını doldur
 watch(selectedPetId, (newId) => {
   const idNum = Number(newId)
   const pet = pets.value.find((p) => p.id === idNum)
-  if (pet) {
-    petName.value = pet.name
-  } else {
-    petName.value = ''
-  }
+  petName.value = pet ? pet.name : ''
 })
+
 function onFilesChange(event) {
   const files = Array.from(event.target.files || [])
 
@@ -280,9 +243,8 @@ function onFilesChange(event) {
   }
 
   form.imageFiles = files
-  form.imagePreviews = files.map(f => URL.createObjectURL(f))
+  form.imagePreviews = files.map((f) => URL.createObjectURL(f))
 }
-
 
 async function handleSave() {
   error.value = ''
@@ -320,6 +282,7 @@ async function handleSave() {
       notes: notesText,
       nextDate: form.nextDate || null,
       purpose: form.purpose || null,
+      microchipNumber: form.microchipNumber || null,
     }
 
     // 3) ZİYARET OLUŞTUR
@@ -327,43 +290,36 @@ async function handleSave() {
     const createdVisit = res.data
     const visitId = createdVisit.id || createdVisit.Id
 
-    // 4) GÖRSEL VARSA, AYRI TRY/CATCH İÇİNDE YÜKLE
-    // 4) GÖRSEL VARSA, AYRI ENDPOINT'E YÜKLE
-// 4) GÖRSELLER VARSA, ÇOKLU ENDPOINT'E YÜKLE
-// 4) GÖRSELLER VARSA, HER BİRİNİ AYRI ENDPOINT'E YÜKLE
-if (form.imageFiles.length && visitId) {
-  const fd = new FormData()
+    // 4) GÖRSELLER VARSA, ÇOKLU ENDPOINT'E YÜKLE
+    if (form.imageFiles.length && visitId) {
+      const fd = new FormData()
+      form.imageFiles.forEach((file) => {
+        // backend: [FromForm] List<IFormFile> files
+        fd.append('files', file)
+      })
 
-  // backend parametresi: List<IFormFile> files => alan adı "files" olmalı
-  form.imageFiles.forEach((file) => {
-    fd.append('files', file)
-  })
+      console.log('IMAGE UPLOAD START', {
+        visitId,
+        count: form.imageFiles.length,
+      })
 
-  console.log('IMAGE UPLOAD START', {
-    visitId,
-    count: form.imageFiles.length,
-  })
+      try {
+        const resUpload = await http.post(`/visits/${visitId}/images`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+        console.log('IMAGE UPLOAD OK', resUpload.status, resUpload.data)
+      } catch (e) {
+        console.error(
+          'image upload error',
+          e.response?.status,
+          e.response?.data || e.message,
+        )
+      }
 
-  try {
-    const resUpload = await http.post(`/visits/${visitId}/images`, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-    console.log('IMAGE UPLOAD OK', resUpload.status, resUpload.data)
-  } catch (e) {
-    console.error(
-      'image upload error',
-      e.response?.status,
-      e.response?.data || e.message,
-    )
-  }
-
-  // İş bittikten sonra temizle
-  form.imageFiles = []
-  form.imagePreviews = []
-}
-
-
-
+      // İş bittikten sonra temizle
+      form.imageFiles = []
+      form.imagePreviews = []
+    }
 
     success.value = 'Ziyaret kaydedildi.'
 
@@ -376,8 +332,7 @@ if (form.imageFiles.length && visitId) {
     form.purpose = ''
     form.ownerStatus = ''
     form.notes = ''
-    form.imageFile = null
-    form.imagePreview = ''
+    form.microchipNumber = ''
   } catch (e) {
     console.error('visit save error', e)
     error.value = 'Ziyaret kaydedilirken bir hata oluştu.'
@@ -385,9 +340,6 @@ if (form.imageFiles.length && visitId) {
     saving.value = false
   }
 }
-
-
-
 </script>
 
 <style scoped>
@@ -395,7 +347,7 @@ if (form.imageFiles.length && visitId) {
   width: 100%;
   max-width: 1024px;
   margin: 0 auto;
-  padding: 1rem; /* her sayfada ihtiyacına göre değiştirirsin */
+  padding: 1rem;
 }
 
 .page-header {
@@ -473,26 +425,27 @@ select {
   flex-direction: column;
   gap: 0.25rem;
 }
+
 .form-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
 }
+
 .form-row-inline {
   display: flex;
-  gap: 12px;              /* aradaki boşluk */
+  gap: 12px;
 }
 
 .form-row-inline .form-group {
-  flex: 1;                /* ikisi de eşit genişlikte olsun */
+  flex: 1;
 }
 
-/* çok dar ekranda tekrar alta geçsin istersen: */
- @media (max-width: 640px) {
+@media (max-width: 640px) {
   .form-row-inline {
     flex-direction: column;
   }
-} 
+}
 
 .visit-body {
   padding: 1rem;
@@ -536,5 +489,21 @@ select {
 .hint {
   font-size: 0.75rem;
   color: #6b7280;
+}
+
+/* küçük thumbnail grid’i */
+.visit-image-preview-grid {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.visit-image-thumb img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
 }
 </style>

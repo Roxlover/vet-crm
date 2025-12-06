@@ -1,117 +1,147 @@
 import axios from 'axios'
 import { getToken, clearAuth } from '../utils/auth'
 
-// ======================
+// ==================================================
+//  ORTAM / PLATFORM ALGILAMA
+// ==================================================
+const isBrowser = typeof window !== 'undefined'
+const isNativeApp =
+  isBrowser && (window.Capacitor || window.CapacitorRuntime)
+
+// ==================================================
 //  BASE URL ÇÖZÜCÜ
-//  - .env'de VITE_API_BASE varsa onu kullanır
-//  - Yoksa window.location.hostname'e göre karar verir
-//    • localhost → http://localhost:5239
-//    • 192.168.x.x / 10.x.x.x / 172.16–31.x.x → o IP + :5239
-//    • Diğer durumlar → aynı origin (https://panel.domain.com)
-// ======================
+// ==================================================
 function resolveBase() {
-  // 1) .env üzerinden override imkânı (canlıya aldığımızda işimize çok yarar)
-  // .env.local / .env.production içine:
-  //   VITE_API_BASE=https://api.senin-domainin.com
-  // yazarsan direkt burası geçerli olur.
-  const envBase = import.meta?.env?.VITE_API_BASE
-  if (envBase) {
-    return envBase.replace(/\/$/, '') // sonda / varsa kırp
+  // 1) .env üzerinden override
+  const rawEnvBase = import.meta?.env?.VITE_API_BASE
+  if (rawEnvBase && typeof rawEnvBase === 'string') {
+    const cleaned = rawEnvBase.trim().replace(/\/$/, '')
+    console.log('[HTTP][BASE][ENV]', cleaned)
+    return cleaned
   }
 
-  // 2) window yoksa (test vs.) fallback
-  if (typeof window === 'undefined') {
+  // 2) SSR / window yoksa fallback
+  if (!isBrowser) {
+    console.log('[HTTP][BASE][NO_WINDOW] http://localhost:5239')
     return 'http://localhost:5239'
   }
 
   const { protocol, hostname } = window.location
 
-  // 3) PC'de local dev (sadece kendi tarayıcından bakarken)
+  // 3) Local dev (web)
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    console.log('[HTTP][BASE][LOCALHOST] http://localhost:5239')
     return 'http://localhost:5239'
   }
 
-  // 4) Aynı Wi-Fi'den telefon / başka PC ile bağlanma (LAN IP)
+  // 4) LAN IP ise (aynı ağdaki backend’e git)
   const isLanIp =
     /^192\.168\./.test(hostname) ||
     /^10\./.test(hostname) ||
     /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
 
   if (isLanIp) {
-    // Örn: telefon tarayıcısında 192.168.1.37:5173 açarsan
-    // API_BASE → http://192.168.1.37:5239 olur
-    return `http://${hostname}:5239`
+    const lan = `http://${hostname}:5239`
+    console.log('[HTTP][BASE][LAN]', lan)
+    return lan
   }
 
-  // 5) Production: API ve panel aynı origin'de ise
-  // Örn: https://panel.domain.com/api
-  return `${protocol}//${hostname}`
+  // 5) Production: bulunduğumuz origin
+  const sameOrigin = `${protocol}//${hostname}`
+  console.log('[HTTP][BASE][ORIGIN]', sameOrigin)
+  return sameOrigin
 }
 
 const BASE = resolveBase()
+console.log('[HTTP][BASE][FINAL]', BASE)
 
 export const API_BASE = BASE
 
 export const http = axios.create({
   baseURL: `${BASE}/api`,
-  timeout: 10000,
+  timeout: 15000, // biraz rahatlatalım
 })
 
+// ==================================================
+//  REQUEST INTERCEPTOR
+// ==================================================
 http.interceptors.request.use((config) => {
   const token = getToken()
 
-  console.log(
-    '[HTTP][REQ]',
-    config.method?.toUpperCase(),
-    config.url,
-    {
-      baseURL: config.baseURL,
-      data: config.data,
-    },
-  )
+  const method = (config.method || 'GET').toUpperCase()
+  const fullUrl = (config.baseURL || '') + (config.url || '')
+
+  console.log('[HTTP][REQ]', method, config.url, {
+    baseURL: config.baseURL,
+    fullUrl,
+    params: config.params,
+    data: config.data,
+  })
 
   if (token) {
     config.headers = config.headers || {}
     config.headers.Authorization = `Bearer ${token}`
   }
+
   return config
 })
 
+// ==================================================
+//  RESPONSE INTERCEPTOR
+// ==================================================
 http.interceptors.response.use(
   (res) => {
-    console.log(
-      '[HTTP][RES]',
-      res.config.method?.toUpperCase(),
-      res.config.url,
-      {
-        status: res.status,
-        data: res.data,
-      },
-    )
+    const method = (res.config.method || 'GET').toUpperCase()
+    console.log('[HTTP][RES]', method, res.config.url, {
+      status: res.status,
+      data: res.data,
+    })
     return res
   },
   (err) => {
+    // ---- Sunucudan cevap geldiyse ----
     if (err.response) {
-      console.log(
-        '[HTTP][ERR_RES]',
-        err.config?.method?.toUpperCase(),
-        err.config?.url,
-        {
-          status: err.response.status,
-          data: err.response.data,
-        },
-      )
-    } else if (err.request) {
+      const status = err.response.status
+      const method = (err.config?.method || 'GET').toUpperCase()
+      const url = err.config?.url
+      const fullUrl = (err.config?.baseURL || '') + (err.config?.url || '')
+
+      console.log('[HTTP][ERR_RES]', method, url, {
+        status,
+        fullUrl,
+        data: err.response.data,
+      })
+
+      try {
+        console.log(
+          '[HTTP][ERR_RES_RAW]',
+          JSON.stringify(err.response.data),
+        )
+      } catch (_) {
+        // ignore
+      }
+
+      // 401 ise token düşür ama native app'te sayfayı reload etme
+      if (status === 401) {
+        console.warn('[AUTH] 401 geldi, token temizleniyor...')
+        clearAuth()
+
+        // Web browser ise login'e yönlendir
+        if (isBrowser && !isNativeApp) {
+          window.location.href = '/login'
+        }
+      }
+    }
+    // ---- İstek atıldı ama response hiç gelmediyse ----
+    else if (err.request) {
       console.log('[HTTP][ERR_REQ_NO_RESPONSE]', err.message)
-    } else {
+    }
+    // ---- Interceptor/config sırasında hata ----
+    else {
       console.log('[HTTP][ERR_SETUP]', err.message)
     }
 
-    if (err.response && err.response.status === 401) {
-      console.warn('[AUTH] 401 geldi, token temizleniyor...')
-      clearAuth()
-      window.location.href = '/login'
-    }
+    // Çağıran tarafa hatayı iletmeye devam etsin
     return Promise.reject(err)
   },
 )

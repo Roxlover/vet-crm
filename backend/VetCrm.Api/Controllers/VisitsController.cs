@@ -90,11 +90,8 @@ public class VisitsController : ControllerBase
                 CreatedByUserId   = v.CreatedByUserId,
                 CreatedByUsername = v.CreatedByUsername,
                 CreatedByName     = v.CreatedByName,
-
-                // Eski tekli alan (thumbnail gibi)
                 ImageUrl = v.ImageUrl,
-
-                // 🔹 Çoklu görseller
+                MicrochipNumber = v.MicrochipNumber,  
                 Images = v.Images
                     .OrderByDescending(i => i.CreatedAt)
                     .Select(i => new VisitImageDto
@@ -107,7 +104,6 @@ public class VisitsController : ControllerBase
             })
             .ToListAsync();
 
-        // ImageUrl boş olanlara, ilk görseli fallback olarak yaz
         foreach (var dto in visits)
         {
             if (dto.ImageUrl == null)
@@ -147,9 +143,8 @@ public class VisitsController : ControllerBase
                 CreatedByName     = v.CreatedByName,
                 DoctorId          = v.DoctorId,
                 DoctorName        = v.Doctor != null ? v.Doctor.FullName : null,
-
                 ImageUrl = v.ImageUrl,
-
+                 MicrochipNumber = v.MicrochipNumber,  
                 Images = v.Images
                     .OrderByDescending(i => i.CreatedAt)
                     .Select(i => new VisitImageDto
@@ -208,7 +203,8 @@ public class VisitsController : ControllerBase
                 Purpose     = dto.Purpose,
                 CreatedByUserId   = _currentUser.UserId,
                 CreatedByUsername = _currentUser.Username,
-                CreatedByName     = _currentUser.FullName
+                CreatedByName     = _currentUser.FullName,
+                MicrochipNumber = dto.MicrochipNumber, 
             };
 
             var userId = _currentUser.UserId;
@@ -237,7 +233,8 @@ public class VisitsController : ControllerBase
                 CreatedByUserId   = visit.CreatedByUserId,
                 CreatedByUsername = visit.CreatedByUsername,
                 CreatedByName     = visit.CreatedByName,
-                ImageUrl          = visit.ImageUrl
+                ImageUrl          = visit.ImageUrl,
+                MicrochipNumber   = visit.MicrochipNumber,
             };
 
             Console.WriteLine("===== CreateVisit SUCCESS =====");
@@ -264,6 +261,7 @@ public class VisitsController : ControllerBase
         visit.Notes       = dto.Notes;
         visit.NextDate    = dto.NextDate;
         visit.Purpose     = dto.Purpose;
+        visit.MicrochipNumber = dto.MicrochipNumber;
 
         SyncReminderForVisit(visit);
 

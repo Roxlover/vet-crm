@@ -46,10 +46,15 @@ export async function fetchDoctors() {
 }
 
 export async function updateReminderStatus(id, completed, markAsOverdue = false) {
-  await http.patch(`/reminders/${id}/status`, {
-    completed,
-    markAsOverdue,
-  })
+  try {
+    await http.patch(`/reminders/${id}/status`, {
+      completed,
+      markAsOverdue,
+    })
+  } catch (err) {
+    console.error('[REMINDERS][UPDATE_STATUS_ERR]', err)
+    throw err    // veya burada swallow edip UI'da toast göster
+  }
 }
 export function fetchVisitDetail(visitId) {
   return http.get(`/visits/${visitId}`).then(res => res.data)

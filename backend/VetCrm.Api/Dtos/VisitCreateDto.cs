@@ -12,5 +12,6 @@ public class VisitCreateDto
     public string? Notes { get; set; }
 
     public string? Purpose { get; set; }
-    public DateOnly? NextDate { get; set; }  // defterdeki "ne zaman gelecek"
+    public DateOnly? NextDate { get; set; } 
+    public string? MicrochipNumber { get; set; }  
 }

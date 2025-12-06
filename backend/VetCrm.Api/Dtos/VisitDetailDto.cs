@@ -21,6 +21,7 @@ public class VisitDetailDto
     public string? CreatedByUsername { get; set; }
    public decimal? CreditAmountTl { get; set; }
     public List<VisitImageDto> Images { get; set; } = new();
+    public string? MicrochipNumber { get; set; }
 
 }
 

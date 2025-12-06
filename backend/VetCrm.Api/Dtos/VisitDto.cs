@@ -24,5 +24,6 @@ public class VisitDto
     public string? DoctorName { get; set; }
     public string? ImageUrl { get; set; }
     public List<VisitImageDto> Images { get; set; } = new();
+    public string? MicrochipNumber { get; set; } 
 
 }
