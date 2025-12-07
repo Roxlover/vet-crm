@@ -244,11 +244,12 @@
   <div v-if="showDetail" class="modal-backdrop" @click.self="closeDetail">
     <div class="modal">
       <button class="close" @click="closeDetail">×</button>
+    <div v-if="detailLoading" class="state">Yükleniyor...</div>
 
-      <div v-if="detailLoading" class="state">Yükleniyor...</div>
-      <div v-else-if="!selectedVisit" class="state">
-        Kayıt bulunamadı.
-      </div>
+    <!-- SADECE seçili ziyaret yok *ve* yeni randevu modu kapalıysa "kayıt yok" de -->
+    <div v-else-if="!selectedVisit && !showNewAppointment" class="state">
+      Kayıt bulunamadı.
+    </div>
       <div v-else class="detail-body">
         <h3>{{ selectedVisit.petName }} – {{ selectedVisit.ownerName }}</h3>
         <p><strong>Yapılan işlem tarihi:</strong> {{ selectedVisit.performedAt }}</p>
@@ -456,7 +457,7 @@
             <input
               type="text"
               v-model="form.microchipNumber"
-              placeholder="Örn: 981000123456789"
+
             />
           </div>
 
@@ -568,7 +569,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, reactive  } from 'vue'
 import {
   fetchReminderSummary,
   fetchReminders,
@@ -578,12 +579,16 @@ import {
   createAppointment,
   fetchCalendarAppointments,
   searchOwners,
+  updateReminderStatus,
 } from '../api/dashboard'
 import { http, API_BASE } from '@/api/http'
 import { useRouter } from 'vue-router'
 import { getUser } from '@/utils/auth'
 
 const router = useRouter()
+const form = reactive({
+  microchipNumber: '',
+})
 
 const activeView = ref('list')          // 'list' | 'calendar'
 const selectedReminderId = ref(null)
@@ -767,7 +772,6 @@ async function openVisitFromCalendar(event) {
 function openNewAppointmentFromCalendar(day) {
   showDetail.value = true
   detailLoading.value = false
-  // selectedVisit.value = null
   selectedReminderId.value = null
   showNewAppointment.value = true
   appointmentDate.value = day.iso
@@ -781,10 +785,13 @@ function openNewAppointmentFromCalendar(day) {
   selectedOwnerLabel.value = ''
   ownerQuery.value = ''
   ownerResults.value = []
+  form.microchipNumber = ''
   showImagePreview.value = false
-  selectedVisit.value = detail
+  selectedVisit.value = null
   activeImageIndex.value = 0
 }
+
+
 
 async function loadCalendarForMonth(baseDate) {
   calendarLoading.value = true
@@ -895,9 +902,15 @@ async function openVisit(item) {
     console.log('VISIT DETAIL >>>', detail)
     console.log('images >>>', detail.images, detail.Images)
 
-    // 🔹 MODALDA KULLANILACAK KAYIT
     selectedVisit.value = detail
     activeImageIndex.value = 0
+    
+    form.microchipNumber = detail.microchipNumber || ''
+
+// 🔹 Veresiye input’u
+creditAmount.value =
+  detail.creditAmountTl != null ? detail.creditAmountTl.toString() : ''
+creditEditOpen.value = false
 
     // 🔹 Veresiye input’u
     creditAmount.value =
@@ -977,10 +990,11 @@ async function markReminder(completed) {
 
   statusSaving.value = true
   try {
-    await http.patch(`/reminders/${selectedReminderId.value}/status`, {
+    await updateReminderStatus(
+      selectedReminderId.value,
       completed,
-      markAsOverdue: !completed,
-    })
+      !completed, // completed=false ise geciken olarak işaretle
+    )
 
     await loadSummary()
     await loadList(completed ? 'done' : 'overdue')
@@ -992,6 +1006,7 @@ async function markReminder(completed) {
     statusSaving.value = false
   }
 }
+
 
 async function openVisitDetail(item) {
   try {
@@ -1076,6 +1091,7 @@ async function submitAppointment() {
     scheduledAt: isoDateTime,
     purpose: appointmentPurpose.value,
     doctorId: selectedDoctorId.value || null,
+    microchipNumber: form.microchipNumber || null,
   }
 
   try {

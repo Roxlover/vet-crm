@@ -18,62 +18,57 @@ public class RemindersController : ControllerBase
         _db = db;
     }
 
-//  [HttpPatch("{id:int}/status")]
-[HttpPost("{id:int}/status")]
-public async Task<IActionResult> UpdateStatus(
-    int id,
-    [FromBody] UpdateReminderStatusRequest request)
-{
-    var reminder = await _db.Reminders.FirstOrDefaultAsync(r => r.Id == id);
-    if (reminder == null)
-        return NotFound();
-
-    var today = DateOnly.FromDateTime(DateTime.Today);
-
-    if (request.Completed)
+    // PATCH de POST da çalışsın:
+    [HttpPatch("{id:int}/status")]
+    [HttpPost("{id:int}/status")]
+    public async Task<IActionResult> UpdateStatus(
+        int id,
+        [FromBody] UpdateReminderStatusRequest request)
     {
-        reminder.IsCompleted = true;
-        reminder.CompletedAt = DateTime.UtcNow;
-    }
-    else
-    {
-        reminder.IsCompleted = false;
+        var reminder = await _db.Reminders.FirstOrDefaultAsync(r => r.Id == id);
+        if (reminder == null)
+            return NotFound();
 
-        if (request.MarkAsOverdue && reminder.DueDate >= today)
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        if (request.Completed)
         {
-            reminder.DueDate = today.AddDays(-1);
+            reminder.IsCompleted = true;
+            reminder.CompletedAt = DateTime.UtcNow;
         }
+        else
+        {
+            reminder.IsCompleted = false;
+
+            if (request.MarkAsOverdue && reminder.DueDate >= today)
+            {
+                reminder.DueDate = today.AddDays(-1);
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        return NoContent();
     }
 
-    await _db.SaveChangesAsync();
-    return NoContent();
-}
-[HttpPatch("{id:int}/credit")]
-public async Task<IActionResult> UpdateCredit(
-    int id,
-    [FromBody] UpdateReminderCreditDto dto)
-{
-    Console.WriteLine($"[UpdateCredit] id={id}, amount={dto.CreditAmountTl}");
-
-    var reminder = await _db.Reminders
-        .Include(r => r.Visit)
-        .FirstOrDefaultAsync(r => r.Id == id);
-
-    if (reminder == null || reminder.Visit == null)
-        return NotFound();
-
-    reminder.Visit.CreditAmountTl = dto.CreditAmountTl;
-    await _db.SaveChangesAsync();
-
-    Console.WriteLine($"[UpdateCredit] VISIT {reminder.VisitId} now has credit={reminder.Visit.CreditAmountTl}");
-
-    return NoContent();
-}
-
-
-}
-
-public class UpdateReminderCreditDto
+    [HttpPatch("{id:int}/credit")]
+    public async Task<IActionResult> UpdateCredit(
+        int id,
+        [FromBody] UpdateReminderCreditDto dto)
     {
-        public decimal CreditAmountTl { get; set; }
+        Console.WriteLine($"[UpdateCredit] id={id}, amount={dto.CreditAmountTl}");
+
+        var reminder = await _db.Reminders
+            .Include(r => r.Visit)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (reminder == null || reminder.Visit == null)
+            return NotFound();
+
+        reminder.Visit.CreditAmountTl = dto.CreditAmountTl;
+        await _db.SaveChangesAsync();
+
+        Console.WriteLine($"[UpdateCredit] VISIT {reminder.VisitId} now has credit={reminder.Visit.CreditAmountTl}");
+
+        return NoContent();
     }
+}

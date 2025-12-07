@@ -2,23 +2,18 @@ import { http } from '@/api/http'
 
 // ÖZET (Bugün / Yarın / Geciken / Yapıldı kutuları)
 export async function fetchReminderSummary() {
-  const response = await http.get('/dashboard/reminders-summary')
-  return response.data
+  const { data } = await http.get('/dashboard/reminders-summary')
+  return data
 }
 
 // Filtreye göre liste (today / tomorrow / overdue / upcoming / done)
 export async function fetchReminders(filter) {
-  const response = await http.get('/dashboard/reminders', {
+  const { data } = await http.get('/dashboard/reminders', {
     params: { filter },
   })
-  return response.data
+  return data
 }
 
-// Ziyaret detayı (modal)
-// export async function fetchVisitDetail(visitId) {
-//   const res = await http.get(`/dashboard/visit/${visitId}`)
-//   return res.data
-// }
 // Takvim için randevu listesi
 export async function fetchCalendarAppointments(from, to) {
   const { data } = await http.get('/calendar/appointments', {
@@ -46,22 +41,19 @@ export async function fetchDoctors() {
 }
 
 export async function updateReminderStatus(id, completed, markAsOverdue = false) {
-  try {
-    await http.patch(`/reminders/${id}/status`, {
-      completed,
-      markAsOverdue,
-    })
-  } catch (err) {
-    console.error('[REMINDERS][UPDATE_STATUS_ERR]', err)
-    throw err    // veya burada swallow edip UI'da toast göster
-  }
+  const { data } = await http.post(`/reminders/${id}/status`, {
+    completed,
+    markAsOverdue,
+  })
+  return data
 }
+
+// Ziyaret detayı (modal)
 export function fetchVisitDetail(visitId) {
-  return http.get(`/visits/${visitId}`).then(res => res.data)
+  return http.get(`/visits/${visitId}`).then((res) => res.data)
 }
 
-
-
+// Hasta sahibi arama
 export async function searchOwners(query) {
   const { data } = await http.get('/owners/search', {
     params: { query },

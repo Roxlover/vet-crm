@@ -1,9 +1,6 @@
 import axios from 'axios'
 import { getToken, clearAuth } from '../utils/auth'
 
-// ==================================================
-//  ORTAM / PLATFORM ALGILAMA
-// ==================================================
 const isBrowser = typeof window !== 'undefined'
 const isNativeApp =
   isBrowser && (window.Capacitor || window.CapacitorRuntime)
@@ -12,15 +9,23 @@ const isNativeApp =
 //  BASE URL ÇÖZÜCÜ
 // ==================================================
 function resolveBase() {
-  // 1) .env üzerinden override
   const rawEnvBase = import.meta?.env?.VITE_API_BASE
+
+  // 1) ENV VAR HER ŞEYDEN ÖNCE GELSİN (WEB + NATIVE)
   if (rawEnvBase && typeof rawEnvBase === 'string') {
     const cleaned = rawEnvBase.trim().replace(/\/$/, '')
     console.log('[HTTP][BASE][ENV]', cleaned)
     return cleaned
   }
 
-  // 2) SSR / window yoksa fallback
+  // 2) Native app’te asla window.location üzerinden localhost aramayalım
+  if (isNativeApp) {
+    const fallback = 'https://api.e-bullvet.com'
+    console.log('[HTTP][BASE][NATIVE_FALLBACK]', fallback)
+    return fallback
+  }
+
+  // 3) SSR / window yoksa
   if (!isBrowser) {
     console.log('[HTTP][BASE][NO_WINDOW] http://localhost:5239')
     return 'http://localhost:5239'
@@ -28,13 +33,13 @@ function resolveBase() {
 
   const { protocol, hostname } = window.location
 
-  // 3) Local dev (web)
+  // 4) Local dev (web)
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     console.log('[HTTP][BASE][LOCALHOST] http://localhost:5239')
     return 'http://localhost:5239'
   }
 
-  // 4) LAN IP ise (aynı ağdaki backend’e git)
+  // 5) LAN IP
   const isLanIp =
     /^192\.168\./.test(hostname) ||
     /^10\./.test(hostname) ||
@@ -46,7 +51,7 @@ function resolveBase() {
     return lan
   }
 
-  // 5) Production: bulunduğumuz origin
+  // 6) Production: origin
   const sameOrigin = `${protocol}//${hostname}`
   console.log('[HTTP][BASE][ORIGIN]', sameOrigin)
   return sameOrigin
@@ -59,15 +64,12 @@ export const API_BASE = BASE
 
 export const http = axios.create({
   baseURL: `${BASE}/api`,
-  timeout: 15000, // biraz rahatlatalım
+  timeout: 15000,
 })
 
-// ==================================================
-//  REQUEST INTERCEPTOR
-// ==================================================
+// REQUEST INTERCEPTOR
 http.interceptors.request.use((config) => {
   const token = getToken()
-
   const method = (config.method || 'GET').toUpperCase()
   const fullUrl = (config.baseURL || '') + (config.url || '')
 
@@ -86,9 +88,7 @@ http.interceptors.request.use((config) => {
   return config
 })
 
-// ==================================================
-//  RESPONSE INTERCEPTOR
-// ==================================================
+// RESPONSE INTERCEPTOR
 http.interceptors.response.use(
   (res) => {
     const method = (res.config.method || 'GET').toUpperCase()
@@ -99,7 +99,6 @@ http.interceptors.response.use(
     return res
   },
   (err) => {
-    // ---- Sunucudan cevap geldiyse ----
     if (err.response) {
       const status = err.response.status
       const method = (err.config?.method || 'GET').toUpperCase()
@@ -112,36 +111,19 @@ http.interceptors.response.use(
         data: err.response.data,
       })
 
-      try {
-        console.log(
-          '[HTTP][ERR_RES_RAW]',
-          JSON.stringify(err.response.data),
-        )
-      } catch (_) {
-        // ignore
-      }
-
-      // 401 ise token düşür ama native app'te sayfayı reload etme
       if (status === 401) {
         console.warn('[AUTH] 401 geldi, token temizleniyor...')
         clearAuth()
-
-        // Web browser ise login'e yönlendir
         if (isBrowser && !isNativeApp) {
           window.location.href = '/login'
         }
       }
-    }
-    // ---- İstek atıldı ama response hiç gelmediyse ----
-    else if (err.request) {
+    } else if (err.request) {
       console.log('[HTTP][ERR_REQ_NO_RESPONSE]', err.message)
-    }
-    // ---- Interceptor/config sırasında hata ----
-    else {
+    } else {
       console.log('[HTTP][ERR_SETUP]', err.message)
     }
 
-    // Çağıran tarafa hatayı iletmeye devam etsin
     return Promise.reject(err)
-  },
+  }
 )

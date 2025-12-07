@@ -15,7 +15,7 @@
             <img src="./logo.png" alt="BullVet Logo" />
           </span>
           <div class="logo-text">
-            <div class="title">NL Vet</div>
+            <div class="title">e-Bull Vet</div>
             <div class="subtitle">Klinik Paneli</div>
           </div>
         </div>
@@ -78,7 +78,7 @@
           </button>
 
           <div class="topbar-title">
-            NL Vet – Veteriner Aşı Takip Paneli
+            e-Bull Vet – Veteriner Aşı Takip Paneli
           </div>
 
           <!-- SAĞ ÜST ZİL -->
