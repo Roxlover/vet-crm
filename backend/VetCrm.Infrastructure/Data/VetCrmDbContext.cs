@@ -19,6 +19,8 @@ public class VetCrmDbContext : DbContext
     public DbSet<LedgerEntry> LedgerEntries { get; set; } = null!;
 
     public DbSet<Notification> Notifications { get; set; } = null!;
+    public DbSet<VisitPlan> VisitPlans { get; set; } = null!;
+    public DbSet<Appointment> Appointments { get; set; } = null!;
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

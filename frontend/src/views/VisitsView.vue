@@ -78,10 +78,48 @@
         </div>
 
         <div class="form-row-inline">
-          <div class="form-group">
-            <label>Ne zaman gelecek? (Sonraki aşı / kontrol tarihi)</label>
-            <input type="date" v-model="form.nextDate" />
+        <div class="field-group">
+          <label>Ne zaman / ne için gelecek?</label>
+
+          <div
+            v-for="(item, index) in nextVisits"
+            :key="index"
+            class="next-visit-row"
+          >
+            <input
+              type="date"
+              v-model="item.date"
+            />
+
+            <input
+              type="text"
+              v-model="item.purpose"
+              placeholder="Örn: iç/dış parazit, karma aşı..."
+            />
+
+            <button
+              v-if="nextVisits.length > 1"
+              type="button"
+              class="btn-small"
+              @click="removeNextVisitRow(index)"
+            >
+              -
+            </button>
           </div>
+
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="addNextVisitRow"
+          >
+            + Tarih ekle
+          </button>
+
+          <p class="hint">
+            En az bir tarih girebilirsin, istersen birden fazla satır ekle.
+          </p>
+        </div>
+
 
           <div class="form-group">
             <label>Ne için gelecek</label>
@@ -186,6 +224,17 @@ const form = reactive({
   imagePreviews: [],   // çoklu preview
   microchipNumber: '', // mikroçip
 })
+const nextVisits = ref([
+  { date: '', purpose: '' },
+])
+
+function addNextVisitRow() {
+  nextVisits.value.push({ date: '', purpose: '' })
+}
+
+function removeNextVisitRow(index) {
+  nextVisits.value.splice(index, 1)
+}
 
 // Seçilen sahip için pet listesi
 const petsForSelectedOwner = computed(() =>
@@ -280,7 +329,12 @@ async function handleSave() {
       procedures: proceduresText,
       amountTl: form.amountTl ?? 0,
       notes: notesText,
-      nextDate: form.nextDate || null,
+      nextVisits: nextVisits.value
+        .filter(x => x.date) // boş tarihleri at
+        .map(x => ({
+          nextDate: x.date,
+          purpose: x.purpose || null,
+        })),
       purpose: form.purpose || null,
       microchipNumber: form.microchipNumber || null,
     }
@@ -506,4 +560,28 @@ select {
   border-radius: 6px;
   border: 1px solid #e5e7eb;
 }
+
+.next-visit-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.next-visit-row input[type='date'] {
+  max-width: 150px;
+}
+
+.next-visit-row input[type='text'] {
+  flex: 1;
+}
+
+.btn-small {
+  border: none;
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 999px;
+  padding: 0 0.6rem;
+  cursor: pointer;
+}
+
 </style>

@@ -22,7 +22,7 @@ public class VisitDetailDto
    public decimal? CreditAmountTl { get; set; }
     public List<VisitImageDto> Images { get; set; } = new();
     public string? MicrochipNumber { get; set; }
-
+    public List<VisitPlanCreateDto> Plans { get; set; } = new();
 }
 
 

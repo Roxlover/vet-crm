@@ -251,6 +251,9 @@ namespace VetCrm.Infrastructure.Migrations
                     b.Property<decimal?>("AmountTl")
                         .HasColumnType("numeric");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("CreatedByName")
                         .HasColumnType("text");
 
@@ -332,6 +335,38 @@ namespace VetCrm.Infrastructure.Migrations
                     b.ToTable("VisitImages");
                 });
 
+            modelBuilder.Entity("VetCrm.Domain.Entities.VisitPlan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Purpose")
+                        .HasColumnType("text");
+
+                    b.Property<int>("VisitId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("VisitId");
+
+                    b.ToTable("VisitPlans");
+                });
+
             modelBuilder.Entity("VetCrm.Domain.Entities.Notification", b =>
                 {
                     b.HasOne("VetCrm.Domain.Entities.User", "User")
@@ -407,6 +442,23 @@ namespace VetCrm.Infrastructure.Migrations
                     b.Navigation("Visit");
                 });
 
+            modelBuilder.Entity("VetCrm.Domain.Entities.VisitPlan", b =>
+                {
+                    b.HasOne("VetCrm.Domain.Entities.User", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId");
+
+                    b.HasOne("VetCrm.Domain.Entities.Visit", "Visit")
+                        .WithMany("Plans")
+                        .HasForeignKey("VisitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Visit");
+                });
+
             modelBuilder.Entity("VetCrm.Domain.Entities.Owner", b =>
                 {
                     b.Navigation("Pets");
@@ -425,6 +477,8 @@ namespace VetCrm.Infrastructure.Migrations
             modelBuilder.Entity("VetCrm.Domain.Entities.Visit", b =>
                 {
                     b.Navigation("Images");
+
+                    b.Navigation("Plans");
                 });
 #pragma warning restore 612, 618
         }

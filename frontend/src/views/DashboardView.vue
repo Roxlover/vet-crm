@@ -99,26 +99,27 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="item in reminderList"
-                :key="item.id"
-                @click="openVisit(item)"
-                class="clickable-row"
-              >
-                <td>{{ formatDate(item.reminderDate) }}</td>
-                <td>{{ formatDate(item.appointmentDate) }}</td>
-                <td>{{ item.petName }}</td>
-                <td>{{ item.ownerName }}</td>
-                <td class="procedure-cell">
-                  {{ item.procedures }}
-                  <span
-                    v-if="item.creditAmountTl"
-                    class="credit-pill"
-                  >
-                    • Veresiye: {{ item.creditAmountTl }} TL
-                  </span>
-                </td>
-              </tr>
+            <tr
+              v-for="item in reminderList"
+              :key="item?.id"
+              @click="item && openVisit(item)"
+              class="clickable-row"
+            >
+              <td>{{ formatDate(item?.reminderDate) }}</td>
+              <td>{{ formatDate(item?.appointmentDate) }}</td>
+              <td>{{ item?.petName || '—' }}</td>
+              <td>{{ item?.ownerName || '—' }}</td>
+              <td class="procedure-cell">
+                {{ item?.procedures || '—' }}
+                <span
+                  v-if="item?.creditAmountTl"
+                  class="credit-pill"
+                >
+                  • Veresiye: {{ item.creditAmountTl }} TL
+                </span>
+              </td>
+            </tr>
+
             </tbody>
           </table>
         </div>
@@ -181,19 +182,19 @@
                 <div class="day-events">
                   <div
                     v-for="appt in day.appointments"
-                    :key="appt?.visitId"
+                    :key="appt?.visitId ?? appt?.id"
                     class="event-pill"
-                    @click.stop="openVisitFromCalendar(appt)"
+                    @click.stop="appt && openVisitFromCalendar(appt)"
                   >
-                    <span
-                      class="event-time"
-                      v-if="appt?.scheduledAt"
-                    >
-                      {{ formatTime(appt.scheduledAt) }}
-                    </span>
+                  <span
+                    class="event-time"
+                    v-if="appt?.scheduledAt"
+                  >
+                    {{ formatTime(appt.scheduledAt) }}
+                  </span>
 
                     <span class="event-text">
-                      {{ appt?.petName }} – {{ appt?.ownerName }}
+                      {{ appt?.petName || '—' }} – {{ appt?.ownerName || '—' }}
                     </span>
 
                     <span
@@ -253,8 +254,23 @@
       <div v-else class="detail-body">
         <h3>{{ selectedVisit.petName }} – {{ selectedVisit.ownerName }}</h3>
         <p><strong>Yapılan işlem tarihi:</strong> {{ selectedVisit.performedAt }}</p>
-        <p><strong>Ne zaman gelecek? :</strong> {{ formatDateTime(selectedVisit.nextDate) }}</p>
-        <p><strong>Ne için gelecek? :</strong> {{ selectedVisit.purpose || '—' }}</p>
+        <div v-if="selectedVisit.nextVisits && selectedVisit.nextVisits.length">
+        <p><strong>Ne zaman / ne için gelecek?</strong></p>
+        <ul class="next-visits-list">
+          <li
+            v-for="n in selectedVisit.nextVisits"
+            :key="n.id || n.nextDate"
+          >
+            <span>{{ formatDateTime(n.nextDate) }}</span>
+            <span> – {{ n.purpose || '—' }}</span>
+          </li>
+        </ul>
+      </div>
+      <div v-else>
+        <!-- Eski datayı da desteklemek istersen fallback -->
+        <!-- <p><strong>Ne zaman gelecek? :</strong> {{ formatDateTime(selectedVisit.nextDate) }}</p> -->
+        <!-- <p><strong>Ne için gelecek? :</strong> {{ selectedVisit.purpose || '—' }}</p> -->
+      </div>
         <p><strong>Mikroçip numarası:</strong> {{ selectedVisit.microchipNumber || '—' }}</p>
         <p><strong>İşlem(ler):</strong> {{ selectedVisit.procedures || '—' }}</p>
         <p><strong>Tutar:</strong> {{ selectedVisit.amountTl ?? '—' }} TL</p>
@@ -1109,13 +1125,21 @@ async function loadList(filter) {
   activeFilter.value = filter
   listLoading.value = true
   try {
-    reminderList.value = await fetchReminders(filter)
+    const raw = await fetchReminders(filter)
+
+    // Burada null / bozuk item’ları ayıklıyoruz
+    reminderList.value = (raw || []).filter(
+      (r) =>
+        r &&                          // null değil
+        (r.petName || r.ownerName)    // en azından bir isim var
+    )
   } catch (e) {
     console.error(e)
   } finally {
     listLoading.value = false
   }
 }
+
 
 function formatDate(dateOnlyString) {
   if (!dateOnlyString) return '—'
@@ -1844,6 +1868,15 @@ function titleForFilter() {
   height: 64px;
   object-fit: cover;
   display: block;
+}
+.next-visits-list {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.85rem;
+}
+
+.next-visits-list li + li {
+  margin-top: 0.15rem;
 }
 
 </style>

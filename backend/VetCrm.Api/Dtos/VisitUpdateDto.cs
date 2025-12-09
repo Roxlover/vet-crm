@@ -10,4 +10,7 @@ public class VisitUpdateDto
 
     public DateOnly? NextDate { get; set; }
     public string? MicrochipNumber { get; set; } 
+   public List<VisitPlanCreateDto> Plans { get; set; } = new();
+   public List<VisitPlanCreateDto> NextVisits { get; set; } = new();
+
 }

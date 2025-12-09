@@ -64,7 +64,7 @@ export const API_BASE = BASE
 
 export const http = axios.create({
   baseURL: `${BASE}/api`,
-  timeout: 15000,
+   timeout: 60000,
 })
 
 // REQUEST INTERCEPTOR
