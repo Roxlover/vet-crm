@@ -13,11 +13,9 @@ public class VisitCreateDto
 
     public string? Purpose { get; set; }
 
-    // Eski tekli yapı için (gerekirse)
     public DateOnly? NextDate { get; set; }
 
     public string? MicrochipNumber { get; set; }
 
-    // 🔥 Çoklu "ne zaman gelecek" satırları
-    public List<VisitPlanCreateDto> NextVisits { get; set; } = new();
+    public List<VisitPlanCreateDto> Plans { get; set; } = new();
 }

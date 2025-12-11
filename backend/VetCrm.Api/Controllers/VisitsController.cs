@@ -30,73 +30,88 @@ public class VisitsController : ControllerBase
     }
 
     /// <summary>
-    /// Bir ziyaret için hem VisitPlan kayıtlarını hem de Reminders'ı senkronize eder.
-    /// - plans doluysa: her satır için VisitPlan + Reminder üretir.
-    /// - plans boşsa: legacy Visit.NextDate üzerinden 1 reminder üretir.
+    /// Bir ziyaret için VisitPlan + Reminder + Appointment senkronu.
+    /// - plans doluysa: her satır için VisitPlan + Reminder + Appointment üretir.
+    /// - plans boşsa: legacy Visit.NextDate üzerinden 1 reminder + 1 appointment üretir.
     /// </summary>
- private void SyncRemindersForVisit(Visit visit, List<VisitPlanCreateDto>? plans)
-{
-    var existingReminders = _db.Reminders.Where(r => r.VisitId == visit.Id);
-    _db.Reminders.RemoveRange(existingReminders);
-
-    // Yeni çoklu yapı: VisitPlans
-    if (plans != null && plans.Count > 0)
+    private void SyncRemindersForVisit(Visit visit, List<VisitPlanCreateDto>? plans)
     {
-        foreach (var p in plans)
+        // Eski kayıtları temizle
+        var oldReminders    = _db.Reminders   .Where(r => r.VisitId == visit.Id);
+        var oldPlans        = _db.VisitPlans  .Where(p => p.VisitId == visit.Id);
+        var oldAppointments = _db.Appointments.Where(a => a.VisitId == visit.Id);
+
+        _db.Reminders.RemoveRange(oldReminders);
+        _db.VisitPlans.RemoveRange(oldPlans);
+        _db.Appointments.RemoveRange(oldAppointments);
+
+        // Çoklu plan yoksa -> legacy NextDate mantığı
+        if (plans == null || plans.Count == 0)
         {
-            if (p == null || p.Date == default)
-                continue;
+            if (visit.NextDate is null)
+                return;
 
-            var dueDate = p.Date.AddDays(-1);
+            var next = visit.NextDate.Value;
+            var due  = next.AddDays(-1);
 
-            // 1) Reminder
-            var reminder = new Reminder
+            _db.Reminders.Add(new Reminder
             {
                 VisitId = visit.Id,
-                DueDate = dueDate,
+                DueDate = due,
                 Status  = ReminderStatus.Pending
-            };
-            _db.Reminders.Add(reminder);
+            });
 
-            // 2) Appointment (takvim için)
+            // Takvim için tek appointment
             _db.Appointments.Add(new Appointment
             {
                 VisitId     = visit.Id,
                 OwnerId     = visit.Pet.OwnerId,
                 PetId       = visit.PetId,
-                ScheduledAt = p.Date.ToDateTime(new TimeOnly(10, 30)), // şimdilik sabit saat
-                Purpose     = p.Purpose,
-                DoctorId    = p.DoctorId
+                ScheduledAt = next.ToDateTime(new TimeOnly(10, 30)),
+                Purpose     = visit.Purpose,
+                DoctorId    = visit.DoctorId,
             });
+
+            return;
         }
 
-        return;
+        // Çoklu planlı yeni yapı
+        foreach (var p in plans)
+        {
+            if (p == null || p.Date == default)
+                continue;
+
+            // VisitPlan kaydı
+            var vp = new VisitPlan
+            {
+                VisitId  = visit.Id,
+                Date     = p.Date,
+                Purpose  = p.Purpose,
+                DoctorId = p.DoctorId,
+            };
+            _db.VisitPlans.Add(vp);
+
+            // Reminder
+            var due = p.Date.AddDays(-1);
+            _db.Reminders.Add(new Reminder
+            {
+                VisitId = visit.Id,
+                DueDate = due,
+                Status  = ReminderStatus.Pending
+            });
+
+            // Appointment (takvim)
+            _db.Appointments.Add(new Appointment
+            {
+                VisitId     = visit.Id,
+                OwnerId     = visit.Pet.OwnerId,
+                PetId       = visit.PetId,
+                ScheduledAt = p.Date.ToDateTime(new TimeOnly(10, 30)),
+                Purpose     = p.Purpose,
+                DoctorId    = p.DoctorId,
+            });
+        }
     }
-
-    // Eski tekli NextDate davranışı (geriye uyum için)
-    if (visit.NextDate is null)
-        return;
-
-    var legacyDue = visit.NextDate.Value.AddDays(-1);
-
-    var legacyReminder = new Reminder
-    {
-        VisitId = visit.Id,
-        DueDate = legacyDue,
-        Status  = ReminderStatus.Pending
-    };
-    _db.Reminders.Add(legacyReminder);
-
-    _db.Appointments.Add(new Appointment
-    {
-        VisitId     = visit.Id,
-        OwnerId     = visit.Pet.OwnerId,
-        PetId       = visit.PetId,
-        ScheduledAt = visit.NextDate.Value.ToDateTime(new TimeOnly(10, 30)),
-        Purpose     = visit.Purpose,
-        DoctorId    = visit.DoctorId
-    });
-}
 
     // --------------------------------------------------------------------
     // GET /api/visits?ownerId=&petId=
@@ -112,7 +127,7 @@ public class VisitsController : ControllerBase
             .Include(v => v.CreatedByUser)
             .Include(v => v.Doctor)
             .Include(v => v.Images)
-            .Include(v => v.Plans)      // 🔹 planları da çek
+            .Include(v => v.Plans)
                 .ThenInclude(p => p.Doctor)
             .AsQueryable();
 
@@ -272,33 +287,29 @@ public class VisitsController : ControllerBase
             if (pet is null)
                 return BadRequest($"Pet with id {dto.PetId} not found.");
 
-            DateOnly? primaryNextDate = null;
-            if (dto.NextVisits != null && dto.NextVisits.Count > 0)
+             DateOnly? primaryNextDate = null;
+            if (dto.Plans != null && dto.Plans.Count > 0)
             {
-                primaryNextDate = dto.NextVisits
-                    .Where(n => n != null && n.Date != default)
-                    .Select(n => n.Date)
+                primaryNextDate = dto.Plans
+                    .Where(p => p != null && p.Date != default)
+                    .Select(p => p.Date)
                     .OrderBy(d => d)
                     .FirstOrDefault();
             }
 
-
             var visit = new Visit
             {
-                PetId = dto.PetId,
+                PetId       = dto.PetId,
                 PerformedAt = dto.PerformedAt ?? DateTime.UtcNow,
-                Procedures = dto.Procedures,
-                AmountTl = dto.AmountTl,
-                Notes = dto.Notes,
-
-                // Çoklu plan varsa en erken, yoksa legacy NextDate
-                NextDate = primaryNextDate ?? dto.NextDate,
-                Purpose = dto.Purpose,
-
-                CreatedByUserId = _currentUser.UserId,
+                Procedures  = dto.Procedures,
+                AmountTl    = dto.AmountTl,
+                Notes       = dto.Notes,
+                NextDate    = primaryNextDate ?? dto.NextDate,
+                Purpose     = dto.Purpose,
+                CreatedByUserId   = _currentUser.UserId,
                 CreatedByUsername = _currentUser.Username,
-                CreatedByName = _currentUser.FullName,
-                MicrochipNumber = dto.MicrochipNumber
+                CreatedByName     = _currentUser.FullName,
+                MicrochipNumber   = dto.MicrochipNumber
             };
 
             var userId = _currentUser.UserId;
@@ -307,31 +318,39 @@ public class VisitsController : ControllerBase
 
             _db.Visits.Add(visit);
             await _db.SaveChangesAsync();
+            _db.Entry(visit).Reference(v => v.Pet).Load();
 
-            // Plan + Reminders senkron
-            SyncRemindersForVisit(visit, dto.NextVisits);            
+            // ❗❗ ÖNEMLİ: BURADA ARTIK dto.Plans KULLANILACAK
+            SyncRemindersForVisit(visit, dto.Plans);
+            await _db.SaveChangesAsync();
+
+            // Sync’de OwnerId kullanacağımız için Pet + Owner nav’larını yükle
+            _db.Entry(visit).Reference(v => v.Pet).Load();
+            _db.Entry(visit.Pet).Reference(p => p.Owner).Load();
+
+            SyncRemindersForVisit(visit, dto.Plans);
             await _db.SaveChangesAsync();
 
             var result = new VisitDto
             {
-                Id = visit.Id,
-                PetId = visit.PetId,
-                PetName = pet.Name,
-                OwnerId = pet.OwnerId,
-                OwnerName = pet.Owner.FullName,
+                Id          = visit.Id,
+                PetId       = visit.PetId,
+                PetName     = pet.Name,
+                OwnerId     = pet.OwnerId,
+                OwnerName   = pet.Owner.FullName,
                 PerformedAt = visit.PerformedAt,
-                Procedures = visit.Procedures,
-                AmountTl = visit.AmountTl,
-                Notes = visit.Notes,
-                NextDate = visit.NextDate,
-                Purpose = visit.Purpose,
-                DoctorName = visit.Doctor != null ? visit.Doctor.FullName : null,
-                CreatedByUserId = visit.CreatedByUserId,
+                Procedures  = visit.Procedures,
+                AmountTl    = visit.AmountTl,
+                Notes       = visit.Notes,
+                NextDate    = visit.NextDate,
+                Purpose     = visit.Purpose,
+                DoctorName  = visit.Doctor != null ? visit.Doctor.FullName : null,
+                CreatedByUserId   = visit.CreatedByUserId,
                 CreatedByUsername = visit.CreatedByUsername,
-                CreatedByName = visit.CreatedByName,
-                ImageUrl = visit.ImageUrl,
-                MicrochipNumber = visit.MicrochipNumber,
-                Plans = new()   // henüz mapper ile tekrar çekmiyoruz, istersen bırakabilirsin
+                CreatedByName     = visit.CreatedByName,
+                ImageUrl          = visit.ImageUrl,
+                MicrochipNumber   = visit.MicrochipNumber,
+                Plans             = new()
             };
 
             Console.WriteLine("===== CreateVisit SUCCESS =====");
@@ -351,30 +370,33 @@ public class VisitsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateVisit(int id, [FromBody] VisitUpdateDto dto)
     {
-        var visit = await _db.Visits.FindAsync(id);
+        var visit = await _db.Visits
+            .Include(v => v.Pet) // OwnerId’ye ihtiyacımız var
+            .FirstOrDefaultAsync(v => v.Id == id);
+
         if (visit is null)
             return NotFound();
 
-        visit.PerformedAt = dto.PerformedAt;
-        visit.Procedures = dto.Procedures;
-        visit.AmountTl = dto.AmountTl;
-        visit.Notes = dto.Notes;
+        visit.PerformedAt     = dto.PerformedAt;
+        visit.Procedures      = dto.Procedures;
+        visit.AmountTl        = dto.AmountTl;
+        visit.Notes           = dto.Notes;
         visit.MicrochipNumber = dto.MicrochipNumber;
 
         DateOnly? primaryNextDate = null;
-        if (dto.NextVisits != null && dto.NextVisits.Count > 0)
+        if (dto.Plans != null && dto.Plans.Count > 0)
         {
-            primaryNextDate = dto.NextVisits
-                .Where(n => n != null && n.Date != default)
-                .Select(n => n.Date)
+            primaryNextDate = dto.Plans
+                .Where(p => p != null && p.Date != default)
+                .Select(p => p.Date)
                 .OrderBy(d => d)
                 .FirstOrDefault();
         }
 
-
         visit.NextDate = primaryNextDate ?? dto.NextDate;
-        visit.Purpose = dto.Purpose;
+        visit.Purpose  = dto.Purpose;
 
+        // ❗ BURADA DA dto.Plans
         SyncRemindersForVisit(visit, dto.Plans);
 
         await _db.SaveChangesAsync();
@@ -398,6 +420,9 @@ public class VisitsController : ControllerBase
         var plans = _db.VisitPlans.Where(p => p.VisitId == id);
         _db.VisitPlans.RemoveRange(plans);
 
+        var apps = _db.Appointments.Where(a => a.VisitId == id);
+        _db.Appointments.RemoveRange(apps);
+
         _db.Visits.Remove(visit);
         await _db.SaveChangesAsync();
 
@@ -405,13 +430,12 @@ public class VisitsController : ControllerBase
     }
 
     // --------------------------------------------------------------------
-    // GET /api/visits/upcoming
-    // (Şimdilik legacy NextDate üstünden gidiyor; ileride VisitPlans'e de genişletiriz)
+    // GET /api/visits/upcoming  (şimdilik NextDate üzerinden)
     // --------------------------------------------------------------------
     [HttpGet("upcoming")]
     public async Task<ActionResult<IEnumerable<UpcomingVisitDto>>> GetUpcoming([FromQuery] int days = 1)
     {
-        var today = DateOnly.FromDateTime(DateTime.Now.Date);
+        var today  = DateOnly.FromDateTime(DateTime.Now.Date);
         var target = today.AddDays(days);
 
         var upcoming = await _db.Visits
@@ -420,15 +444,15 @@ public class VisitsController : ControllerBase
             .Where(v => v.NextDate == target)
             .Select(v => new UpcomingVisitDto
             {
-                VisitId = v.Id,
-                PetId = v.PetId,
-                PetName = v.Pet.Name,
-                OwnerId = v.Pet.OwnerId,
-                OwnerName = v.Pet.Owner.FullName,
+                VisitId        = v.Id,
+                PetId          = v.PetId,
+                PetName        = v.Pet.Name,
+                OwnerId        = v.Pet.OwnerId,
+                OwnerName      = v.Pet.Owner.FullName,
                 OwnerPhoneE164 = v.Pet.Owner.PhoneE164,
-                VisitDate = v.NextDate!.Value,
-                Procedures = v.Procedures,
-                WhatsAppSent = false
+                VisitDate      = v.NextDate!.Value,
+                Procedures     = v.Procedures,
+                WhatsAppSent   = false
             })
             .OrderBy(u => u.OwnerName)
             .ThenBy(u => u.PetName)
@@ -465,7 +489,7 @@ public class VisitsController : ControllerBase
 
             var image = new VisitImage
             {
-                VisitId = visit.Id,
+                VisitId  = visit.Id,
                 ImageUrl = url,
                 CreatedAt = DateTime.UtcNow
             };
@@ -474,7 +498,7 @@ public class VisitsController : ControllerBase
 
             results.Add(new VisitImageDto
             {
-                Id = image.Id,
+                Id       = image.Id,
                 ImageUrl = url,
                 CreatedAt = image.CreatedAt
             });

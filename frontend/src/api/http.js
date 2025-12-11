@@ -9,11 +9,15 @@ const isNativeApp =
 //  BASE URL ÇÖZÜCÜ
 // ==================================================
 function resolveBase() {
-  const rawEnvBase = import.meta?.env?.VITE_API_BASE
+  // HEM VITE_API_BASE HEM DE VITE_API_BASE_URL DESTEKLİ
+  const rawEnvBase =
+    (import.meta?.env?.VITE_API_BASE ||
+      import.meta?.env?.VITE_API_BASE_URL ||
+      '').trim()
 
   // 1) ENV VAR HER ŞEYDEN ÖNCE GELSİN (WEB + NATIVE)
-  if (rawEnvBase && typeof rawEnvBase === 'string') {
-    const cleaned = rawEnvBase.trim().replace(/\/$/, '')
+  if (rawEnvBase) {
+    const cleaned = rawEnvBase.replace(/\/$/, '')
     console.log('[HTTP][BASE][ENV]', cleaned)
     return cleaned
   }

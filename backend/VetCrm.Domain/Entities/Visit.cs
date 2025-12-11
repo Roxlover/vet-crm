@@ -32,7 +32,7 @@ public class Visit
     public string? MicrochipNumber { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    // 🔹 Yeni: çoklu "ne zaman gelecek" planları
     public ICollection<VisitPlan> Plans { get; set; } = new List<VisitPlan>();
+    public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+
 }
