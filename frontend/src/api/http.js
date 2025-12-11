@@ -10,10 +10,8 @@ const isNativeApp =
 // ==================================================
 function resolveBase() {
   // HEM VITE_API_BASE HEM DE VITE_API_BASE_URL DESTEKLİ
-  const rawEnvBase =
-    (import.meta?.env?.VITE_API_BASE ||
-      import.meta?.env?.VITE_API_BASE_URL ||
-      '').trim()
+const rawEnvBase =
+  import.meta?.env?.VITE_API_BASE_URL ?? import.meta?.env?.VITE_API_BASE
 
   // 1) ENV VAR HER ŞEYDEN ÖNCE GELSİN (WEB + NATIVE)
   if (rawEnvBase) {
