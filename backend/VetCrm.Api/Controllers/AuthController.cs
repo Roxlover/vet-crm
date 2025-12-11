@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using VetCrm.Infrastructure.Data;
 using VetCrm.Api.Services;
 using VetCrm.Domain.Entities;
+using BC = BCrypt.Net.BCrypt;
 
 namespace VetCrm.Api.Controllers
 {
@@ -47,8 +48,9 @@ namespace VetCrm.Api.Controllers
             var user = await _db.Users
                 .FirstOrDefaultAsync(u => u.Username.ToLower() == normalizedUsername);
 
-            if (user == null || user.PasswordHash != dto.Password)
+            if (user == null || !BC.Verify(dto.Password, user.PasswordHash))
                 return Unauthorized("Kullanıcı adı veya şifre hatalı.");
+
 
             var token = _tokenService.CreateToken(user);
 
