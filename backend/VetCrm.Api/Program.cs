@@ -43,9 +43,9 @@ builder.Services.AddCors(options =>
                 "http://localhost:5173",
                 "http://localhost",
                 "http://192.168.1.107:5173",
-                "capacitor://localhost"
+                "capacitor://localhost",
                 // ileride web deploy yaparsak:
-                // "https://app.e-bullvet.com"
+                "https://app.e-bullvet.com"
             )
             .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
             .AllowAnyHeader()
