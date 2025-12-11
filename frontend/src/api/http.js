@@ -2,26 +2,40 @@ import axios from 'axios'
 import { getToken, clearAuth } from '../utils/auth'
 
 const isBrowser = typeof window !== 'undefined'
-const isNativeApp =
-  isBrowser && (window.Capacitor || window.CapacitorRuntime)
+const isNativeApp = isBrowser && (window.Capacitor || window.CapacitorRuntime)
 
+// ==================================================
+//  BASE URL ÇÖZÜCÜ
+// ==================================================
 function resolveBase() {
+  // Hem VITE_API_BASE_URL hem VITE_API_BASE destekli
+  const rawEnvBase =
+    import.meta?.env?.VITE_API_BASE_URL || import.meta?.env?.VITE_API_BASE
 
-const rawEnvBase =
-  import.meta?.env?.VITE_API_BASE_URL ?? import.meta?.env?.VITE_API_BASE
+  // 1) ENV VAR HER ŞEYDEN ÖNCE GELSİN (WEB + NATIVE)
+  if (rawEnvBase && typeof rawEnvBase === 'string') {
+    let cleaned = rawEnvBase.trim()
 
-  if (rawEnvBase) {
-    const cleaned = rawEnvBase.replace(/\/$/, '')
+    // Sonda gelen fazladan /'ları sil
+    cleaned = cleaned.replace(/\/+$/, '')
+
+    // Yanlışlıkla .../api yazılmışsa /api kısmını da kırp
+    if (cleaned.toLowerCase().endsWith('/api')) {
+      cleaned = cleaned.slice(0, -4) // "/api" 4 karakter
+    }
+
     console.log('[HTTP][BASE][ENV]', cleaned)
     return cleaned
   }
 
+  // 2) Native app’te asla window.location üzerinden localhost aramayalım
   if (isNativeApp) {
     const fallback = 'https://api.e-bullvet.com'
     console.log('[HTTP][BASE][NATIVE_FALLBACK]', fallback)
     return fallback
   }
 
+  // 3) SSR / window yoksa
   if (!isBrowser) {
     console.log('[HTTP][BASE][NO_WINDOW] http://localhost:5239')
     return 'http://localhost:5239'
@@ -29,11 +43,13 @@ const rawEnvBase =
 
   const { protocol, hostname } = window.location
 
+  // 4) Local dev (web)
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     console.log('[HTTP][BASE][LOCALHOST] http://localhost:5239')
     return 'http://localhost:5239'
   }
 
+  // 5) LAN IP
   const isLanIp =
     /^192\.168\./.test(hostname) ||
     /^10\./.test(hostname) ||
@@ -45,6 +61,7 @@ const rawEnvBase =
     return lan
   }
 
+  // 6) Production: origin
   const sameOrigin = `${protocol}//${hostname}`
   console.log('[HTTP][BASE][ORIGIN]', sameOrigin)
   return sameOrigin
@@ -56,10 +73,12 @@ console.log('[HTTP][BASE][FINAL]', BASE)
 export const API_BASE = BASE
 
 export const http = axios.create({
+  // DİKKAT: Artık burada her zaman tek bir /api olacak
   baseURL: `${BASE}/api`,
-   timeout: 60000,
+  timeout: 60000,
 })
 
+// REQUEST INTERCEPTOR
 http.interceptors.request.use((config) => {
   const token = getToken()
   const method = (config.method || 'GET').toUpperCase()
@@ -80,6 +99,7 @@ http.interceptors.request.use((config) => {
   return config
 })
 
+// RESPONSE INTERCEPTOR (aynen kalabilir)
 http.interceptors.response.use(
   (res) => {
     const method = (res.config.method || 'GET').toUpperCase()
