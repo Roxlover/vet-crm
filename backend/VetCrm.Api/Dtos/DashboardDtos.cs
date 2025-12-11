@@ -2,8 +2,8 @@ namespace VetCrm.Api.Dtos;
 
 public class ReminderItemDto
 {
-    public int Id { get; set; }              // Reminder Id
-    public int VisitId { get; set; }         // <- YENİ
+    public int Id { get; set; }           
+    public int VisitId { get; set; }        
     public string PetName { get; set; } = "";
     public string OwnerName { get; set; } = "";
     public DateOnly ReminderDate { get; set; }

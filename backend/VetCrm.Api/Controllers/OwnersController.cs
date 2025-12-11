@@ -173,7 +173,6 @@ public class OwnersController : ControllerBase
         return Ok(pets);
     }
 
-    // 🔴 ARAMA ENDPOINTİ BURADA, CONTROLLER'IN İÇİNDE OLMALI
     [HttpGet("search")]
     public async Task<ActionResult<List<OwnerSearchDto>>> SearchOwners([FromQuery] string query)
     {
@@ -200,7 +199,6 @@ public class OwnersController : ControllerBase
     }
 }
 
-// DTO'LAR CONTROLLER DIŞINDA OLABİLİR
 public class OwnerPetDto
 {
     public int Id { get; set; }

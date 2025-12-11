@@ -32,7 +32,6 @@ namespace VetCrm.Api.Controllers
             if (currentUserId == null)
                 return Unauthorized("Oturum geçersiz. Lütfen tekrar giriş yapın.");
 
-            // 🔹 Çalışma saatleri kontrolü
             var startTime = new TimeSpan(10, 30, 0);
             var endTime   = new TimeSpan(19, 30, 0);
             var timeOfDay = request.ScheduledAt.TimeOfDay;
@@ -45,7 +44,6 @@ namespace VetCrm.Api.Controllers
             var dateOnly = DateOnly.FromDateTime(request.ScheduledAt.Date);
             var visits = new List<Visit>();
 
-            // 🔹 Ziyaret kayıtlarını oluştur
             foreach (var petId in request.PetIds.Distinct())
             {
                 var visit = new Visit
@@ -70,14 +68,8 @@ namespace VetCrm.Api.Controllers
                 visits.Add(visit);
             }
 
-            // Önce visit'leri kaydedelim ki Id'leri oluşsun
             await _db.SaveChangesAsync();
 
-            // ─────────────────────────────────────────────
-            //  RANDEVU BİLDİRİMİ (TÜM KULLANICILARA)
-            // ─────────────────────────────────────────────
-
-            // Sahip bilgisi
             Owner? owner = null;
             if (request.OwnerId > 0)
             {
@@ -85,7 +77,6 @@ namespace VetCrm.Api.Controllers
             }
 
 
-            // Seçilen pet isimleri
             var petNames = await _db.Pets
                 .Where(p => request.PetIds.Contains(p.Id))
                 .Select(p => p.Name)
@@ -97,7 +88,6 @@ namespace VetCrm.Api.Controllers
 
             var ownerName = owner?.FullName ?? "Hasta Sahibi";
 
-            // Mesaj metni
             var message =
                 $"{ownerName} - {petsText} için " +
                 $"{request.ScheduledAt:dd.MM.yyyy HH:mm} tarihine randevu oluşturuldu. " +
@@ -105,7 +95,6 @@ namespace VetCrm.Api.Controllers
 
             var firstVisitId = visits.FirstOrDefault()?.Id;
 
-            // Tüm kullanıcılara notification oluştur
             var allUsers = await _db.Users.ToListAsync();
 
             foreach (var user in allUsers)
@@ -124,8 +113,6 @@ namespace VetCrm.Api.Controllers
             }
 
             await _db.SaveChangesAsync();
-
-            // ─────────────────────────────────────────────
 
             return Ok(new
             {

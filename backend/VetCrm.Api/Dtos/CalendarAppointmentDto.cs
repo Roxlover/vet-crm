@@ -2,7 +2,7 @@ public class CalendarAppointmentDto
 {
     public int VisitId { get; set; }
 
-    public DateTime ScheduledAt { get; set; } // PerformedAt
+    public DateTime ScheduledAt { get; set; } 
     public DateOnly? NextDate { get; set; }
 
     public string PetName { get; set; } = null!;

@@ -28,13 +28,11 @@ export async function fetchOwnerPets(ownerId) {
   return data
 }
 
-// Yeni randevu oluştur
 export async function createAppointment(payload) {
   const { data } = await http.post('/appointments', payload)
   return data
 }
 
-// Doktor listesi
 export async function fetchDoctors() {
   const { data } = await http.get('/doctors')
   return data
@@ -48,12 +46,10 @@ export async function updateReminderStatus(id, completed, markAsOverdue = false)
   return data
 }
 
-// Ziyaret detayı (modal)
 export function fetchVisitDetail(visitId) {
   return http.get(`/visits/${visitId}`).then((res) => res.data)
 }
 
-// Hasta sahibi arama
 export async function searchOwners(query) {
   const { data } = await http.get('/owners/search', {
     params: { query },

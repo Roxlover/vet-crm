@@ -18,7 +18,6 @@ public class PetsController : ControllerBase
         _db = db;
     }
 
-    // GET: api/pets?ownerId=1
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PetDto>>> GetPets([FromQuery] int? ownerId)
     {
@@ -48,7 +47,6 @@ public class PetsController : ControllerBase
         return Ok(pets);
     }
 
-    // GET: api/pets/5
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PetDto>> GetPet(int id)
     {
@@ -74,7 +72,6 @@ public class PetsController : ControllerBase
         return Ok(pet);
     }
 
-    // POST: api/pets
     [HttpPost]
     public async Task<ActionResult<PetDto>> CreatePet([FromBody] PetCreateDto dto)
     {

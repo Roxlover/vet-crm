@@ -25,27 +25,24 @@ public class LedgerRangeResponse
 
 public class CreateLedgerEntryDto
 {
-    public DateOnly Date { get; set; }      // input’ta sadece gün
+    public DateOnly Date { get; set; }     
     public decimal Amount { get; set; }
     public bool IsIncome { get; set; }
     public string Category { get; set; } = null!;
     public string? Description { get; set; }
     public int? VisitId { get; set; }
-    public int? CreatedByUserId { get; set; }  // şimdilik manuel 1 gönderebiliriz
+    public int? CreatedByUserId { get; set; }  
 }
 
 public class LedgerSummaryDto
 {
-    // Toplam yazılan işlem tutarı (fatura/fiş gibi düşün)
+
     public decimal TotalAmount { get; set; }
 
-    // Tahsil edilen (nakit/kart)
     public decimal TotalCollected { get; set; }
 
-    // Halen veresiye kalan
     public decimal TotalCredit { get; set; }
 
-    // Ziyaret adedi
     public int VisitCount { get; set; }
 }
 

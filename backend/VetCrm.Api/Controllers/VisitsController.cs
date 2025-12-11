@@ -29,14 +29,8 @@ public class VisitsController : ControllerBase
         _storage = storage;
     }
 
-    /// <summary>
-    /// Bir ziyaret için VisitPlan + Reminder + Appointment senkronu.
-    /// - plans doluysa: her satır için VisitPlan + Reminder + Appointment üretir.
-    /// - plans boşsa: legacy Visit.NextDate üzerinden 1 reminder + 1 appointment üretir.
-    /// </summary>
     private void SyncRemindersForVisit(Visit visit, List<VisitPlanCreateDto>? plans)
     {
-        // Eski kayıtları temizle
         var oldReminders    = _db.Reminders   .Where(r => r.VisitId == visit.Id);
         var oldPlans        = _db.VisitPlans  .Where(p => p.VisitId == visit.Id);
         var oldAppointments = _db.Appointments.Where(a => a.VisitId == visit.Id);
@@ -45,7 +39,6 @@ public class VisitsController : ControllerBase
         _db.VisitPlans.RemoveRange(oldPlans);
         _db.Appointments.RemoveRange(oldAppointments);
 
-        // Çoklu plan yoksa -> legacy NextDate mantığı
         if (plans == null || plans.Count == 0)
         {
             if (visit.NextDate is null)
@@ -61,7 +54,6 @@ public class VisitsController : ControllerBase
                 Status  = ReminderStatus.Pending
             });
 
-            // Takvim için tek appointment
             _db.Appointments.Add(new Appointment
             {
                 VisitId     = visit.Id,
@@ -75,13 +67,11 @@ public class VisitsController : ControllerBase
             return;
         }
 
-        // Çoklu planlı yeni yapı
         foreach (var p in plans)
         {
             if (p == null || p.Date == default)
                 continue;
 
-            // VisitPlan kaydı
             var vp = new VisitPlan
             {
                 VisitId  = visit.Id,
@@ -91,7 +81,6 @@ public class VisitsController : ControllerBase
             };
             _db.VisitPlans.Add(vp);
 
-            // Reminder
             var due = p.Date.AddDays(-1);
             _db.Reminders.Add(new Reminder
             {
@@ -100,7 +89,6 @@ public class VisitsController : ControllerBase
                 Status  = ReminderStatus.Pending
             });
 
-            // Appointment (takvim)
             _db.Appointments.Add(new Appointment
             {
                 VisitId     = visit.Id,
@@ -113,9 +101,6 @@ public class VisitsController : ControllerBase
         }
     }
 
-    // --------------------------------------------------------------------
-    // GET /api/visits?ownerId=&petId=
-    // --------------------------------------------------------------------
     [HttpGet]
     public async Task<ActionResult<IEnumerable<VisitDto>>> GetVisits(
         [FromQuery] int? ownerId,
@@ -193,9 +178,6 @@ public class VisitsController : ControllerBase
         return Ok(visits);
     }
 
-    // --------------------------------------------------------------------
-    // GET /api/visits/{id}
-    // --------------------------------------------------------------------
     [HttpGet("{id:int}")]
     public async Task<ActionResult<VisitDto>> GetVisit(int id)
     {
@@ -262,9 +244,6 @@ public class VisitsController : ControllerBase
         return Ok(dto);
     }
 
-    // --------------------------------------------------------------------
-    // POST /api/visits
-    // --------------------------------------------------------------------
     [HttpPost]
     public async Task<ActionResult<VisitDto>> CreateVisit([FromBody] VisitCreateDto dto)
     {
@@ -320,11 +299,9 @@ public class VisitsController : ControllerBase
             await _db.SaveChangesAsync();
             _db.Entry(visit).Reference(v => v.Pet).Load();
 
-            // ❗❗ ÖNEMLİ: BURADA ARTIK dto.Plans KULLANILACAK
             SyncRemindersForVisit(visit, dto.Plans);
             await _db.SaveChangesAsync();
 
-            // Sync’de OwnerId kullanacağımız için Pet + Owner nav’larını yükle
             _db.Entry(visit).Reference(v => v.Pet).Load();
             _db.Entry(visit.Pet).Reference(p => p.Owner).Load();
 
@@ -364,14 +341,11 @@ public class VisitsController : ControllerBase
         }
     }
 
-    // --------------------------------------------------------------------
-    // PUT /api/visits/{id}
-    // --------------------------------------------------------------------
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateVisit(int id, [FromBody] VisitUpdateDto dto)
     {
         var visit = await _db.Visits
-            .Include(v => v.Pet) // OwnerId’ye ihtiyacımız var
+            .Include(v => v.Pet) 
             .FirstOrDefaultAsync(v => v.Id == id);
 
         if (visit is null)
@@ -396,7 +370,7 @@ public class VisitsController : ControllerBase
         visit.NextDate = primaryNextDate ?? dto.NextDate;
         visit.Purpose  = dto.Purpose;
 
-        // ❗ BURADA DA dto.Plans
+
         SyncRemindersForVisit(visit, dto.Plans);
 
         await _db.SaveChangesAsync();
@@ -404,9 +378,6 @@ public class VisitsController : ControllerBase
         return NoContent();
     }
 
-    // --------------------------------------------------------------------
-    // DELETE /api/visits/{id}
-    // --------------------------------------------------------------------
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteVisit(int id)
     {
@@ -429,9 +400,6 @@ public class VisitsController : ControllerBase
         return NoContent();
     }
 
-    // --------------------------------------------------------------------
-    // GET /api/visits/upcoming  (şimdilik NextDate üzerinden)
-    // --------------------------------------------------------------------
     [HttpGet("upcoming")]
     public async Task<ActionResult<IEnumerable<UpcomingVisitDto>>> GetUpcoming([FromQuery] int days = 1)
     {
@@ -461,9 +429,6 @@ public class VisitsController : ControllerBase
         return Ok(upcoming);
     }
 
-    // --------------------------------------------------------------------
-    // ÇOKLU GÖRSEL UPLOAD
-    // --------------------------------------------------------------------
     [HttpPost("{id:int}/images")]
     public async Task<ActionResult<List<VisitImageDto>>> UploadImages(
         int id,

@@ -20,7 +20,6 @@ public class NotificationsController : ControllerBase
         _currentUser = currentUser;
     }
 
-    // GET /api/notifications
     [HttpGet]
     public async Task<ActionResult<List<NotificationDto>>> GetMyNotifications()
     {
@@ -45,7 +44,6 @@ public class NotificationsController : ControllerBase
         return Ok(dto);
     }
 
-    // POST /api/notifications/read
     [HttpPost("read")]
     public async Task<IActionResult> MarkAllRead()
     {

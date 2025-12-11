@@ -20,11 +20,9 @@ public class DashboardVisitDetailDto
     public string? ImageUrl { get; set; }
     public decimal? CreditAmountTl { get; set; }
 
-    // Doktor bilgisi
     public int? DoctorId { get; set; }
     public string? DoctorName { get; set; }
 
-    // Kaydı ekleyen kullanıcı
     public int? CreatedByUserId { get; set; }
     public string? CreatedByUsername { get; set; }
     public string? CreatedByName { get; set; }

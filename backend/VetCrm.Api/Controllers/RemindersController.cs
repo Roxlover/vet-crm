@@ -18,7 +18,6 @@ public class RemindersController : ControllerBase
         _db = db;
     }
 
-    // PATCH de POST da çalışsın:
     [HttpPatch("{id:int}/status")]
     [HttpPost("{id:int}/status")]
     public async Task<IActionResult> UpdateStatus(

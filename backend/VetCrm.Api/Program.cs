@@ -14,15 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 const string FrontendCorsPolicy = "FrontendCors";
 
-// =====================
-// DB
-// =====================
 builder.Services.AddDbContext<VetCrmDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// =====================
-// Hangfire
-// =====================
 builder.Services.AddScoped<ReminderProcessor>();
 
 builder.Services.AddHangfire(config =>
@@ -37,14 +31,9 @@ builder.Services.AddHangfire(config =>
 
 builder.Services.AddHangfireServer();
 
-// =====================
-// Görsel depolama (şimdilik local)
-// =====================
 builder.Services.AddScoped<IR2Storage, LocalVisitImageStorage>();
 
-// =====================
-// CORS
-// =====================
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
@@ -65,12 +54,10 @@ builder.Services.AddCors(options =>
     });
 });
 
-// API'yı 0.0.0.0:5239'da dinlet
+
 builder.WebHost.UseSetting(WebHostDefaults.ServerUrlsKey, "http://0.0.0.0:5239");
 
-// =====================
-// JWT & CURRENT USER
-// =====================
+
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.AddScoped<ITokenService, TokenService>();
 
@@ -117,26 +104,19 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-// =====================
-// MVC + Swagger
-// =====================
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();   // 🔹 basit Swagger, ekstra config yok
+builder.Services.AddSwaggerGen();   
 
 var app = builder.Build();
 
-// Swagger'ı hep açık tutmak istersen if'i kaldırabilirsin.
-// Şimdilik Dev'de zaten açık olacak.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// =====================
-// Middleware pipeline
-// =====================
 app.UseHangfireDashboard("/hangfire");
 app.UseStaticFiles();
 
@@ -147,9 +127,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// =====================
-// Hangfire job
-// =====================
+
 RecurringJob.AddOrUpdate<ReminderProcessor>(
     "process-reminders",
     rp => rp.ProcessDueRemindersAsync(),

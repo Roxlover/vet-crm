@@ -9,7 +9,7 @@ namespace VetCrm.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [AllowAnonymous]  // 🔴 Tüm AuthController anonime açık
+    [AllowAnonymous]  
     public class AuthController : ControllerBase
     {
         private readonly VetCrmDbContext _db;

@@ -18,9 +18,6 @@ public class LedgerController : ControllerBase
         _db = db;
     }
 
-    // -------------------------------------------------
-    //  Ortak helper: Ziyaret tutarlarından tahsil/veresiye hesapla
-    // -------------------------------------------------
     private static (decimal total, decimal collected, decimal credit) CalcAmounts(
         decimal? amount, decimal? credit)
     {
@@ -32,20 +29,14 @@ public class LedgerController : ControllerBase
         return (total, collected, creditVal);
     }
 
-    // -------------------------------------------------
-    //  DTO'lar
-    // -------------------------------------------------
-// Kullanıcı bazlı grup DTO'su
     public class LedgerUserGroupDto
     {
         public int? UserId { get; set; }
         public string? Username { get; set; }
         public string? FullName { get; set; }
 
-        // Bu kullanıcının özet bilgisi
         public LedgerSummaryDto Summary { get; set; } = new();
 
-        // Bu kullanıcının ziyaret satırları
         public List<LedgerVisitItemDto> Items { get; set; } = new();
     }
 
@@ -67,17 +58,14 @@ public class LedgerController : ControllerBase
         public string? Category { get; set; }
         public string? Note { get; set; }
     }
-
-    // Ziyaretlerden üretilen bilanço özeti
     public class LedgerSummaryDto
     {
-        public decimal TotalAmount { get; set; }      // Ziyaretlerin toplam tutarı
-        public decimal TotalCollected { get; set; }   // Tahsil edilen
-        public decimal TotalCredit { get; set; }      // Veresiye kalan
-        public int VisitCount { get; set; }           // Ziyaret sayısı
+        public decimal TotalAmount { get; set; }    
+        public decimal TotalCollected { get; set; }  
+        public decimal TotalCredit { get; set; }     
+        public int VisitCount { get; set; }       
     }
 
-    // Ziyaret bazlı gelir satırı
     public class LedgerVisitItemDto
     {
         public int VisitId { get; set; }
@@ -95,11 +83,7 @@ public class LedgerController : ControllerBase
         public string? CreatedByName { get; set; }
     }
 
-    // -------------------------------------------------
-    //  1) Mevcut manuel GELİR/GİDER kayıtları
-    // -------------------------------------------------
 
-    // GET /api/ledger?from=2025-11-01&to=2025-11-30
     [HttpGet]
     public async Task<ActionResult<List<LedgerEntryDto>>> GetRange(
         [FromQuery] DateOnly from,
@@ -123,7 +107,6 @@ public class LedgerController : ControllerBase
         return Ok(list);
     }
 
-    // POST /api/ledger
     [HttpPost]
     public async Task<ActionResult<LedgerEntryDto>> Create(
         [FromBody] CreateLedgerEntryRequest request)
@@ -161,12 +144,6 @@ public class LedgerController : ControllerBase
         return Ok(dto);
     }
 
-    // -------------------------------------------------
-    //  2) ZİYARETLERDEN GELİR – "ne kadar alındı" kısımları
-    // -------------------------------------------------
-
-    // GET /api/ledger/summary?from=2025-11-01&to=2025-11-30
-// GET /api/ledger/summary?from=...&to=...&doctorId=7
 [HttpGet("summary")]
 public async Task<ActionResult<LedgerSummaryDto>> GetVisitSummary(
     [FromQuery] DateOnly from,
@@ -179,13 +156,11 @@ public async Task<ActionResult<LedgerSummaryDto>> GetVisitSummary(
         to = tmp;
     }
 
-    // Temel ziyaret sorgusu
     var query = _db.Visits
         .Where(v =>
             DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
             DateOnly.FromDateTime(v.PerformedAt.Date) <= to);
 
-    // 🔴 Sadece hatırlatması "Yapıldı" olan ziyaretler
     query = query.Where(v =>
         _db.Reminders.Any(r => r.VisitId == v.Id && r.IsCompleted));
 
@@ -239,7 +214,6 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
             DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
             DateOnly.FromDateTime(v.PerformedAt.Date) <= to);
 
-    // 🔴 Yine: sadece hatırlatması "Yapıldı" olan ziyaretler
     baseQuery = baseQuery.Where(v =>
         _db.Reminders.Any(r => r.VisitId == v.Id && r.IsCompleted));
 
@@ -298,7 +272,6 @@ public async Task<ActionResult<List<LedgerUserGroupDto>>> GetByUser(
         to = tmp;
     }
 
-    // Ziyaretleri tarih aralığına göre çek
     var visits = await _db.Visits
         .Include(v => v.Pet)
             .ThenInclude(p => p.Owner)
@@ -307,7 +280,6 @@ public async Task<ActionResult<List<LedgerUserGroupDto>>> GetByUser(
             DateOnly.FromDateTime(v.PerformedAt.Date) <= to)
         .ToListAsync();
 
-    // Kullanıcıya göre grupla (kim eklediyse)
     var groups = visits
         .GroupBy(v => new
         {
@@ -321,7 +293,6 @@ public async Task<ActionResult<List<LedgerUserGroupDto>>> GetByUser(
             decimal totalCollected = 0m;
             decimal totalCredit = 0m;
 
-            // Her visit'ten LedgerVisitItemDto üret
             var items = g.Select(v =>
             {
                 var (total, collected, credit) = CalcAmounts(v.AmountTl, v.CreditAmountTl);
@@ -363,7 +334,6 @@ public async Task<ActionResult<List<LedgerUserGroupDto>>> GetByUser(
                 Items = items
             };
         })
-        // Null user ( CreatedByUserId=null ) varsa en sona at
         .OrderBy(g => g.UserId.HasValue ? 0 : 1)
         .ThenBy(g => g.FullName ?? g.Username)
         .ToList();

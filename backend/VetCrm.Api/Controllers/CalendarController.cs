@@ -30,7 +30,6 @@ public class CalendarController : ControllerBase
         public decimal? CreditAmountTl { get; set; }
     }
 
-    // /api/calendar/appointments?from=2025-11-01&to=2025-11-30
     [HttpGet("appointments")]
     public async Task<ActionResult<List<CalendarAppointmentDto>>> GetAppointments(
         [FromQuery] DateOnly from,
