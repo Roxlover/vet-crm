@@ -6,7 +6,7 @@ using VetCrm.Infrastructure.Data;
 
 namespace VetCrm.Api.Controllers;
 
-[Authorize(Policy = "BullBossOnly")]
+[Authorize(Roles = "Admin")]
 [ApiController]
 [Route("api/[controller]")]
 public class LedgerController : ControllerBase

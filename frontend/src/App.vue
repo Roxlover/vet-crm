@@ -46,7 +46,7 @@
 
           
           <RouterLink
-            v-if="isBullBoss"
+            v-if="auth.user?.role === 'Admin'"
             to="/bilanco"
             class="nav-item"
             :class="{ active: route.name === 'Bilanco' }"

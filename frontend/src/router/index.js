@@ -29,6 +29,7 @@ const router = createRouter({
       path: '/bilanco',
       name: 'Bilanco',
       component: BilancoView,
+      meta: { requiresAuth: true, roles: ['Admin'] },
     },
     {
       path: '/pets',
@@ -56,30 +57,29 @@ router.beforeEach((to, from, next) => {
   const userRaw = localStorage.getItem('vetcrm_user')
   const user = userRaw ? JSON.parse(userRaw) : null
 
-  // login yoksa -> login'e gönder
   if (authRequired && (!user || !token)) {
     return next('/login')
   }
 
-  // login olmuşken /login'e gelmeye çalışma
   if (!authRequired && user && token) {
     return next('/')
   }
 
-  // Bilanço sadece BullBoss
-  if (to.path === '/bilanco' && (!user || user.username !== 'BullBoss')) {
-    return next('/') 
+  if (to.path === '/bilanco') {
+    const role = user?.role?.trim()
+    const username = user?.username?.toLowerCase().trim()
+    const allowedUsers = ['bullboss']  
+
+    const isAdmin = role === 'Admin'
+    const isExplicitAllowed = username && allowedUsers.includes(username)
+
+    if (!isAdmin && !isExplicitAllowed) {
+      return next('/')
+    }
   }
 
-  // if (to.path === '/bilanco') {
-  //   const username = user?.username?.toLowerCase().trim()
-  //   const allowed = ['bullboss', 'sila']   // buraya istediğin isimleri ekleyebilirsin
-
-  //   if (!username || !allowed.includes(username)) {
-  //     return next('/')
-  //   }
-  // }
   next()
 })
+
 
 export default router

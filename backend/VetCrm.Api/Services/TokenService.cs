@@ -12,7 +12,7 @@ public class JwtSettings
     public string Key { get; set; } = null!;
     public string Issuer { get; set; } = null!;
     public string Audience { get; set; } = null!;
-    public int ExpiresMinutes { get; set; } = 720;
+    public int ExpiresMinutes { get; set; } = 720; // 12 saat default
 }
 
 public class TokenService : ITokenService
@@ -26,24 +26,50 @@ public class TokenService : ITokenService
 
     public string CreateToken(User user)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Key));
+        var keyBytes = Encoding.UTF8.GetBytes(_settings.Key);
+        var key = new SymmetricSecurityKey(keyBytes);
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>
         {
+            // Kimlik
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.UniqueName, user.Username),
-            new(ClaimTypes.Name, user.FullName),
-            new(ClaimTypes.Role, user.Role),
-            // username'i ayrıca özel claim olarak da koyuyoruz
-            new("username", user.Username)
+            new(ClaimTypes.NameIdentifier, user.Id.ToString())
         };
+
+        // Username
+        if (!string.IsNullOrWhiteSpace(user.Username))
+        {
+            claims.Add(new(JwtRegisteredClaimNames.UniqueName, user.Username));
+            // custom claim
+            claims.Add(new("username", user.Username));
+        }
+
+        // Görünen isim (FullName varsa onu, yoksa username’i kullan)
+        if (!string.IsNullOrWhiteSpace(user.FullName))
+        {
+            claims.Add(new(ClaimTypes.Name, user.FullName));
+        }
+        else if (!string.IsNullOrWhiteSpace(user.Username))
+        {
+            claims.Add(new(ClaimTypes.Name, user.Username));
+        }
+
+        // Rol
+        if (!string.IsNullOrWhiteSpace(user.Role))
+        {
+            claims.Add(new(ClaimTypes.Role, user.Role));
+        }
+
+        var expiresMinutes = _settings.ExpiresMinutes > 0
+            ? _settings.ExpiresMinutes
+            : 720;
 
         var token = new JwtSecurityToken(
             issuer: _settings.Issuer,
             audience: _settings.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_settings.ExpiresMinutes),
+            expires: DateTime.UtcNow.AddMinutes(expiresMinutes),
             signingCredentials: creds
         );
 
