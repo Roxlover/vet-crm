@@ -51,7 +51,7 @@ async function handleSubmit() {
   <div class="login-page">
     <div class="login-card">
       <div class="login-header">
-        <h1 class="login-title">NL</h1>
+        <h1 class="login-title">e-BullVet</h1>
         <p class="login-subtitle">Kullanıcı adı ve şifrenizle giriş yapın</p>
       </div>
 
