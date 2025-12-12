@@ -49,7 +49,6 @@ public class VetCrmDbContext : DbContext
                 .HasForeignKey(v => v.PetId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 🔴 Doktor ilişkisi (Visit.DoctorId, Visit.Doctor)
             b.HasOne(v => v.Doctor)
                 .WithMany(d => d.Visits)
                 .HasForeignKey(v => v.DoctorId)
@@ -63,8 +62,7 @@ public class VetCrmDbContext : DbContext
         modelBuilder.Entity<Reminder>(b =>
         {
             b.HasOne(r => r.Visit)
-                // Visit tarafında Reminders koleksiyonu TANIMLI DEĞİL, o yüzden:
-                .WithMany() // <--- v => v.Reminders DEĞİL
+                .WithMany() 
                 .HasForeignKey(r => r.VisitId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
@@ -75,7 +73,6 @@ public class VetCrmDbContext : DbContext
                 b.Property(x => x.Amount).IsRequired();
                 b.Property(x => x.IsIncome).IsRequired();
 
-                // CreatedAt için veritabanı default’u da tanımlayalım (ek güvenlik)
                 b.Property(x => x.CreatedAt)
                     .HasDefaultValueSql("NOW()");
             });
@@ -100,22 +97,22 @@ public class VetCrmDbContext : DbContext
                 .HasColumnType("text");
 
             b.HasOne(a => a.Owner)
-                .WithMany() // Owner.Appointments koleksiyonu yoksa
+                .WithMany() 
                 .HasForeignKey(a => a.OwnerId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             b.HasOne(a => a.Pet)
-                .WithMany() // Pet.Appointments koleksiyonu yoksa
+                .WithMany() 
                 .HasForeignKey(a => a.PetId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             b.HasOne(a => a.Doctor)
-                .WithMany() // User.Visits koleksiyonu var, Appointments için koleksiyon tanımlamadık
+                .WithMany() 
                 .HasForeignKey(a => a.DoctorId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             b.HasOne(a => a.Visit)
-                .WithMany() // Visit.Appointments koleksiyonu yoksa
+                .WithMany()
                 .HasForeignKey(a => a.VisitId)
                 .OnDelete(DeleteBehavior.SetNull);
         });

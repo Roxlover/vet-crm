@@ -51,3 +51,28 @@ frontend/ios/App/App.xcworkspace/xcuserdata/
 
 # macOS
 .DS_Store
+# .NET build outputs
+**/bin/
+**/obj/
+
+# publish artifacts
+**/publish/
+**/Publish/
+**/*.pubxml.user
+
+# logs
+**/*.log
+
+# user-specific files
+**/*.user
+**/*.suo
+**/*.cache
+**/*.pdb
+**/publish/
+**/Publish/
+**/bin/
+**/obj/
+**/bin/
+**/obj/
+**/publish/
+**/Publish/
