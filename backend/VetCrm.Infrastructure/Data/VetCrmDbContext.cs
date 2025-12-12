@@ -89,6 +89,37 @@ public class VetCrmDbContext : DbContext
             b.HasIndex(u => u.Username).IsUnique(); // aynı username bir daha olmasın
         });
 
+        modelBuilder.Entity<Appointment>(b =>
+        {
+            b.HasKey(a => a.Id);
+
+            b.Property(a => a.ScheduledAt)
+                .IsRequired();
+
+            b.Property(a => a.Purpose)
+                .HasColumnType("text");
+
+            b.HasOne(a => a.Owner)
+                .WithMany() // Owner.Appointments koleksiyonu yoksa
+                .HasForeignKey(a => a.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(a => a.Pet)
+                .WithMany() // Pet.Appointments koleksiyonu yoksa
+                .HasForeignKey(a => a.PetId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(a => a.Doctor)
+                .WithMany() // User.Visits koleksiyonu var, Appointments için koleksiyon tanımlamadık
+                .HasForeignKey(a => a.DoctorId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            b.HasOne(a => a.Visit)
+                .WithMany() // Visit.Appointments koleksiyonu yoksa
+                .HasForeignKey(a => a.VisitId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
         modelBuilder.Entity<Notification>(b =>
         {
             b.Property(n => n.Type).IsRequired().HasMaxLength(50);

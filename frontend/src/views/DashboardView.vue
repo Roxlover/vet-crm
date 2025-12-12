@@ -1107,8 +1107,10 @@ async function submitAppointment() {
     scheduledAt: isoDateTime,
     purpose: appointmentPurpose.value,
     doctorId: selectedDoctorId.value || null,
+    visitId: selectedVisit.value ? selectedVisit.value.id : null,
     microchipNumber: form.microchipNumber || null,
   }
+
 
   try {
     await createAppointment(payload)

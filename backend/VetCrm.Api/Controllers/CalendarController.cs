@@ -1,9 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VetCrm.Infrastructure.Data;
-using Microsoft.AspNetCore.Authorization;
 
 namespace VetCrm.Api.Controllers;
+
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
@@ -18,8 +19,10 @@ public class CalendarController : ControllerBase
 
     public class CalendarAppointmentDto
     {
-        public int VisitId { get; set; }
+        public int Id { get; set; }              // Appointment Id
+        public int? VisitId { get; set; }        // Bağlı olduğu ziyaret
         public DateTime ScheduledAt { get; set; }
+
         public string PetName { get; set; } = null!;
         public string OwnerName { get; set; } = null!;
         public string? Purpose { get; set; }
@@ -35,35 +38,42 @@ public class CalendarController : ControllerBase
         [FromQuery] DateOnly from,
         [FromQuery] DateOnly to)
     {
-        var visits = await _db.Visits
-            .Include(v => v.Pet)!.ThenInclude(p => p.Owner)
-            .Include(v => v.Doctor)
-            .Include(v => v.CreatedByUser)
-            .Where(v => v.NextDate != null &&
-                        v.NextDate >= from &&
-                        v.NextDate <= to)
-            .OrderBy(v => v.NextDate)
-            .ThenBy(v => v.PerformedAt)
-            .ToListAsync();
+        var fromDateTime = from.ToDateTime(TimeOnly.MinValue);
+        var toDateTime   = to.ToDateTime(TimeOnly.MaxValue);
 
-        var dtos = visits.Select(v => new CalendarAppointmentDto
-        {
-            VisitId = v.Id,
-            ScheduledAt = v.PerformedAt,
-            PetName = v.Pet!.Name,
-            OwnerName = v.Pet.Owner!.FullName,
-            Purpose = v.Purpose,
-            DoctorName = v.Doctor != null ? v.Doctor.FullName : null,
-            CreatedByUsername = v.CreatedByUser != null ? v.CreatedByUser.Username : null,
-            CreatedByName = v.CreatedByUser != null ? v.CreatedByUser.FullName : null,
-            CreditAmountTl = v.CreditAmountTl,
+        var list = await (
+            from a in _db.Appointments
 
-        })
-        .OrderBy(a => a.ScheduledAt)
-        .ThenBy(a => a.OwnerName)
-        .ThenBy(a => a.PetName)
-        .ToList();
+            join v     in _db.Visits  on a.VisitId equals v.Id
+            join pet   in _db.Pets    on a.PetId equals pet.Id
+            join owner in _db.Owners  on pet.OwnerId equals owner.Id
 
-        return Ok(dtos);
+            join doc in _db.Users on a.DoctorId equals doc.Id into docJoin
+            from doc in docJoin.DefaultIfEmpty()
+
+            join creator in _db.Users on v.CreatedByUserId equals creator.Id into creatorJoin
+            from creator in creatorJoin.DefaultIfEmpty()
+
+            where a.ScheduledAt >= fromDateTime && a.ScheduledAt <= toDateTime
+            orderby a.ScheduledAt, owner.FullName, pet.Name
+            select new CalendarAppointmentDto
+            {
+                Id         = a.Id,
+                VisitId    = v.Id,
+                ScheduledAt = a.ScheduledAt,
+
+                PetName   = pet.Name,
+                OwnerName = owner.FullName,
+                Purpose   = a.Purpose,
+                DoctorName = doc != null ? doc.FullName : null,
+
+                CreatedByUsername = creator != null ? creator.Username : null,
+                CreatedByName     = creator != null ? creator.FullName  : null,
+
+                CreditAmountTl = v.CreditAmountTl
+            }
+        ).ToListAsync();
+
+        return Ok(list);
     }
 }

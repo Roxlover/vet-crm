@@ -7,7 +7,6 @@
       </p>
     </header>
 
-    <!-- Sahip + hasta seçim alanı -->
     <section class="selector-card">
       <div class="field">
         <label>Hasta Sahibi</label>
@@ -38,7 +37,6 @@
       </div>
     </section>
 
-    <!-- Asıl kart -->
     <section class="visit-card">
       <header class="visit-header">
         <div>
@@ -149,7 +147,6 @@
           <textarea v-model="form.notes" rows="3" />
         </div>
 
-        <!-- Çoklu görsel alanı -->
         <div class="field">
           <label>Görsel çek / ekle</label>
 
@@ -220,9 +217,9 @@ const form = reactive({
   purpose: '',
   ownerStatus: '',
   notes: '',
-  imageFiles: [],      // çoklu dosya
-  imagePreviews: [],   // çoklu preview
-  microchipNumber: '', // mikroçip
+  imageFiles: [],     
+  imagePreviews: [],   
+  microchipNumber: '', 
 })
 const nextVisits = ref([
   { date: '', purpose: '' },
@@ -236,7 +233,6 @@ function removeNextVisitRow(index) {
   nextVisits.value.splice(index, 1)
 }
 
-// Seçilen sahip için pet listesi
 const petsForSelectedOwner = computed(() =>
   pets.value.filter((p) => p.ownerId === Number(selectedOwnerId.value))
 )
@@ -259,7 +255,6 @@ async function loadOwnersAndPets() {
   }
 }
 
-// Owner seçilince: telefon + ad vs. doldur
 watch(selectedOwnerId, (newId) => {
   const idNum = Number(newId)
   const owner = owners.value.find((o) => o.id === idNum)
@@ -270,10 +265,9 @@ watch(selectedOwnerId, (newId) => {
     ownerName.value = ''
     ownerPhone.value = ''
   }
-  selectedPetId.value = '' // sahip değişince hasta sıfırlansın
+  selectedPetId.value = '' 
 })
 
-// Pet seçilince: pet adını doldur
 watch(selectedPetId, (newId) => {
   const idNum = Number(newId)
   const pet = pets.value.find((p) => p.id === idNum)
@@ -330,7 +324,7 @@ async function handleSave() {
       amountTl: form.amountTl ?? 0,
       notes: notesText,
       nextVisits: nextVisits.value
-        .filter(x => x.date) // boş tarihleri at
+        .filter(x => x.date) 
         .map(x => ({
           nextDate: x.date,
           purpose: x.purpose || null,
@@ -339,16 +333,13 @@ async function handleSave() {
       microchipNumber: form.microchipNumber || null,
     }
 
-    // 3) ZİYARET OLUŞTUR
     const res = await http.post('/visits', payload)
     const createdVisit = res.data
     const visitId = createdVisit.id || createdVisit.Id
 
-    // 4) GÖRSELLER VARSA, ÇOKLU ENDPOINT'E YÜKLE
     if (form.imageFiles.length && visitId) {
       const fd = new FormData()
       form.imageFiles.forEach((file) => {
-        // backend: [FromForm] List<IFormFile> files
         fd.append('files', file)
       })
 
@@ -370,14 +361,11 @@ async function handleSave() {
         )
       }
 
-      // İş bittikten sonra temizle
       form.imageFiles = []
       form.imagePreviews = []
     }
 
     success.value = 'Ziyaret kaydedildi.'
-
-    // 5) Form temizliği
     form.procedures = ''
     form.vaccines = ''
     form.performedAt = ''

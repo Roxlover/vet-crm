@@ -86,57 +86,60 @@ public async Task<ActionResult<ReminderSummaryDto>> GetRemindersSummary()
     return Ok(dto);
 }
 
-   [HttpGet("reminders")]
-public async Task<ActionResult<List<ReminderItemDto>>> GetReminders(
-    [FromQuery] string filter = "upcoming")
+[HttpGet("reminders")]
+public async Task<IActionResult> GetReminders([FromQuery] string filter = "upcoming")
 {
-    var today = DateOnly.FromDateTime(DateTime.Today);
+    var today    = DateOnly.FromDateTime(DateTime.UtcNow.Date);
     var tomorrow = today.AddDays(1);
 
-    IQueryable<Reminder> query = _db.Reminders.AsQueryable();
+    var query =
+        from r in _db.Reminders
+        join v   in _db.Visits on r.VisitId equals v.Id
+        join pet in _db.Pets   on v.PetId equals pet.Id
+        join owner in _db.Owners on pet.OwnerId equals owner.Id
+        join a in _db.Appointments on v.Id equals a.VisitId into apptJoin
+        from a in apptJoin.DefaultIfEmpty()
+        select new
+        {
+            id             = r.Id,
+            visitId        = v.Id,
+            reminderDate   = r.DueDate,
+            appointmentDate = a != null 
+                ? DateOnly.FromDateTime(a.ScheduledAt) 
+                : (DateOnly?)null,
+            petName        = pet.Name,
+            ownerName      = owner.FullName,
+            procedures     = v.Procedures,
+            creditAmountTl = v.CreditAmountTl,
+            r.Status,
+            r.IsCompleted
+        };
 
-    switch (filter.ToLowerInvariant())
+    switch (filter)
     {
         case "today":
-            query = query.Where(r => r.DueDate == today && !r.IsCompleted);
+            query = query.Where(x => x.reminderDate == today && !x.IsCompleted);
             break;
-
         case "tomorrow":
-            query = query.Where(r => r.DueDate == tomorrow && !r.IsCompleted);
+            query = query.Where(x => x.reminderDate == tomorrow && !x.IsCompleted);
             break;
-
         case "overdue":
-            query = query.Where(r => r.DueDate < today && !r.IsCompleted);
+            query = query.Where(x => x.reminderDate < today && !x.IsCompleted);
             break;
-
         case "done":
-            query = query.Where(r => r.IsCompleted)
-                         .OrderByDescending(r => r.CompletedAt);
+            query = query.Where(x => x.IsCompleted);
             break;
-
-        default: 
-
-            query = query.Where(r => r.DueDate > today && !r.IsCompleted);
+        default:
+            query = query.Where(x => x.reminderDate >= today && !x.IsCompleted);
             break;
     }
 
-    var items = await query
-        .OrderBy(r => r.DueDate)
-        .Include(r => r.Visit)!.ThenInclude(v => v!.Pet)!.ThenInclude(p => p!.Owner)
-        .Select(r => new ReminderItemDto
-        {
-            Id = r.Id,
-            VisitId = r.VisitId,
-            ReminderDate = r.DueDate,
-            AppointmentDate = r.Visit!.NextDate ?? r.DueDate,
-            PetName = r.Visit!.Pet!.Name,
-            OwnerName = r.Visit!.Pet!.Owner!.FullName,
-            Procedures = r.Visit!.Procedures ?? string.Empty,
-            CreditAmountTl = r.Visit!.CreditAmountTl 
-        })
+    var list = await query
+        .OrderBy(x => x.reminderDate)
+        .ThenBy(x => x.appointmentDate)
         .ToListAsync();
 
-    return Ok(items);
+    return Ok(list);
 }
 
     [HttpGet("reminders-dashboard")]
@@ -177,7 +180,7 @@ public async Task<ActionResult<List<ReminderItemDto>>> GetReminders(
         return Ok(resp);
     }
 
-    [HttpGet("visit/{id:int}")]
+  [HttpGet("visit/{id:int}")]
 public async Task<ActionResult<DashboardVisitDetailDto>> GetVisitDetail(int id)
 {
     var dto = await _db.Visits
@@ -205,12 +208,28 @@ public async Task<ActionResult<DashboardVisitDetailDto>> GetVisitDetail(int id)
 
             CreatedByUserId   = v.CreatedByUserId,
             CreatedByUsername = v.CreatedByUsername,
-            CreatedByName     = v.CreatedByName
+            CreatedByName     = v.CreatedByName,
+
+            MicrochipNumber   = v.MicrochipNumber
         })
         .FirstOrDefaultAsync();
 
     if (dto == null) return NotFound();
+
+    // BURAYA EKLE: Appointment'lardan nextVisits listesi
+    dto.NextVisits = await _db.Appointments
+        .Where(a => a.VisitId == id)
+        .OrderBy(a => a.ScheduledAt)
+        .Select(a => new NextVisitItemDto
+        {
+            Id       = a.Id,
+            NextDate = a.ScheduledAt,
+            Purpose  = a.Purpose
+        })
+        .ToListAsync();
+
     return Ok(dto);
 }
+
 
 }

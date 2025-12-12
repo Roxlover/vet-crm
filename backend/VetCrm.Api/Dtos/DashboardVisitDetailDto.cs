@@ -28,5 +28,12 @@ public class DashboardVisitDetailDto
     public string? CreatedByName { get; set; }
     public List<VisitImageDto> Images { get; set; } = new();
     public string? MicrochipNumber { get; set; }
+    public List<NextVisitItemDto> NextVisits { get; set; } = new();
+}
 
+public class NextVisitItemDto
+{
+    public int Id { get; set; }
+    public DateTime NextDate { get; set; }
+    public string? Purpose { get; set; }
 }

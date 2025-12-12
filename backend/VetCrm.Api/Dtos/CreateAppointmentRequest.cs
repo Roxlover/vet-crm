@@ -8,5 +8,7 @@ namespace VetCrm.Api.Dtos
         public string? Purpose { get; set; }
         public int? DoctorId { get; set; }
         public int? CreatedByUserId { get; set; }
-    }
+        public int? VisitId { get; set; }
+        public string? MicrochipNumber { get; set; }
+}
 }
