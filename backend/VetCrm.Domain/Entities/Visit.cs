@@ -9,7 +9,6 @@ public class Visit
 
     public DateTime PerformedAt { get; set; }
 
-    // Legacy tekli alan (dashboard + upcoming için hâlâ işimize yarayacak)
     public DateOnly? NextDate { get; set; }
 
     public string? Purpose { get; set; }

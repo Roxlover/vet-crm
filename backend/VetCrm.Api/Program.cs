@@ -36,21 +36,19 @@ builder.Services.AddScoped<IR2Storage, LocalVisitImageStorage>();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(FrontendCorsPolicy, policy =>
+     options.AddPolicy(FrontendCorsPolicy, policy =>
     {
         policy
             .WithOrigins(
+                "https://app.e-bullvet.com",
                 "http://localhost:5173",
                 "http://localhost",
                 "http://192.168.1.107:5173",
-                "capacitor://localhost",
-                // ileride web deploy yaparsak:
-                "https://app.e-bullvet.com"
+                "capacitor://localhost"
             )
-            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
             .AllowAnyHeader()
-            .AllowCredentials()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -96,7 +94,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAssertion(ctx =>
         {
             var username = ctx.User.FindFirst("username")?.Value
-                           ?? ctx.User.Identity?.Name;
+                ?? ctx.User.Identity?.Name;
 
             return string.Equals(username, "BullBoss",
                 StringComparison.OrdinalIgnoreCase);
@@ -110,12 +108,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();   
 
 var app = builder.Build();
-
-// if (app.Environment.IsDevelopment())
-// {
-//     app.UseSwagger();
-//     app.UseSwaggerUI();
-// }
 var enableSwagger = builder.Configuration.GetValue<bool>("EnableSwagger");
 
 if (app.Environment.IsDevelopment() || enableSwagger)
