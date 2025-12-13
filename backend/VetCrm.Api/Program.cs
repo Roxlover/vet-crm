@@ -8,7 +8,7 @@ using VetCrm.Api.Options;
 using VetCrm.Api.Services;
 using VetCrm.Api.Storage;
 using VetCrm.Infrastructure.Data;
-using VetCrm.Infrastructure.Storage;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +18,6 @@ builder.Services.AddDbContext<VetCrmDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<ReminderProcessor>();
-builder.Services.AddScoped<VetCrm.Infrastructure.Storage.IR2Storage, VetCrm.Api.Storage.R2VisitImageStorage>();
 
 builder.Services.AddHangfire(config =>
     config
@@ -53,6 +52,10 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod()
             .AllowCredentials();
     });
+});
+builder.WebHost.ConfigureKestrel(o =>
+{
+    o.Limits.MaxRequestBodySize = 50 * 1024 * 1024; // 50 MB
 });
 
 

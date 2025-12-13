@@ -4,18 +4,8 @@ using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
-using VetCrm.Infrastructure.Storage;
 
 namespace VetCrm.Api.Storage;
-
-public class R2Options
-{
-    public string AccountId { get; set; } = default!;
-    public string AccessKey { get; set; } = default!;
-    public string SecretKey { get; set; } = default!;
-    public string Bucket { get; set; } = default!;
-    public string PublicBaseUrl { get; set; } = default!;
-}
 
 public class R2VisitImageStorage : IR2Storage
 {
@@ -34,17 +24,15 @@ public class R2VisitImageStorage : IR2Storage
             ForcePathStyle = true
         };
 
+        // DİKKAT: doğru ctor bu. AmazonS3Config bir "region" değildir.
         _s3 = new AmazonS3Client(_opt.AccessKey, _opt.SecretKey, cfg);
     }
 
-    // Interface imzası birebir: (visitId, stream, contentType)
     public async Task<string> UploadVisitImageAsync(int visitId, Stream stream, string contentType)
     {
-        // contentType boş gelirse fallback
         if (string.IsNullOrWhiteSpace(contentType))
             contentType = "application/octet-stream";
 
-        // Uzantı contentType'dan türet (isteğe bağlı ama iyi)
         var ext = contentType switch
         {
             "image/jpeg" => ".jpg",
