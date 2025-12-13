@@ -34,5 +34,4 @@ public class Visit
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<VisitPlan> Plans { get; set; } = new List<VisitPlan>();
     public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
-
 }

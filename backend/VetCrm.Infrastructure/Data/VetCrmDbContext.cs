@@ -112,9 +112,10 @@ public class VetCrmDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
 
             b.HasOne(a => a.Visit)
-                .WithMany()
+                .WithMany(v => v.Appointments)
                 .HasForeignKey(a => a.VisitId)
                 .OnDelete(DeleteBehavior.SetNull);
+
         });
 
         modelBuilder.Entity<Notification>(b =>
