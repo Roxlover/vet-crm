@@ -33,47 +33,46 @@ public class CalendarController : ControllerBase
         public decimal? CreditAmountTl { get; set; }
     }
 
-    [HttpGet("appointments")]
-    public async Task<ActionResult<List<CalendarAppointmentDto>>> GetAppointments(
-        [FromQuery] DateOnly from,
-        [FromQuery] DateOnly to)
-    {
-        var fromDateTime = from.ToDateTime(TimeOnly.MinValue);
-        var toDateTime   = to.ToDateTime(TimeOnly.MaxValue);
+[HttpGet("appointments")]
+public async Task<ActionResult<List<CalendarAppointmentDto>>> GetAppointments(
+    [FromQuery] DateOnly from,
+    [FromQuery] DateOnly to)
+{
+    var tz = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
 
-        var list = await (
-            from a in _db.Appointments
+    var fromLocal = DateTime.SpecifyKind(from.ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
+    var toLocal   = DateTime.SpecifyKind(to.ToDateTime(TimeOnly.MaxValue),   DateTimeKind.Unspecified);
 
-            join v     in _db.Visits  on a.VisitId equals v.Id
-            join pet   in _db.Pets    on a.PetId equals pet.Id
-            join owner in _db.Owners  on pet.OwnerId equals owner.Id
+    var fromUtc = TimeZoneInfo.ConvertTimeToUtc(fromLocal, tz);
+    var toUtc   = TimeZoneInfo.ConvertTimeToUtc(toLocal, tz);
 
-            join doc in _db.Users on a.DoctorId equals doc.Id into docJoin
-            from doc in docJoin.DefaultIfEmpty()
+    var list = await (
+        from a in _db.Appointments
+        join v in _db.Visits on a.VisitId equals v.Id
+        join pet in _db.Pets on a.PetId equals pet.Id
+        join owner in _db.Owners on pet.OwnerId equals owner.Id
+        join doc in _db.Users on a.DoctorId equals doc.Id into docJoin
+        from doc in docJoin.DefaultIfEmpty()
+        join creator in _db.Users on v.CreatedByUserId equals creator.Id into creatorJoin
+        from creator in creatorJoin.DefaultIfEmpty()
+        where a.ScheduledAt >= fromUtc && a.ScheduledAt <= toUtc
+        orderby a.ScheduledAt, owner.FullName, pet.Name
+        select new CalendarAppointmentDto
+        {
+            Id = a.Id,
+            VisitId = v.Id,
+            ScheduledAt = a.ScheduledAt,
+            PetName = pet.Name,
+            OwnerName = owner.FullName,
+            Purpose = a.Purpose,
+            DoctorName = doc != null ? doc.FullName : null,
+            CreatedByUsername = creator != null ? creator.Username : null,
+            CreatedByName = creator != null ? creator.FullName : null,
+            CreditAmountTl = v.CreditAmountTl
+        }
+    ).ToListAsync();
 
-            join creator in _db.Users on v.CreatedByUserId equals creator.Id into creatorJoin
-            from creator in creatorJoin.DefaultIfEmpty()
+    return Ok(list);
+}
 
-            where a.ScheduledAt >= fromDateTime && a.ScheduledAt <= toDateTime
-            orderby a.ScheduledAt, owner.FullName, pet.Name
-            select new CalendarAppointmentDto
-            {
-                Id         = a.Id,
-                VisitId    = v.Id,
-                ScheduledAt = a.ScheduledAt,
-
-                PetName   = pet.Name,
-                OwnerName = owner.FullName,
-                Purpose   = a.Purpose,
-                DoctorName = doc != null ? doc.FullName : null,
-
-                CreatedByUsername = creator != null ? creator.Username : null,
-                CreatedByName     = creator != null ? creator.FullName  : null,
-
-                CreditAmountTl = v.CreditAmountTl
-            }
-        ).ToListAsync();
-
-        return Ok(list);
-    }
 }
