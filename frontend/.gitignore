@@ -76,3 +76,11 @@ frontend/ios/App/App.xcworkspace/xcuserdata/
 **/obj/
 **/publish/
 **/Publish/
+# Environment-specific secrets
+**/appsettings.Production.json
+**/appsettings.Product*.json
+**/appsettings.*Production*.json
+
+# Local overrides (opsiyonel)
+**/appsettings.Local.json
+**/appsettings.Development.local.json
