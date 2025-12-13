@@ -38,24 +38,24 @@ public async Task<ActionResult<List<CalendarAppointmentDto>>> GetAppointments(
     [FromQuery] DateOnly from,
     [FromQuery] DateOnly to)
 {
+    // Cross-platform TZ
     TimeZoneInfo tz;
     try
     {
-        tz = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+        tz = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"); // Windows
     }
     catch
     {
-        tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+        tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul"); // Linux
     }
 
-    var fromLocalUnspec = from.ToDateTime(TimeOnly.MinValue);
-    var toLocalUnspec   = to.ToDateTime(TimeOnly.MaxValue);
+    // DateOnly -> local wall-clock (Unspecified)
+    var fromLocal = DateTime.SpecifyKind(from.ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
+    var toLocal   = DateTime.SpecifyKind(to.ToDateTime(TimeOnly.MaxValue),   DateTimeKind.Unspecified);
 
-    fromLocalUnspec = DateTime.SpecifyKind(fromLocalUnspec, DateTimeKind.Unspecified);
-    toLocalUnspec   = DateTime.SpecifyKind(toLocalUnspec, DateTimeKind.Unspecified);
-
-    var fromUtc = DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(fromLocalUnspec, tz), DateTimeKind.Utc);
-    var toUtc   = DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(toLocalUnspec, tz), DateTimeKind.Utc);
+    // Convert to UTC and force Kind=Utc explicitly (Npgsql wants this for timestamptz)
+    var fromUtc = DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(fromLocal, tz), DateTimeKind.Utc);
+    var toUtc   = DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(toLocal, tz),   DateTimeKind.Utc);
 
     var list = await (
         from a in _db.Appointments
