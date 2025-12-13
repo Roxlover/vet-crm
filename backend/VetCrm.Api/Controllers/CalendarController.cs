@@ -38,13 +38,24 @@ public async Task<ActionResult<List<CalendarAppointmentDto>>> GetAppointments(
     [FromQuery] DateOnly from,
     [FromQuery] DateOnly to)
 {
-    var tz = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+    TimeZoneInfo tz;
+    try
+    {
+        tz = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+    }
+    catch
+    {
+        tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+    }
 
-    var fromLocal = DateTime.SpecifyKind(from.ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
-    var toLocal   = DateTime.SpecifyKind(to.ToDateTime(TimeOnly.MaxValue),   DateTimeKind.Unspecified);
+    var fromLocalUnspec = from.ToDateTime(TimeOnly.MinValue);
+    var toLocalUnspec   = to.ToDateTime(TimeOnly.MaxValue);
 
-    var fromUtc = TimeZoneInfo.ConvertTimeToUtc(fromLocal, tz);
-    var toUtc   = TimeZoneInfo.ConvertTimeToUtc(toLocal, tz);
+    fromLocalUnspec = DateTime.SpecifyKind(fromLocalUnspec, DateTimeKind.Unspecified);
+    toLocalUnspec   = DateTime.SpecifyKind(toLocalUnspec, DateTimeKind.Unspecified);
+
+    var fromUtc = DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(fromLocalUnspec, tz), DateTimeKind.Utc);
+    var toUtc   = DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(toLocalUnspec, tz), DateTimeKind.Utc);
 
     var list = await (
         from a in _db.Appointments
@@ -74,5 +85,6 @@ public async Task<ActionResult<List<CalendarAppointmentDto>>> GetAppointments(
 
     return Ok(list);
 }
+
 
 }
