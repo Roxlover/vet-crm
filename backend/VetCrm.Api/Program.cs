@@ -18,6 +18,7 @@ builder.Services.AddDbContext<VetCrmDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<ReminderProcessor>();
+builder.Services.AddScoped<VetCrm.Infrastructure.Storage.IR2Storage, VetCrm.Api.Storage.R2VisitImageStorage>();
 
 builder.Services.AddHangfire(config =>
     config
@@ -31,7 +32,9 @@ builder.Services.AddHangfire(config =>
 
 builder.Services.AddHangfireServer();
 
-builder.Services.AddScoped<IR2Storage, LocalVisitImageStorage>();
+builder.Services.Configure<R2Options>(builder.Configuration.GetSection("R2"));
+builder.Services.AddScoped<IR2Storage, R2VisitImageStorage>();
+
 
 
 builder.Services.AddCors(options =>
@@ -102,6 +105,10 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = 50 * 1024 * 1024; // 50 MB
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
