@@ -8,7 +8,7 @@ public class CalendarAppointmentDto
     public string PetName { get; set; } = null!;
     public string OwnerName { get; set; } = null!;
     public string? Purpose { get; set; }
-
+    public int? ReminderId { get; set; }
     public string? DoctorName { get; set; }
     public string? CreatedByUsername { get; set; }
     public string? CreatedByName { get; set; }

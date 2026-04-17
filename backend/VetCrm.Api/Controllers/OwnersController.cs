@@ -17,6 +17,23 @@ public class OwnersController : ControllerBase
     {
         _db = db;
     }
+    private static DateOnly? BirthDateFromAge(int? years, int? months)
+{
+    if (years is null && months is null) return null;
+
+    var y = years ?? 0;
+    var m = months ?? 0;
+
+    if (y < 0) y = 0;
+    if (m < 0) m = 0;
+    if (m > 11) m = 11;
+
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+    // DateOnly'de AddMonths/AddYears var
+    var bd = today.AddYears(-y).AddMonths(-m);
+    return bd;
+}
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<OwnerDto>>> GetOwners()
@@ -31,7 +48,7 @@ public class OwnersController : ControllerBase
                 Email = o.Email,
                 Address = o.Address,
                 KvkkOptIn = o.KvkkOptIn,
-                PetCount = o.Pets.Count
+                PetCount = o.Pets.Count(p => p.IsActive)
             })
             .ToListAsync();
 
@@ -39,29 +56,47 @@ public class OwnersController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<OwnerDto>> GetOwner(int id)
+public async Task<ActionResult<OwnerDto>> GetOwner(int id)
+{
+    var ownerEntity = await _db.Owners
+        .Include(o => o.Pets)
+        .FirstOrDefaultAsync(o => o.Id == id);
+
+    if (ownerEntity is null)
+        return NotFound();
+
+    var dto = new OwnerDto
     {
-        var owner = await _db.Owners
-            .Include(o => o.Pets)
-            .Where(o => o.Id == id)
-            .Select(o => new OwnerDto
+        Id = ownerEntity.Id,
+        FullName = ownerEntity.FullName,
+        PhoneE164 = ownerEntity.PhoneE164,
+        Email = ownerEntity.Email,
+        Address = ownerEntity.Address,
+        KvkkOptIn = ownerEntity.KvkkOptIn,
+        PetCount = ownerEntity.Pets.Count(p => p.IsActive),
+        Pets = ownerEntity.Pets
+            .OrderBy(p => p.Name)
+            .Select(p =>
             {
-                Id = o.Id,
-                FullName = o.FullName,
-                PhoneE164 = o.PhoneE164,
-                Email = o.Email,
-                Address = o.Address,
-                KvkkOptIn = o.KvkkOptIn,
-                PetCount = o.Pets.Count
+                var age = OwnerDto.CalcAge(p.BirthDate);
+
+                return new OwnerPetFullDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Species = p.Species,
+                    Breed = p.Breed,
+                    BirthDate = p.BirthDate,
+                    AgeYears = age?.years,
+                    AgeMonths = age?.months
+                };
             })
-            .FirstOrDefaultAsync();
+            .ToList()
+    };
 
-        if (owner is null)
-            return NotFound();
-
-        return Ok(owner);
-    }
-
+    return Ok(dto);
+}
+ 
     [HttpPost]
     public async Task<ActionResult<OwnerDto>> CreateOwner([FromBody] OwnerCreateDto dto)
     {
@@ -72,13 +107,25 @@ public class OwnersController : ControllerBase
             KvkkOptIn = dto.KvkkOptIn,
             Pets = dto.Pets
                 .Where(p => !string.IsNullOrWhiteSpace(p.Name))
-                .Select(p => new Pet
-                {
-                    Name = p.Name.Trim(),
-                    Species = p.Species,
-                    AgeYears = p.AgeYears,
-                    Notes = p.Notes
-                })
+
+                .Select(p =>
+{
+    var derivedBirthDate = BirthDateFromAge(p.AgeYears, p.AgeMonths);
+
+    return new Pet
+    {
+        Name = p.Name.Trim(),
+        Species = p.Species,
+        // Artık response yaş hesapladığı için BirthDate kritik:
+        BirthDate = derivedBirthDate,
+        // AgeYears DB’de var; istersen tut, istersen null bırak.
+        // Tutmak istiyorsan:
+        AgeYears = p.AgeYears,
+        Notes = p.Notes,
+        IsActive = true
+    };
+})
+
                 .ToList()
         };
 
@@ -90,7 +137,7 @@ public class OwnersController : ControllerBase
             Id = owner.Id,
             FullName = owner.FullName,
             PhoneE164 = owner.PhoneE164,
-            PetCount = owner.Pets.Count
+            PetCount = owner.Pets.Count(p => p.IsActive)
         };
 
         return CreatedAtAction(nameof(GetOwner), new { id = owner.Id }, result);
@@ -127,41 +174,50 @@ public class OwnersController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("{ownerId}/pets")]
-    public async Task<ActionResult<PetSimpleDto>> AddPetToOwner(int ownerId, [FromBody] PetSimpleDto dto)
+ [HttpPost("{ownerId}/pets")]
+ public async Task<ActionResult> AddPetToOwner(int ownerId, [FromBody] PetCreateDto dto)
+ {
+    var owner = await _db.Owners.FindAsync(ownerId);
+    if (owner == null)
+        return NotFound();
+
+    if (dto == null || string.IsNullOrWhiteSpace(dto.Name))
+        return BadRequest("Pet adı zorunludur.");
+
+   var derivedBirthDate = dto.BirthDate ?? BirthDateFromAge(dto.AgeYears, dto.AgeMonths);
+
+var pet = new Pet
+{
+    OwnerId = ownerId,
+    Name = dto.Name.Trim(),
+    Species = dto.Species,
+    Breed = dto.Breed,
+    BirthDate = derivedBirthDate,
+    AgeYears = dto.AgeYears, // istersen tut
+    Notes = dto.Notes,
+    IsActive = true
+};
+
+    _db.Pets.Add(pet);
+    await _db.SaveChangesAsync();
+
+    return Ok(new
     {
-        var owner = await _db.Owners.FindAsync(ownerId);
-        if (owner == null)
-            return NotFound();
-
-        DateOnly? birthDate = null;
-        if (dto.AgeYears.HasValue && dto.AgeYears.Value > 0)
-        {
-            var today = DateOnly.FromDateTime(DateTime.Today);
-            birthDate = new DateOnly(today.Year - dto.AgeYears.Value, today.Month, today.Day);
-        }
-
-        var pet = new Pet
-        {
-            OwnerId = ownerId,
-            Name = dto.Name,
-            Species = dto.Species,
-            Notes = dto.Notes,
-            BirthDate = birthDate
-        };
-
-        _db.Pets.Add(pet);
-        await _db.SaveChangesAsync();
-
-        dto.Id = pet.Id;
-        return Ok(dto);
-    }
+        id = pet.Id,
+        name = pet.Name,
+        species = pet.Species,
+        breed = pet.Breed,
+        birthDate = pet.BirthDate,
+        notes = pet.Notes
+    });
+}
+ 
 
     [HttpGet("{id:int}/pets")]
     public async Task<ActionResult<List<OwnerPetDto>>> GetOwnerPets(int id)
     {
         var pets = await _db.Pets
-            .Where(p => p.OwnerId == id)
+            .Where(p => p.OwnerId == id && p.IsActive)
             .OrderBy(p => p.Name)
             .Select(p => new OwnerPetDto
             {

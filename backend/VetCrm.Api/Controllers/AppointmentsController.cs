@@ -26,6 +26,9 @@ namespace VetCrm.Api.Controllers
         public async Task<ActionResult> Create([FromBody] CreateAppointmentRequest request)
         {
             // 1) Giriş kontrolleri
+            if (request == null)
+                return BadRequest("İstek gövdesi (request) zorunludur.");
+
             if (request.OwnerId <= 0)
                 return BadRequest("Hasta sahibi (OwnerId) zorunludur.");
 
@@ -39,17 +42,14 @@ namespace VetCrm.Api.Controllers
             if (currentUserId == null)
                 return Unauthorized("Oturum geçersiz. Lütfen tekrar giriş yapın.");
 
-            // 2) Saat aralığı kontrolü (10:30 - 19:30)
-            var startTime = new TimeSpan(10, 30, 0);
-            var endTime   = new TimeSpan(19, 30, 0);
-            var timeOfDay = request.ScheduledAt.TimeOfDay;
+            // 2) Saat aralığı kontrolü (İstanbul saatine göre 10:30 - 19:30)
+            var utc = EnsureUtc(request.ScheduledAt);
+            var localIstanbul = UtcToIstanbul(utc);
 
-            if (timeOfDay < startTime || timeOfDay > endTime)
-            {
+            if (!IsWithinWorkingHours(localIstanbul))
                 return BadRequest("Randevu saati 10:30 - 19:30 arasında olmalıdır.");
-            }
 
-            var scheduledDateOnly = DateOnly.FromDateTime(request.ScheduledAt);
+            var scheduledDateOnly = DateOnly.FromDateTime(localIstanbul);
 
             // 3) İlgili kayıtlar gerçekten var mı?
             var visit = await _db.Visits.FirstOrDefaultAsync(v => v.Id == request.VisitId.Value);
@@ -69,32 +69,35 @@ namespace VetCrm.Api.Controllers
                 .ToListAsync();
 
             if (validPetIds.Count != distinctPetIds.Count)
-            {
                 return BadRequest("Seçilen hayvanlardan en az biri bu hasta sahibine ait değil.");
-            }
 
-            // 4) Visit üzerinde mikroçip güncellemesi (geldiyse)
+            // Mikroçip (opsiyonel)
             if (!string.IsNullOrWhiteSpace(request.MicrochipNumber))
-            {
                 visit.MicrochipNumber = request.MicrochipNumber;
-            }
 
-            // İstersen, en yakın gelecek randevuyu Visit.NextDate olarak tutabilirsin
-            // (Şu an hepsi aynı tarihte olduğu için direkt set ediyoruz)
+            // Visit.NextDate: local gün
             visit.NextDate = scheduledDateOnly;
 
             var now = DateTime.UtcNow;
-
-            // 5) Appointment + Reminder kayıtları
             var createdAppointments = new List<Appointment>();
 
             foreach (var petId in validPetIds)
             {
+                // 4) Duplicate engeli: aynı Visit + aynı Pet + aynı ScheduledAt (UTC)
+                var exists = await _db.Appointments.AnyAsync(a =>
+                    a.VisitId == request.VisitId.Value &&
+                    a.PetId == petId &&
+                    a.ScheduledAt == utc
+                );
+
+                if (exists)
+                    return BadRequest("Aynı randevu zaten mevcut (aynı ziyaret + aynı hayvan + aynı saat).");
+
                 var appointment = new Appointment
                 {
                     OwnerId = request.OwnerId,
                     PetId = petId,
-                    ScheduledAt = request.ScheduledAt,
+                    ScheduledAt = utc,               // DB’de UTC sakla
                     Purpose = request.Purpose,
                     DoctorId = request.DoctorId,
                     VisitId = request.VisitId
@@ -108,38 +111,32 @@ namespace VetCrm.Api.Controllers
                     VisitId = visit.Id,
                     DueDate = scheduledDateOnly,
                     CreatedAt = now,
-                    Status = 0,              // Pending
+                    Status = 0,
                     IsCompleted = false,
                     SentAt = null,
                     CompletedAt = null
                 };
-
                 _db.Reminders.Add(reminder);
             }
 
-            // 6) Bildirim metni
+            // 5) Bildirim metni (İstanbul saatine göre)
             var petNames = await _db.Pets
                 .Where(p => validPetIds.Contains(p.Id))
                 .Select(p => p.Name)
                 .ToListAsync();
 
-            var petsText = petNames.Count > 0
-                ? string.Join(", ", petNames)
-                : "Hasta";
-
+            var petsText = petNames.Count > 0 ? string.Join(", ", petNames) : "Hasta";
             var ownerName = owner.FullName ?? "Hasta Sahibi";
 
             var message =
                 $"{ownerName} - {petsText} için " +
-                $"{request.ScheduledAt:dd.MM.yyyy HH:mm} tarihine randevu oluşturuldu. " +
+                $"{localIstanbul:dd.MM.yyyy HH:mm} tarihine randevu oluşturuldu. " +
                 $"İşlem: {request.Purpose ?? "Belirtilmedi"}";
 
-            // 7) Tüm kullanıcılara Notification ekle
             var allUsers = await _db.Users.ToListAsync();
-
             foreach (var user in allUsers)
             {
-                var notification = new Notification
+                _db.Notifications.Add(new Notification
                 {
                     UserId = user.Id,
                     Type = "AppointmentCreated",
@@ -147,12 +144,9 @@ namespace VetCrm.Api.Controllers
                     VisitId = visit.Id,
                     CreatedAt = now,
                     IsRead = false
-                };
-
-                _db.Notifications.Add(notification);
+                });
             }
 
-            // 8) Tüm değişiklikleri kaydet
             await _db.SaveChangesAsync();
 
             return Ok(new
@@ -160,6 +154,33 @@ namespace VetCrm.Api.Controllers
                 appointmentIds = createdAppointments.Select(a => a.Id).ToList(),
                 visitId = visit.Id
             });
+        }
+
+        private static DateTime EnsureUtc(DateTime dt)
+        {
+            if (dt.Kind == DateTimeKind.Utc) return dt;
+            if (dt.Kind == DateTimeKind.Unspecified) return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+            return dt.ToUniversalTime();
+        }
+
+        private static TimeZoneInfo GetIstanbulTimeZone()
+        {
+            try { return TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul"); }
+            catch { return TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"); }
+        }
+
+        private static DateTime UtcToIstanbul(DateTime utc)
+        {
+            var tz = GetIstanbulTimeZone();
+            return TimeZoneInfo.ConvertTimeFromUtc(utc, tz);
+        }
+
+        private static bool IsWithinWorkingHours(DateTime localIstanbul)
+        {
+            var minutes = localIstanbul.Hour * 60 + localIstanbul.Minute;
+            var start = 10 * 60 + 30;
+            var end = 19 * 60 + 30;
+            return minutes >= start && minutes <= end;
         }
     }
 }

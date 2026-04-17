@@ -3,9 +3,7 @@
     <header class="page-header">
       <div>
         <h1>Hasta Sahipleri</h1>
-        <p class="subtitle">
-          Kliniğinizde kayıtlı tüm hasta sahiplerini yönetin.
-        </p>
+        <p class="subtitle">Kliniğinizde kayıtlı tüm hasta sahiplerini yönetin.</p>
       </div>
     </header>
 
@@ -19,21 +17,19 @@
           </button>
         </div>
 
-        <div v-if="loading" class="state">
-          Yükleniyor...
-        </div>
-        <div v-else-if="error" class="state state-error">
-          {{ error }}
-        </div>
+        <div v-if="loading" class="state">Yükleniyor...</div>
+        <div v-else-if="error" class="state state-error">{{ error }}</div>
         <div v-else-if="owners.length === 0" class="state">
           Henüz hasta sahibi eklenmemiş.
         </div>
+
         <table v-else class="table">
           <thead>
             <tr>
               <th>İsim</th>
               <th>Telefon</th>
               <th>Pet sayısı</th>
+              <th class="actions-col"></th>
             </tr>
           </thead>
           <tbody>
@@ -41,6 +37,11 @@
               <td>{{ owner.fullName }}</td>
               <td>{{ owner.phoneE164 }}</td>
               <td>{{ owner.petCount }}</td>
+              <td class="actions">
+                <button class="btn btn-sm" type="button" @click="openOwnerDetail(owner.id)">
+                  Detay
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -55,102 +56,64 @@
         <form class="form" @submit.prevent="handleCreate">
           <div class="form-group">
             <label for="fullName">Ad Soyad</label>
-            <input
-              id="fullName"
-              v-model="form.fullName"
-              type="text"
-              required
-              placeholder=""
-            />
+            <input id="fullName" v-model="form.fullName" type="text" required />
           </div>
 
           <div class="form-group">
             <label for="phone">Telefon</label>
-            <input
-              id="phone"
-              v-model="form.phoneE164"
-              type="tel"
-              required
-              placeholder=""
-            />
-            <small class="hint">
-              0 yazmadan, ülke kodu ile birlikte (Türkiye için 90).
-            </small>
+            <input id="phone" v-model="form.phoneE164" type="tel" required />
+            <small class="hint">0 yazmadan, ülke kodu ile birlikte (Türkiye için 90).</small>
           </div>
 
-          <!-- ... Ad Soyad, Telefon, KVKK vs inputları ... -->
+          <section class="pets-section">
+            <div class="pets-header">
+              <h3>Evcil Hayvanları</h3>
+            </div>
 
-       <!-- Evcil Hayvanları -->
-<section class="pets-section">
-  <div class="pets-header">
-    <h3>Evcil Hayvanları</h3>
+            <div v-for="(pet, index) in form.pets" :key="index" class="pet-card">
+              <div class="pet-card-header">
+                <button
+                  v-if="form.pets.length > 1"
+                  type="button"
+                  class="link-button"
+                  @click="removePetRow(index)"
+                >
+                  Bu peti kaldır
+                </button>
+              </div>
+
+              <div class="pet-card-grid">
+  <div class="field">
+    <label>Pet adı</label>
+    <input v-model="pet.name" type="text" />
   </div>
 
-  <div
-    v-for="(pet, index) in form.pets"
-    :key="index"
-    class="pet-card"
-  >
-    <div class="pet-card-header">
-      <button
-        v-if="form.pets.length > 1"
-        type="button"
-        class="link-button"
-        @click="removePetRow(index)"
-      >
-        Bu peti kaldır
-      </button>
-    </div>
-
-    <div class="pet-card-grid">
-      <div class="field">
-        <label>Pet adı</label>
-        <input
-          v-model="pet.name"
-          type="text"
-        />
-      </div>
-
-      <div class="field">
-        <label>Tür</label>
-        <input
-          v-model="pet.species"
-          type="text"
-        />
-      </div>
-
-      <div class="field field-small">
-        <label>Yaşı</label>
-        <input
-          v-model.number="pet.ageYears"
-          type="number"
-          min="0"
-        />
-      </div>
-    </div>
-
-    <div class="field">
-      <label>Geçmiş   </label>
-      <input
-        v-model="pet.notes"
-        type="text"
-      />
-    </div>
+  <div class="field">
+    <label>Tür</label>
+    <input v-model="pet.species" type="text" />
   </div>
 
-  <button
-    type="button"
-    class="btn-secondary add-pet-button"
-    @click="addPetRow"
-  >
-    + Pet ekle
-  </button>
-</section>
+  <div class="field field-small">
+    <label>Yıl</label>
+    <input v-model.number="pet.ageYears" type="number" min="0" />
+  </div>
 
+  <div class="field field-small">
+    <label>Ay</label>
+    <input v-model.number="pet.ageMonths" type="number" min="0" max="11" />
+  </div>
+</div>
+ 
+              <div class="field">
+                <label>Geçmiş</label>
+                <input v-model="pet.notes" type="text" />
+              </div>
+            </div>
 
-          <button type="button" class="btn-primary" @click="handleCreate" :disabled="creating">
-            {{ creating ? 'Kaydediliyor…' : 'Kaydet' }}
-          </button>
+            <button type="button" class="btn-secondary add-pet-button" @click="addPetRow">
+              + Pet ekle
+            </button>
+          </section>
 
           <div class="form-actions">
             <button class="btn" type="submit" :disabled="creating">
@@ -158,62 +121,164 @@
             </button>
           </div>
 
-          <p v-if="formError" class="state state-error">
-            {{ formError }}
-          </p>
-          <p v-if="formSuccess" class="state state-success">
-            {{ formSuccess }}
-          </p>
+          <p v-if="formError" class="state state-error">{{ formError }}</p>
+          <p v-if="formSuccess" class="state state-success">{{ formSuccess }}</p>
         </form>
       </div>
     </section>
+
+    <!-- Owner Detail Modal -->
+    <div v-if="showDetailModal" class="modal-backdrop" @click.self="closeOwnerDetail">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Hasta Sahibi Detayı</h3>
+          <button class="btn btn-sm" type="button" @click="closeOwnerDetail">Kapat</button>
+        </div>
+
+        <div v-if="detailLoading" class="state modal-state">Yükleniyor...</div>
+        <div v-else-if="!ownerDetail" class="state state-error modal-state">
+          Detay yüklenemedi.
+        </div>
+
+        <div v-else class="modal-body">
+          <div class="kv">
+            <div><strong>Ad Soyad:</strong> {{ ownerDetail.fullName }}</div>
+            <div><strong>Telefon:</strong> {{ ownerDetail.phoneE164 }}</div>
+          </div>
+
+          <h4 class="section-title">Evcil Hayvanlar</h4>
+
+          <!-- ✅ Pet Ekle Formu -->
+          <div class="pet-add">
+            <div class="pet-add-grid">
+              <div class="field">
+                <label>Pet adı</label>
+                <input v-model="newPet.name" type="text" />
+              </div>
+
+              <div class="field">
+                <label>Tür</label>
+                <input v-model="newPet.species" type="text" />
+              </div>
+
+              <div class="field field-small">
+                <label>Yıl</label>
+                <input v-model.number="newPet.ageYears" type="number" min="0" />
+              </div>
+
+              <div class="field field-small">
+                <label>Ay</label>
+                <input v-model.number="newPet.ageMonths" type="number" min="0" max="11" />
+              </div>
+
+              <div class="field">
+                <label>Cins (Breed)</label>
+                <input v-model="newPet.breed" type="text" />
+              </div>
+
+              <div class="field">
+                <label>Doğum Tarihi</label>
+                <input v-model="newPet.birthDate" type="date" />
+              </div>
+
+              <div class="field full">
+                <label>Geçmiş</label>
+                <input v-model="newPet.notes" type="text" />
+              </div>
+            </div>
+
+            <div class="pet-add-actions">
+              <button class="btn btn-sm" type="button" @click="addPet" :disabled="petAdding">
+                {{ petAdding ? 'Ekleniyor...' : 'Pet Ekle' }}
+              </button>
+              <div v-if="petAddError" class="state state-error">{{ petAddError }}</div>
+            </div>
+          </div>
+          <p v-if="petDeleteError" class="state state-error">{{ petDeleteError }}</p>
+
+          <div v-if="!ownerDetail.pets || ownerDetail.pets.length === 0" class="muted">
+            Kayıtlı hayvan yok.
+          </div>
+
+          <div v-else class="pets-list">
+            <div v-for="p in ownerDetail.pets" :key="p.id" class="pet-row">
+              <div class="pet-main">
+                <div>
+                  <strong>{{ p.name || '-' }}</strong>
+                  <span class="muted">({{ p.species || '-' }})</span>
+                </div>
+                <div class="muted">
+                  Yaş: {{ p.ageYears ?? '-' }}
+                  <span v-if="p.ageMonths != null">y {{ p.ageMonths }}a</span>
+                </div>
+                <div v-if="p.notes" class="muted">Not: {{ p.notes }}</div>
+              </div>
+            <button class="btn btn-sm" type="button" @click="removePet(p.id)">
+              Sil
+           </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { fetchOwners, createOwner } from '../api/owners'
+import { fetchOwners, createOwner, fetchOwner, addPetToOwner, deletePet } from '../api/owners'
 
 const owners = ref([])
 const loading = ref(false)
+const error = ref('')
+const petDeleteError = ref('')
+const showDetailModal = ref(false)
+const detailLoading = ref(false)
+const ownerDetail = ref(null)
+const selectedOwner = ref(null)
 
 const creating = ref(false)
-const error = ref('')
 const formError = ref('')
 const formSuccess = ref('')
+
+const petAdding = ref(false)
+const petAddError = ref('')
 
 const form = reactive({
   fullName: '',
   phoneE164: '',
   kvkkOptIn: true,
-  pets: [
-    { name: '', species: '', ageYears: null, notes: '' }
-  ]
+  pets: [{ name: '', species: '', ageYears: null, ageMonths: null, notes: '' }]
 })
 
+const newPet = reactive({
+  name: '',
+  species: '',
+  ageYears: null,
+  ageMonths: null,
+  breed: '',
+  birthDate: '',
+  notes: ''
+})
 
-// “+ Pet ekle” butonu burayı çağıracak
-function addPetRow() {
-  form.pets.push({
-    name: '',
-    species: '',
-    ageYears: null,
-    notes: ''
-  })
+function resetNewPet() {
+  newPet.name = ''
+  newPet.species = ''
+  newPet.ageYears = null
+  newPet.ageMonths = null
+  newPet.breed = ''
+  newPet.birthDate = ''
+  newPet.notes = ''
+  petAddError.value = ''
 }
-
-function removePetRow(index) {
-  if (form.pets.length === 1) return
-  form.pets.splice(index, 1)
-}
-
 
 async function loadOwners() {
   loading.value = true
   error.value = ''
   try {
-    const data = await fetchOwners()
-    owners.value = data
+    const res = await fetchOwners()
+    owners.value = res?.data ?? res
   } catch (err) {
     console.error(err)
     error.value = 'Hasta sahipleri yüklenirken bir hata oluştu.'
@@ -222,6 +287,90 @@ async function loadOwners() {
   }
 }
 
+async function openOwnerDetail(id) {
+  showDetailModal.value = true
+  detailLoading.value = true
+  try {
+    selectedOwner.value = id
+    const res = await fetchOwner(id)
+    ownerDetail.value = res?.data ?? res
+  } catch (err) {
+    console.error(err)
+    ownerDetail.value = null
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+function closeOwnerDetail() {
+  showDetailModal.value = false
+  ownerDetail.value = null
+  selectedOwner.value = null
+  resetNewPet()
+}
+
+async function addPet() {
+  if (!selectedOwner.value) return
+
+  petAddError.value = ''
+  if (!newPet.name || !newPet.name.trim()) {
+    petAddError.value = 'Pet adı zorunludur.'
+    return
+  }
+
+  petAdding.value = true
+  try {
+    const payload = {
+      name: newPet.name.trim(),
+      species: newPet.species?.trim() || null,
+      ageYears: newPet.ageYears ?? null,
+      ageMonths: newPet.ageMonths ?? null,
+      breed: newPet.breed?.trim() || null,
+      birthDate: newPet.birthDate || null,
+      notes: newPet.notes?.trim() || null
+    }
+
+    await addPetToOwner(selectedOwner.value, payload)
+
+    const res = await fetchOwner(selectedOwner.value)
+    ownerDetail.value = res?.data ?? res
+    await loadOwners()
+
+    resetNewPet()
+  } catch (err) {
+    console.error(err)
+    petAddError.value = 'Pet eklenirken hata oluştu.'
+  } finally {
+    petAdding.value = false
+  }
+}
+
+async function removePet(petId) {
+  if (!selectedOwner.value) return
+
+  petDeleteError.value = ''
+
+  try {
+    await deletePet(petId) // (Aşağıda API wrapper kısmını netleştiriyorum)
+    const res = await fetchOwner(selectedOwner.value)
+    ownerDetail.value = res?.data ?? res
+    await loadOwners()
+  } catch (err) {
+    // axios ise:
+    const msg = err?.response?.data || 'Pet silinirken hata oluştu.'
+    petDeleteError.value = typeof msg === 'string' ? msg : (msg?.message || 'Pet silinirken hata oluştu.')
+    console.error(err)
+  }
+}
+
+function addPetRow() {
+  form.pets.push({ name: '', species: '', ageYears: null, ageMonths: null, notes: '' })
+}
+
+function removePetRow(index) {
+  if (form.pets.length === 1) return
+  form.pets.splice(index, 1)
+}
 
 async function handleCreate() {
   formError.value = ''
@@ -235,32 +384,28 @@ async function handleCreate() {
     }
 
     const cleanedPets = form.pets
-      .filter(p => (p.name && p.name.trim().length > 0))
+      .filter(p => p.name && p.name.trim().length > 0)
       .map(p => ({
         name: p.name.trim(),
         species: p.species || null,
         ageYears: p.ageYears ?? null,
+        ageMonths: p.ageMonths ?? null,
         notes: p.notes || null
       }))
 
-    const payload = {
+    await createOwner({
       fullName: form.fullName.trim(),
       phoneE164: form.phoneE164.trim(),
       kvkkOptIn: true,
       pets: cleanedPets
-    }
-
-    await createOwner(payload)
+    })
 
     formSuccess.value = 'Kayıt başarıyla oluşturuldu.'
     await loadOwners()
 
-    // formu sıfırla
     form.fullName = ''
     form.phoneE164 = ''
-    form.pets = [
-      { name: '', species: '', ageYears: null, notes: '' }
-    ]
+    form.pets = [{ name: '', species: '', ageYears: null, ageMonths: null, notes: '' }]
   } catch (err) {
     console.error(err)
     formError.value = 'Kayıt oluşturulurken bir hata oluştu.'
@@ -272,16 +417,14 @@ async function handleCreate() {
 onMounted(loadOwners)
 </script>
 
-
-
-
 <style scoped>
 .page {
   width: 100%;
   max-width: 1024px;
   margin: 0 auto;
-  padding: 1rem; /* her sayfada ihtiyacına göre değiştirirsin */
+  padding: 1rem;
 }
+
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -336,22 +479,15 @@ onMounted(loadOwners)
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
-
   padding: 0.45rem 0.9rem;
   border-radius: 999px;
   border: 1px solid #e5e7eb;
-
   background: #ffe2ab;
   color: #4c5137;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-
-  transition:
-    background-color 0.12s ease,
-    border-color 0.12s ease,
-    box-shadow 0.12s ease,
-    transform 0.08s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
 }
 
 .btn:hover {
@@ -372,12 +508,10 @@ onMounted(loadOwners)
   box-shadow: none;
 }
 
-/* küçük buton (Yenile gibi) */
 .btn-sm {
   padding: 0.3rem 0.7rem;
   font-size: 0.8rem;
 }
-
 
 .state {
   font-size: 0.9rem;
@@ -412,6 +546,11 @@ onMounted(loadOwners)
   font-size: 0.8rem;
 }
 
+.actions-col {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -423,50 +562,6 @@ onMounted(loadOwners)
   flex-direction: column;
   gap: 0.25rem;
 }
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-.form-row-inline {
-  display: flex;
-  gap: 12px;   
-}
-
-.form-row-inline .form-group {
-  flex: 1; 
-}
-
- @media (max-width: 640px) {
-  .form-row-inline {
-    flex-direction: column;
-  }
-} 
-
-.form-field-small {
-  max-width: 120px;
-}
-
-.pet-row {
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  background: #f9fafb;
-}
-
-.pet-separator {
-  border: none;
-  border-top: 1px dashed #e5e7eb;
-  margin: 0.5rem 0 0;
-}
-
-.btn-outline.small,
-.btn-link.small {
-  font-size: 0.8rem;
-  padding: 0.25rem 0.5rem;
-}
-
-
 
 label {
   font-size: 0.85rem;
@@ -519,12 +614,6 @@ textarea:focus {
   font-size: 1rem;
 }
 
-.pets-subtitle {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
 .pet-card {
   background: #ffffff;
   border-radius: 0.75rem;
@@ -535,22 +624,9 @@ textarea:focus {
 
 .pet-card-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 0.5rem;
-}
-
-.pet-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #dbeafe;
-  color: #1d4ed8;
 }
 
 .link-button {
@@ -568,19 +644,13 @@ textarea:focus {
 
 .pet-card-grid {
   display: grid;
-  grid-template-columns: 2fr 2fr 1fr;
+  grid-template-columns: 2fr 2fr 1fr 1fr;
   gap: 0.75rem;
   margin-bottom: 0.5rem;
 }
 
 .field-small input {
   max-width: 140px;
-}
-
-.add-pet-button {
-  margin-top: 0.25rem;
-  width: 100%;
-  justify-content: center;
 }
 
 .btn-secondary {
@@ -600,52 +670,119 @@ textarea:focus {
   background: #f3f4f6;
 }
 
+.add-pet-button {
+  margin-top: 0.25rem;
+  width: 100%;
+  justify-content: center;
+}
+
 @media (max-width: 768px) {
   .pet-card-grid {
     grid-template-columns: 1fr;
   }
 }
 
-
-.btn-primary {
-  display: inline-flex;
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
-
-  border: none;
-  border-radius: 999px;
-
-  padding: 0.55rem 1.2rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-
-  background: linear-gradient(135deg, #ffe2ab, #b93e19);
-  color: #ffffff;
-
-  cursor: pointer;
-  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.35);
-  transition:
-    transform 0.1s ease,
-    box-shadow 0.1s ease,
-    filter 0.1s ease;
+  padding: 16px;
+  z-index: 9999;
 }
 
-.btn-primary:hover {
-  filter: brightness(1.03);
-  box-shadow: 0 10px 25px rgba(22, 163, 74, 0.45);
-  transform: translateY(-1px);
+.modal {
+  width: min(820px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
 }
 
-.btn-primary:active {
-  transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
 }
 
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: default;
-  box-shadow: none;
+.modal-body {
+  padding: 16px;
 }
 
+.modal-state {
+  padding: 16px;
+}
+
+.kv {
+  display: grid;
+  gap: 6px;
+}
+
+.section-title {
+  margin-top: 16px;
+  margin-bottom: 10px;
+}
+
+.muted {
+  opacity: 0.7;
+}
+
+/* Pet list in modal */
+.pets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.pet-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.pet-main {
+  display: grid;
+  gap: 4px;
+}
+
+/* Pet add in modal */
+.pet-add {
+  margin: 12px 0 12px;
+  padding: 12px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.pet-add-grid {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr;
+  gap: 12px;
+}
+
+.pet-add-grid .full {
+  grid-column: 1 / -1;
+}
+
+.pet-add-actions {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .pet-add-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

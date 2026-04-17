@@ -57,31 +57,36 @@ public async Task<ActionResult<List<CalendarAppointmentDto>>> GetAppointments(
     var fromUtc = DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(fromLocal, tz), DateTimeKind.Utc);
     var toUtc   = DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(toLocal, tz),   DateTimeKind.Utc);
 
-    var list = await (
-        from a in _db.Appointments
-        join v in _db.Visits on a.VisitId equals v.Id
-        join pet in _db.Pets on a.PetId equals pet.Id
-        join owner in _db.Owners on pet.OwnerId equals owner.Id
-        join doc in _db.Users on a.DoctorId equals doc.Id into docJoin
-        from doc in docJoin.DefaultIfEmpty()
-        join creator in _db.Users on v.CreatedByUserId equals creator.Id into creatorJoin
-        from creator in creatorJoin.DefaultIfEmpty()
-        where a.ScheduledAt >= fromUtc && a.ScheduledAt <= toUtc
-        orderby a.ScheduledAt, owner.FullName, pet.Name
-        select new CalendarAppointmentDto
-        {
-            Id = a.Id,
-            VisitId = v.Id,
-            ScheduledAt = a.ScheduledAt,
-            PetName = pet.Name,
-            OwnerName = owner.FullName,
-            Purpose = a.Purpose,
-            DoctorName = doc != null ? doc.FullName : null,
-            CreatedByUsername = creator != null ? creator.Username : null,
-            CreatedByName = creator != null ? creator.FullName : null,
-            CreditAmountTl = v.CreditAmountTl
-        }
-    ).ToListAsync();
+var list = await (
+    from a in _db.Appointments
+    join pet in _db.Pets on a.PetId equals pet.Id
+    join owner in _db.Owners on pet.OwnerId equals owner.Id
+
+    join v in _db.Visits on a.VisitId equals v.Id into vJoin
+    from v in vJoin.DefaultIfEmpty()
+
+    join doc in _db.Users on a.DoctorId equals doc.Id into docJoin
+    from doc in docJoin.DefaultIfEmpty()
+
+    join creator in _db.Users on v.CreatedByUserId equals creator.Id into creatorJoin
+    from creator in creatorJoin.DefaultIfEmpty()
+
+    where a.ScheduledAt >= fromUtc && a.ScheduledAt <= toUtc
+    orderby a.ScheduledAt, owner.FullName, pet.Name
+    select new CalendarAppointmentDto
+    {
+        Id = a.Id,
+        VisitId = a.VisitId,
+        ScheduledAt = a.ScheduledAt,
+        PetName = pet.Name,
+        OwnerName = owner.FullName,
+        Purpose = a.Purpose,
+        DoctorName = doc != null ? doc.FullName : null,
+        CreatedByUsername = creator != null ? creator.Username : null,
+        CreatedByName = creator != null ? creator.FullName : null,
+        CreditAmountTl = v != null ? v.CreditAmountTl : null
+    }
+).ToListAsync();
 
     return Ok(list);
 }

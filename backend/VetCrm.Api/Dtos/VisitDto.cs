@@ -3,7 +3,7 @@ namespace VetCrm.Api.Dtos;
 public class VisitDto
 {
     public int Id { get; set; }
-
+    public decimal? CollectedAmountTl { get; set; }
     public int PetId { get; set; }
     public string PetName { get; set; } = null!;
 

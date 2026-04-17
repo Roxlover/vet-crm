@@ -44,15 +44,22 @@
             📋 <span>Ziyaretler</span>
           </RouterLink>
 
-          
-          <RouterLink
-            v-if="auth.user?.role === 'Admin'"
-            to="/bilanco"
-            class="nav-item"
-            :class="{ active: route.name === 'Bilanco' }"
-          >
-            💰 <span>Bilanço</span>
+          <RouterLink 
+            to="/pets" 
+            class="nav-item" 
+             :class="{ active: route.name === 'pets' }"
+           >
+            🐕🐈 <span>Hastalar</span>
           </RouterLink>
+          
+         <RouterLink
+  v-if="canSeeBilanco"
+  to="/bilanco"
+  class="nav-item"
+  :class="{ active: route.name === 'Bilanco' }"
+>
+  💰 <span>Bilanço</span>
+</RouterLink>
 
         </nav>
       </aside>
@@ -141,8 +148,16 @@ import {
 import '@/style.css'
 import { getUser } from '@/utils/auth'
 
-const rawUser = getUser()
-const isBullBoss = computed(() => rawUser?.username === 'BullBoss')
+
+const rawUser = computed(() => getUser() || null)
+
+const canSeeBilanco = computed(() => {
+  const u = rawUser.value || {}
+  const role = String(u.role || '').trim().toLowerCase()
+  const username = String(u.username || '').trim().toLowerCase()
+  return role === 'admin' || username === 'bullboss' 
+})
+
 
 
 const route = useRoute()

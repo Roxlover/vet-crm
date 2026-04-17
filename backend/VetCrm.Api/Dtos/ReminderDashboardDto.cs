@@ -10,4 +10,5 @@ public class ReminderDashboardDto
     public string? Procedures { get; set; }
     public bool IsCompleted { get; set; }
     public string? VisitImageUrl { get; set; }
+    public string? VisitStatus { get; set; }
 }

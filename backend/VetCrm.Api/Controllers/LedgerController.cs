@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VetCrm.Domain.Entities;
 using VetCrm.Infrastructure.Data;
+using System.Security.Claims;
 
 namespace VetCrm.Api.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,BullBoss")]
 [ApiController]
 [Route("api/[controller]")]
 public class LedgerController : ControllerBase
@@ -18,16 +19,40 @@ public class LedgerController : ControllerBase
         _db = db;
     }
 
-    private static (decimal total, decimal collected, decimal credit) CalcAmounts(
-        decimal? amount, decimal? credit)
-    {
-        var total = amount ?? 0m;
-        var creditVal = credit ?? 0m;
-        var collected = total - creditVal;
-        if (collected < 0) collected = 0m;
+private static (decimal total, decimal collected, decimal credit) CalcAmounts(decimal? amount, decimal? credit)
+{
+    var total = amount ?? 0m;
+    var creditVal = credit ?? 0m;
 
-        return (total, collected, creditVal);
-    }
+    // Hiçbir şey kesilmez / 0'lanmaz:
+    var collected = total - creditVal; // negatif olabilir (veri tutarsızlığını gösterir)
+
+    return (total, collected, creditVal);
+}
+
+
+private static bool HasWork(Visit v)
+{
+    return (v.AmountTl ?? 0m) > 0m
+        || !string.IsNullOrWhiteSpace(v.Procedures)
+        || !string.IsNullOrWhiteSpace(v.Purpose)
+        || !string.IsNullOrWhiteSpace(v.Notes);
+}
+
+private IQueryable<Visit> ApplyLedgerInclusionRule(IQueryable<Visit> q)
+{
+    return q.Where(v =>
+        // 1) Reminder completed ise dahil
+        _db.Reminders.Any(r => r.VisitId == v.Id && r.IsCompleted)
+
+        // 2) Reminder yok ama “işlem yapılmış” görünüyorsa dahil
+        || (!_db.Reminders.Any(r => r.VisitId == v.Id) &&
+            ((v.AmountTl ?? 0m) > 0m
+             || v.Procedures != null && v.Procedures != ""
+             || v.Purpose != null && v.Purpose != ""
+             || v.Notes != null && v.Notes != ""))
+    );
+}
 
     public class LedgerUserGroupDto
     {
@@ -39,7 +64,7 @@ public class LedgerController : ControllerBase
 
         public List<LedgerVisitItemDto> Items { get; set; } = new();
     }
-
+    
     public class LedgerEntryDto
     {
         public int Id { get; set; }
@@ -81,7 +106,10 @@ public class LedgerController : ControllerBase
 
         public string? CreatedByUsername { get; set; }
         public string? CreatedByName { get; set; }
-    }
+        public string? Purpose { get; set; }
+        public string? Procedures { get; set; }
+        public string? Notes { get; set; }    
+}
 
 
     [HttpGet]
@@ -113,6 +141,10 @@ public class LedgerController : ControllerBase
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
+  
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrWhiteSpace(userIdStr) || !int.TryParse(userIdStr, out var userId))
+        return Unauthorized("UserId claim bulunamadı."); 
 
         var entry = new LedgerEntry
         {
@@ -125,7 +157,8 @@ public class LedgerController : ControllerBase
             Note = string.IsNullOrWhiteSpace(request.Note)
                 ? null
                 : request.Note.Trim(),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UserId = userId
         };
 
         _db.LedgerEntries.Add(entry);
@@ -161,9 +194,7 @@ public async Task<ActionResult<LedgerSummaryDto>> GetVisitSummary(
             DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
             DateOnly.FromDateTime(v.PerformedAt.Date) <= to);
 
-    query = query.Where(v =>
-        _db.Reminders.Any(r => r.VisitId == v.Id && r.IsCompleted));
-
+      query = ApplyLedgerInclusionRule(query);
     var visits = await query
         .Select(v => new
         {
@@ -213,9 +244,7 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
         .Where(v =>
             DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
             DateOnly.FromDateTime(v.PerformedAt.Date) <= to);
-
-    baseQuery = baseQuery.Where(v =>
-        _db.Reminders.Any(r => r.VisitId == v.Id && r.IsCompleted));
+    baseQuery = ApplyLedgerInclusionRule(baseQuery);
 
     var data = await baseQuery
         .Select(v => new
@@ -228,7 +257,10 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
             OwnerName = v.Pet.Owner.FullName,
             v.Pet.Owner.PhoneE164,
             v.CreatedByUsername,
-            v.CreatedByName
+            v.CreatedByName,
+            v.Purpose,
+            v.Procedures,
+            v.Notes
         })
         .ToListAsync();
 
@@ -247,7 +279,10 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
                 CollectedAmount = collected,
                 CreditAmount = credit,
                 CreatedByUsername = v.CreatedByUsername,
-                CreatedByName = v.CreatedByName
+                CreatedByName = v.CreatedByName,
+                Purpose = v.Purpose,
+                Procedures = v.Procedures,
+                Notes = v.Notes
             };
         })
         .OrderByDescending(x => x.PerformedAt)
@@ -272,13 +307,16 @@ public async Task<ActionResult<List<LedgerUserGroupDto>>> GetByUser(
         to = tmp;
     }
 
-    var visits = await _db.Visits
-        .Include(v => v.Pet)
-            .ThenInclude(p => p.Owner)
-        .Where(v =>
-            DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
-            DateOnly.FromDateTime(v.PerformedAt.Date) <= to)
-        .ToListAsync();
+var visitsQ = _db.Visits
+    .Include(v => v.Pet)
+        .ThenInclude(p => p.Owner)
+    .Where(v =>
+        DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
+        DateOnly.FromDateTime(v.PerformedAt.Date) <= to);
+
+visitsQ = ApplyLedgerInclusionRule(visitsQ);
+
+var visits = await visitsQ.ToListAsync();
 
     var groups = visits
         .GroupBy(v => new
@@ -311,7 +349,10 @@ public async Task<ActionResult<List<LedgerUserGroupDto>>> GetByUser(
                     CollectedAmount = collected,
                     CreditAmount = credit,
                     CreatedByUsername = v.CreatedByUsername,
-                    CreatedByName = v.CreatedByName
+                    CreatedByName = v.CreatedByName,
+                    Purpose = v.Purpose,
+                    Procedures = v.Procedures,
+                    Notes = v.Notes
                 };
             })
             .OrderByDescending(x => x.PerformedAt)

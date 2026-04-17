@@ -68,15 +68,29 @@ public class VetCrmDbContext : DbContext
         });
 
         modelBuilder.Entity<LedgerEntry>(b =>
-            {
-                b.Property(x => x.Date).IsRequired();
-                b.Property(x => x.Amount).IsRequired();
-                b.Property(x => x.IsIncome).IsRequired();
+{
+    b.Property(x => x.Date).IsRequired();
+    b.Property(x => x.Amount).IsRequired();
+    b.Property(x => x.IsIncome).IsRequired();
 
-                b.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("NOW()");
-            });
-        
+    b.Property(x => x.Category).HasMaxLength(64);
+    b.Property(x => x.Note).HasMaxLength(512);
+
+    b.Property(x => x.CreatedAt)
+        .HasDefaultValueSql("NOW()");
+
+    b.HasOne(x => x.User)
+        .WithMany()
+        .HasForeignKey(x => x.UserId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+    b.HasOne(x => x.Visit)
+        .WithMany()
+        .HasForeignKey(x => x.VisitId)
+        .OnDelete(DeleteBehavior.Cascade);
+});
+  
+         
         modelBuilder.Entity<User>(b =>
         {
             b.Property(u => u.FullName).IsRequired().HasMaxLength(120);

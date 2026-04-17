@@ -27,9 +27,9 @@ const router = createRouter({
     },
     {
       path: '/bilanco',
-      name: 'Bilanco',
+      name: 'bilanco',
       component: BilancoView,
-      meta: { requiresAuth: true, roles: ['Admin'] },
+      meta: { requiresAuth: true },
     },
     {
       path: '/pets',
@@ -57,28 +57,49 @@ router.beforeEach((to, from, next) => {
   const userRaw = localStorage.getItem('vetcrm_user')
   const user = userRaw ? JSON.parse(userRaw) : null
 
+  console.log('[ROUTER]', {
+    to: to.path,
+    metaRoles: to.meta?.roles,
+    userRole: user?.role,
+    userUsername: user?.username,
+    hasToken: !!token,
+  })
+  if (to.path === '/bilanco') {
+  const role = String(user?.role || '').trim()                 // Admin
+  const username = String(user?.username || '').trim().toLowerCase()
+
+  const allowedUsers = ['bullboss'] // whitelist
+  const isAdmin = role === 'Admin'
+  const isExplicitAllowed = allowedUsers.includes(username)
+
+  if (!isAdmin && !isExplicitAllowed) return next('/')
+}
+
+  // 1) Auth gerekiyorsa ve yoksa -> login
   if (authRequired && (!user || !token)) {
     return next('/login')
   }
 
+  // 2) Login sayfasına auth’lu girilirse -> dashboard
   if (!authRequired && user && token) {
     return next('/')
   }
 
-  if (to.path === '/bilanco') {
-    const role = user?.role?.trim()
-    const username = user?.username?.toLowerCase().trim()
-    const allowedUsers = ['bullboss']  
+  // 3) Role kontrolü (varsa)
+  const requiredRoles = to.meta?.roles
+  if (requiredRoles && requiredRoles.length) {
+    const role = String(user?.role || '').trim().toLowerCase()
+    const username = String(user?.username || '').trim().toLowerCase()
+    const allowed = requiredRoles.map(r => String(r).trim().toLowerCase())
 
-    const isAdmin = role === 'Admin'
-    const isExplicitAllowed = username && allowedUsers.includes(username)
-
-    if (!isAdmin && !isExplicitAllowed) {
-      return next('/')
+    const ok = allowed.includes(role) || username === 'bullboss'
+    if (!ok) {
+      return next('/') // yetkisiz -> dashboard
     }
   }
 
-  next()
+  // 4) HER HALÜKARDA devam et
+  return next()
 })
 
 

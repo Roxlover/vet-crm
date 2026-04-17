@@ -38,7 +38,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in appointments" :key="item.visitId">
+        <tr v-for="item in appointments" :key="item.id ?? `${item.visitId}-${item.scheduledAt}`">
             <td>{{ formatDate(item.scheduledAt) }}</td>
             <td>{{ formatTime(item.scheduledAt) }}</td>
             <td>{{ item.petName }}</td>
@@ -82,8 +82,14 @@ const loadAppointments = async () => {
   }
 }
 
+const toLocalIsoDate = (d) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 const todayRange = () => {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toLocalIsoDate(new Date())
   from.value = today
   to.value = today
   loadAppointments()
@@ -97,11 +103,10 @@ const thisWeekRange = () => {
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
 
-  from.value = monday.toISOString().slice(0, 10)
-  to.value = sunday.toISOString().slice(0, 10)
+  from.value = toLocalIsoDate(monday)
+  to.value = toLocalIsoDate(sunday)
   loadAppointments()
 }
-
 const formatDate = (iso) => {
   const d = new Date(iso)
   return d.toLocaleDateString('tr-TR')

@@ -8,19 +8,71 @@
     </header>
 
     <section class="selector-card">
-      <div class="field">
-        <label>Hasta Sahibi</label>
-        <select v-model="selectedOwnerId">
-          <option value="">Seçiniz</option>
-          <option
-            v-for="owner in owners"
-            :key="owner.id"
-            :value="owner.id"
-          >
-            {{ owner.fullName }} ({{ owner.phoneE164 }})
-          </option>
-        </select>
+<div class="field">
+  <label>Hasta Sahibi</label>
+
+  <div class="combo" ref="ownerComboRef">
+    <!-- Seçili chip -->
+    <div v-if="selectedOwner" class="chip">
+      <span class="chip-text">
+        {{ selectedOwner.fullName }} ({{ selectedOwner.phoneE164 }})
+      </span>
+      <button type="button" class="chip-x" @click="clearOwner" aria-label="Seçimi temizle">
+        ×
+      </button>
+    </div>
+
+    <!-- Arama inputu -->
+    <input
+      v-else
+      ref="ownerInputRef"
+      class="combo-input"
+      type="text"
+      v-model="ownerQuery"
+      placeholder="En az 2 harf yazın..."
+      @focus="openOwnerDropdown"
+      @click="openOwnerDropdown"
+      @keydown.down.prevent="moveOwnerActive(1)"
+      @keydown.up.prevent="moveOwnerActive(-1)"
+      @keydown.enter.prevent="selectActiveOwner"
+      @keydown.esc.prevent="closeOwnerDropdown"
+      autocomplete="off"
+      role="combobox"
+      :aria-expanded="ownerDropdownOpen ? 'true' : 'false'"
+      aria-autocomplete="list"
+    />
+
+    <!-- Dropdown -->
+    <div v-if="ownerDropdownOpen" class="combo-popover">
+      <div class="combo-hint" v-if="ownerQuery.trim().length < 2">
+        Aramak için en az 2 karakter yazın.
       </div>
+
+      <ul
+        v-else
+        class="combo-list"
+        role="listbox"
+      >
+        <li
+          v-for="(owner, idx) in filteredOwners"
+          :key="owner.id"
+          class="combo-item"
+          :class="{ active: idx === ownerActiveIndex }"
+          role="option"
+          @mousedown.prevent="selectOwner(owner)"
+          @mousemove="ownerActiveIndex = idx"
+        >
+          <div class="combo-title">{{ owner.fullName }}</div>
+          <div class="combo-sub">{{ owner.phoneE164 }}</div>
+        </li>
+
+        <li v-if="!filteredOwners.length" class="combo-empty">
+          Sonuç bulunamadı.
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
 
       <div class="field">
         <label>Hasta (Hayvan)</label>
@@ -59,22 +111,35 @@
           <textarea v-model="form.vaccines" rows="2" />
         </div>
 
-        <div class="field-row">
-          <div class="field">
-            <label>Ne zaman uygulandı?</label>
-            <input type="datetime-local" v-model="form.performedAt" />
-          </div>
-          <div class="field">
-            <label>Ne kadar aldım (TL)?</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              v-model.number="form.amountTl"
-            />
-          </div>
-        </div>
+       <div class="field-row money-row">
+  <div class="field">
+    <label>Ne zaman uygulandı?</label>
+    <input type="datetime-local" v-model="form.performedAt" />
+  </div>
 
+  <div class="field">
+    <label>Ne kadar aldım (TL)?</label>
+    <input
+      type="number"
+      min="0"
+      step="0.01"
+      v-model.number="form.amountTl"
+      placeholder="Örn: 500"
+    />
+  </div>
+
+  <div class="field">
+    <label>Veresiye (TL)</label>
+    <input
+      v-model="form.creditAmountTl"
+      type="number"
+      min="0"
+      step="0.01"
+      placeholder="Örn: 750"
+    />
+  </div>
+</div>
+ 
         <div class="form-row-inline">
         <div class="field-group">
           <label>Ne zaman / ne için gelecek?</label>
@@ -189,7 +254,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, reactive, ref, watch, nextTick  } from 'vue'
 import { fetchOwners } from '../api/owners'
 import { fetchPetsByOwner } from '../api/pets'
 import { http } from '@/api/http'
@@ -212,6 +277,7 @@ const form = reactive({
   procedures: '',
   vaccines: '',
   performedAt: '',
+  creditAmountTl: '',
   amountTl: null,
   nextDate: '',
   purpose: '',
@@ -224,6 +290,110 @@ const form = reactive({
 const nextVisits = ref([
   { date: '', purpose: '' },
 ])
+const ownerQuery = ref('')
+const ownerDropdownOpen = ref(false)
+const ownerActiveIndex = ref(0)
+
+const ownerComboRef = ref(null)
+const ownerInputRef = ref(null)
+
+// selectedOwnerId zaten var; bunu kullanıyoruz
+const selectedOwner = computed(() => {
+  const idNum = Number(selectedOwnerId.value)
+  if (!idNum) return null
+  return owners.value.find(o => o.id === idNum) || null
+})
+
+const filteredOwners = computed(() => {
+  const q = ownerQuery.value.trim().toLowerCase()
+  if (q.length < 2) return []
+
+  // fullName + phone içinde arama
+  return owners.value
+    .filter(o => {
+      const haystack = `${o.fullName || ''} ${o.phoneE164 || ''}`.toLowerCase()
+      return haystack.includes(q)
+    })
+    .slice(0, 50) // çok uzunsa sınırlayalım
+})
+
+function openOwnerDropdown() {
+  ownerDropdownOpen.value = true
+  ownerActiveIndex.value = 0
+}
+
+function closeOwnerDropdown() {
+  ownerDropdownOpen.value = false
+}
+
+function selectOwner(owner) {
+  selectedOwnerId.value = String(owner.id)
+  // Chip görüneceği için query'yi temizleyelim
+  ownerQuery.value = ''
+  ownerActiveIndex.value = 0
+
+  // Seçince dropdown kapansın (isterseniz kapatma):
+  ownerDropdownOpen.value = false
+}
+
+function clearOwner() {
+  selectedOwnerId.value = ''
+  selectedPetId.value = ''
+  ownerName.value = ''
+  ownerPhone.value = ''
+  petName.value = ''
+
+  // Tekrar arama yapılabilsin
+  ownerQuery.value = ''
+  ownerDropdownOpen.value = true
+
+  // Mobilde klavye açılsın: inputa focus
+  nextTick(() => {
+    ownerInputRef.value?.focus()
+  })
+}
+
+function moveOwnerActive(delta) {
+  if (!ownerDropdownOpen.value) ownerDropdownOpen.value = true
+  if (ownerQuery.value.trim().length < 2) return
+  const len = filteredOwners.value.length
+  if (!len) return
+
+  const next = ownerActiveIndex.value + delta
+  if (next < 0) ownerActiveIndex.value = len - 1
+  else if (next >= len) ownerActiveIndex.value = 0
+  else ownerActiveIndex.value = next
+}
+
+function selectActiveOwner() {
+  if (ownerQuery.value.trim().length < 2) return
+  const owner = filteredOwners.value[ownerActiveIndex.value]
+  if (owner) selectOwner(owner)
+}
+
+// Dışarı tıklayınca kapat
+function onDocPointerDown(e) {
+  const root = ownerComboRef.value
+  if (!root) return
+  if (!root.contains(e.target)) {
+    ownerDropdownOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', onDocPointerDown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onDocPointerDown)
+})
+
+// Seçim yoksa inputa tıklayınca klavye gelsin: dropdown aç + focus zaten inputta
+watch(ownerDropdownOpen, (open) => {
+  if (open && !selectedOwner.value) {
+    nextTick(() => ownerInputRef.value?.focus())
+  }
+})
 
 function addNextVisitRow() {
   nextVisits.value.push({ date: '', purpose: '' })
@@ -275,18 +445,28 @@ watch(selectedPetId, (newId) => {
 })
 
 function onFilesChange(event) {
-  const files = Array.from(event.target.files || [])
+  const input = event.target
+  const files = Array.from(input.files || [])
 
-  console.log('SEÇİLEN DOSYA SAYISI >>>', files.length)
+  console.log('SEÇİLEN DOSYA SAYISI (BU SEÇİM) >>>', files.length)
 
-  if (!files.length) {
-    form.imageFiles = []
-    form.imagePreviews = []
-    return
-  }
+  if (!files.length) return
 
-  form.imageFiles = files
-  form.imagePreviews = files.map((f) => URL.createObjectURL(f))
+  // Aynı dosya tekrar eklenmesin diye (name+size+lastModified ile)
+  const existingKey = new Set(
+    (form.imageFiles || []).map(f => `${f.name}_${f.size}_${f.lastModified}`)
+  )
+
+  const newFiles = files.filter(f => !existingKey.has(`${f.name}_${f.size}_${f.lastModified}`))
+
+  // APPEND: önceki seçimleri ezme
+  form.imageFiles = [...(form.imageFiles || []), ...newFiles]
+  form.imagePreviews = form.imageFiles.map(f => URL.createObjectURL(f))
+
+  console.log('TOPLAM DOSYA SAYISI (BİRİKTİRİLMİŞ) >>>', form.imageFiles.length)
+
+  // Kritik: aynı dosyayı tekrar seçebilmek için input'u sıfırla
+  input.value = ''
 }
 
 async function handleSave() {
@@ -316,19 +496,32 @@ async function handleSave() {
     if (form.notes) notesParts.push(form.notes)
     const notesText = notesParts.join('\n')
 
+
+    const credit =
+  form.creditAmountTl === '' || form.creditAmountTl === null || form.creditAmountTl === undefined
+    ? null
+    : Number(String(form.creditAmountTl).replace(',', '.'))
+
+if (credit !== null && (!Number.isFinite(credit) || credit < 0)) {
+  error.value = 'Veresiye negatif olamaz.'
+  return
+} 
     // 2) Ziyaret payload
     const payload = {
       petId: Number(selectedPetId.value),
       performedAt: new Date(form.performedAt).toISOString(),
       procedures: proceduresText,
       amountTl: form.amountTl ?? 0,
+      creditAmountTl: credit,
       notes: notesText,
-      nextVisits: nextVisits.value
-        .filter(x => x.date) 
-        .map(x => ({
-          nextDate: x.date,
-          purpose: x.purpose || null,
-        })),
+      plans: nextVisits.value
+       .filter(x => x.date)
+       .map(x => ({
+         Date: x.date,        // YYYY-MM-DD
+         Purpose: x.purpose || null,
+         DoctorId: null,
+         })),
+ 
       purpose: form.purpose || null,
       microchipNumber: form.microchipNumber || null,
     }
@@ -339,9 +532,9 @@ async function handleSave() {
 
     if (form.imageFiles.length && visitId) {
       const fd = new FormData()
-      form.imageFiles.forEach((file) => {
-        fd.append('files', file)
-      })
+     for (const file of Array.from(form.imageFiles)) {
+       fd.append('files', file)
+     }
 
       console.log('IMAGE UPLOAD START', {
         visitId,
@@ -352,7 +545,9 @@ async function handleSave() {
         const resUpload = await http.post(`/visits/${visitId}/images`, fd, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
-        console.log('IMAGE UPLOAD OK', resUpload.status, resUpload.data)
+      console.log('UPLOAD RESULT COUNT >>>', Array.isArray(resUpload.data) ? resUpload.data.length : resUpload.data)
+      success.value = `Ziyaret kaydedildi. ${Array.isArray(resUpload.data) ? resUpload.data.length : form.imageFiles.length} görsel yüklendi.`
+      console.log('IMAGE UPLOAD OK', resUpload.status, resUpload.data)
       } catch (e) {
         console.error(
           'image upload error',
@@ -369,6 +564,7 @@ async function handleSave() {
     form.procedures = ''
     form.vaccines = ''
     form.performedAt = ''
+    form.creditAmountTl = ''
     form.amountTl = null
     form.nextDate = ''
     form.purpose = ''
@@ -381,6 +577,12 @@ async function handleSave() {
   } finally {
     saving.value = false
   }
+  success.value = 'Ziyaret kaydedildi.'
+
+  setTimeout(() => {
+    window.location.href = '/'
+  }, 600)
+
 }
 </script>
 
@@ -461,7 +663,102 @@ select {
   flex-direction: column;
   gap: 0.7rem;
 }
+.combo {
+  position: relative;
+}
 
+.combo-input {
+  width: 100%;
+}
+
+.combo-popover {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.6rem;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.10);
+  overflow: hidden;
+}
+
+.combo-hint {
+  padding: 0.6rem 0.7rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.combo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.combo-item {
+  cursor: pointer;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.5rem;
+}
+
+.combo-item.active,
+.combo-item:hover {
+  background: #f3f4f6;
+}
+
+.combo-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.combo-sub {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 0.1rem;
+}
+
+.combo-empty {
+  padding: 0.7rem;
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 0.35rem 0.55rem;
+  background: #f9fafb;
+}
+
+.chip-text {
+  font-size: 0.85rem;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-x {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0.25rem;
+  color: #6b7280;
+}
+
+.chip-x:hover {
+  color: #111827;
+}
 .form-group {
   display: flex;
   flex-direction: column;
@@ -570,6 +867,25 @@ select {
   border-radius: 999px;
   padding: 0 0.6rem;
   cursor: pointer;
+}
+/* Para alanlarını mobilde düzgün kır */
+.money-row {
+  flex-wrap: wrap;
+}
+
+.money-row .field {
+  min-width: 0;
+  flex: 1 1 220px; /* daralınca alta iner */
+}
+
+@media (max-width: 640px) {
+  .selector-card {
+    flex-direction: column; /* Hasta sahibi / hayvan mobilde alt alta */
+  }
+
+  .field-row {
+    flex-direction: column; /* performedAt + amount + credit mobilde alt alta */
+  }
 }
 
 </style>

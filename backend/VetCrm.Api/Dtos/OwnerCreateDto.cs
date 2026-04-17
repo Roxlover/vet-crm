@@ -4,6 +4,7 @@ public class OwnerPetCreateDto
 {
     public string Name { get; set; } = string.Empty;
     public string? Species { get; set; }
+    public int? AgeMonths { get; set; }
     public int? AgeYears { get; set; }
     public string? Notes { get; set; }
 }

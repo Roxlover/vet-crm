@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace VetCrm.Api.Dtos;
 
 public class VisitUpdateDto
@@ -9,6 +11,15 @@ public class VisitUpdateDto
     public string? Purpose { get; set; }
 
     public DateOnly? NextDate { get; set; }
-    public string? MicrochipNumber { get; set; } 
-   public List<VisitPlanCreateDto> Plans { get; set; } = new();
+    public string? MicrochipNumber { get; set; }
+
+    [JsonPropertyName("plans")]
+    public List<VisitPlanCreateDto>? Plans { get; set; }
+
+    [JsonPropertyName("nextVisits")]
+    public List<VisitPlanCreateDto>? NextVisits
+    {
+        get => Plans;
+        set => Plans = value;
+    }
 }

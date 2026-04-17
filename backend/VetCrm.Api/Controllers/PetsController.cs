@@ -10,7 +10,75 @@ namespace VetCrm.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class PetsController : ControllerBase
+{   
+
+
+   public class PetProfileDto
 {
+    public int Id { get; set; }
+    public int OwnerId { get; set; }
+    public string OwnerName { get; set; } = "";
+    public string? OwnerPhoneE164 { get; set; }
+
+    public string Name { get; set; } = "";
+    public string? Species { get; set; }
+    public string? Breed { get; set; }
+    public DateOnly? BirthDate { get; set; }
+    public int? AgeYears { get; set; }
+    public int? AgeMonths { get; set; }
+    public string? Notes { get; set; }
+
+    public List<PetVisitDto> Visits { get; set; } = new();
+}
+
+public class PetVisitDto
+{
+    public int VisitId { get; set; }
+    public DateTime PerformedAt { get; set; }
+
+    public string? Procedures { get; set; }
+    public string? Notes { get; set; }
+
+    public decimal? AmountTl { get; set; }
+    public decimal? CreditAmountTl { get; set; }
+
+    public string? CreatedByUsername { get; set; }
+    public string? CreatedByName { get; set; }
+
+    public List<PetVisitImageDto> Images { get; set; } = new();
+}
+
+public class PetVisitImageDto
+{
+    public int Id { get; set; }
+    public string ImageUrl { get; set; } = "";
+}
+
+    private static (int years, int months)? CalcAge(DateOnly? birthDate)
+{
+    if (birthDate is null) return null;
+
+    var today = DateOnly.FromDateTime(DateTime.Today);
+
+    var years = today.Year - birthDate.Value.Year;
+    var months = today.Month - birthDate.Value.Month;
+
+    if (today.Day < birthDate.Value.Day)
+        months--;
+
+    if (months < 0)
+    {
+        years--;
+        months += 12;
+    }
+
+    if (years < 0) years = 0;
+    if (months < 0) months = 0;
+
+    return (years, months);
+}
+
+    
     private readonly VetCrmDbContext _db;
 
     public PetsController(VetCrmDbContext db)
@@ -47,6 +115,79 @@ public class PetsController : ControllerBase
         return Ok(pets);
     }
 
+    [HttpGet("{id:int}/profile")]
+public async Task<ActionResult<PetProfileDto>> GetPetProfile(int id)
+{
+    var petBase = await _db.Pets
+        .Include(p => p.Owner)
+        .Where(p => p.Id == id)
+        .Select(p => new
+        {
+            p.Id,
+            p.OwnerId,
+            OwnerName = p.Owner.FullName,
+            OwnerPhone = p.Owner.PhoneE164,
+            p.Name,
+            p.Species,
+            p.Breed,
+            p.BirthDate,
+            p.Notes
+        })
+        .FirstOrDefaultAsync();
+
+    if (petBase is null)
+        return NotFound();
+
+    var visits = await _db.Visits
+        .Where(v => v.PetId == id)
+        .OrderByDescending(v => v.PerformedAt)
+        .Select(v => new PetVisitDto
+        {
+            VisitId = v.Id,
+            PerformedAt = v.PerformedAt,
+            Procedures = v.Procedures,
+            Notes = v.Notes,
+            AmountTl = v.AmountTl,
+            CreditAmountTl = v.CreditAmountTl,
+
+            // Eğer compile hatası olursa buradaki navigation adını düzeltiriz
+            CreatedByUsername = v.CreatedByUser != null ? v.CreatedByUser.Username : null,
+            CreatedByName = v.CreatedByUser != null ? v.CreatedByUser.FullName : null,
+
+            Images = _db.VisitImages
+                .Where(img => img.VisitId == v.Id)
+                .OrderBy(img => img.Id)
+                .Select(img => new PetVisitImageDto
+                {
+                    Id = img.Id,
+                    ImageUrl = img.ImageUrl
+                })
+                .ToList()
+        })
+        .ToListAsync();
+
+    var age = CalcAge(petBase.BirthDate);
+    var dto = new PetProfileDto
+    {
+        Id = petBase.Id,
+        OwnerId = petBase.OwnerId,
+        OwnerName = petBase.OwnerName,
+        OwnerPhoneE164 = petBase.OwnerPhone,
+
+        Name = petBase.Name,
+        Species = petBase.Species,
+        Breed = petBase.Breed,
+        BirthDate = petBase.BirthDate,
+        AgeYears = age?.years,
+        AgeMonths = age?.months,
+        Notes = petBase.Notes,
+        Visits = visits
+    };
+
+    return Ok(dto);
+}
+
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PetDto>> GetPet(int id)
     {
@@ -71,7 +212,7 @@ public class PetsController : ControllerBase
 
         return Ok(pet);
     }
-
+ 
     [HttpPost]
     public async Task<ActionResult<PetDto>> CreatePet([FromBody] PetCreateDto dto)
     {
@@ -128,17 +269,27 @@ public class PetsController : ControllerBase
 
         return NoContent();
     }
-
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeletePet(int id)
-    {
-        var pet = await _db.Pets.FindAsync(id);
-        if (pet is null)
-            return NotFound();
+public async Task<IActionResult> DeletePet(int id)
+{
+    var pet = await _db.Pets.FindAsync(id);
+    if (pet is null)
+        return NotFound();
 
-        _db.Pets.Remove(pet);
-        await _db.SaveChangesAsync();
+    var hasVisits = await _db.Visits.AnyAsync(v => v.PetId == id);
+    if (hasVisits)
+        return BadRequest("Bu hayvana ait ziyaret kayıtları var. Silinemez. (Gerekirse pasife alma ekleyelim.)");
 
-        return NoContent();
-    }
+    // Eğer appointment tablosunda PetId varsa onu da kontrol et:
+    var hasAppointments = await _db.Appointments.AnyAsync(a => a.PetId == id);
+    if (hasAppointments)
+        return BadRequest("Bu hayvana ait randevu kayıtları var. Silinemez. (Gerekirse pasife alma ekleyelim.)");
+
+    _db.Pets.Remove(pet);
+    await _db.SaveChangesAsync();
+
+    return NoContent();
+}
+
+
 }

@@ -80,3 +80,21 @@ Thumbs.db
 # Local overrides (opsiyonel)
 **/appsettings.Local.json
 **/appsettings.Development.local.json
+_artifacts/
+backend/publish/
+backend/VetCrm.Api/publish/
+frontend-dist/
+frontend/dist_new/
+*.save
+*.save.*
+*.bak
+*.bak.*
+backend/=
+backend/n
+backend/Cloudflare
+backend/s3
+backend/r2backup
+frontend-dist/
+
+frontend-dist
+frontend-dist/

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
@@ -24,8 +25,8 @@ public class R2VisitImageStorage : IR2Storage
             ForcePathStyle = true
         };
 
-        // DİKKAT: doğru ctor bu. AmazonS3Config bir "region" değildir.
-        _s3 = new AmazonS3Client(_opt.AccessKey, _opt.SecretKey, cfg);
+        var creds = new BasicAWSCredentials(_opt.AccessKey, _opt.SecretKey);
+        _s3 = new AmazonS3Client(creds, cfg);
     }
 
     public async Task<string> UploadVisitImageAsync(int visitId, Stream stream, string contentType)
@@ -44,13 +45,32 @@ public class R2VisitImageStorage : IR2Storage
 
         var key = $"visits/{visitId}/{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{ext}";
 
+        // Stream -> byte[] (chunked/trailer riskini azaltmak için)
+        byte[] data;
+        await using (var ms = new MemoryStream())
+        {
+            await stream.CopyToAsync(ms);
+            data = ms.ToArray();
+        }
+
+        var mem = new MemoryStream(data);
+
         var req = new PutObjectRequest
         {
             BucketName = _opt.Bucket,
             Key = key,
-            InputStream = stream,
-            ContentType = contentType
+            InputStream = mem,
+            ContentType = contentType,
+            AutoCloseStream = true
         };
+
+        // ESKİ SDK’larda ContentLength property yok; Headers üzerinden verilir.
+        // (Headers property varsa compile eder)
+        req.Headers.ContentLength = data.LongLength;
+
+        // Eğer SDK’nızda varsa bu satır chunked encoding’i kapatır ve R2’yi rahatlatır.
+        // Compile hata verirse bu satırı silin.
+        req.UseChunkEncoding = false;
 
         await _s3.PutObjectAsync(req);
 

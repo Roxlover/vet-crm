@@ -6,7 +6,7 @@ public class Visit
 
     public int PetId { get; set; }
     public Pet Pet { get; set; } = null!;
-
+    public decimal? CollectedAmountTl { get; set; }
     public DateTime PerformedAt { get; set; }
 
     public DateOnly? NextDate { get; set; }
@@ -29,6 +29,17 @@ public class Visit
 
     public decimal? CreditAmountTl { get; set; }
     public string? MicrochipNumber { get; set; }
+
+    public enum VisitStatus
+{
+    Pending = 0,     // default
+    Completed = 1,   // Yapıldı
+    Missed = 2       // Yapılmadı (gecikene düşür)
+}
+
+public VisitStatus Status { get; set; } = VisitStatus.Pending;
+public DateTime? StatusUpdatedAt { get; set; }
+
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<VisitPlan> Plans { get; set; } = new List<VisitPlan>();

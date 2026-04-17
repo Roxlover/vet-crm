@@ -12,7 +12,8 @@ public class Pet
     public string? Breed { get; set; }     // ırk
     public DateOnly? BirthDate { get; set; }
     public int? AgeYears { get; set; }
-
+    public int? AgeMonths { get; set; }
+    public bool IsActive { get; set; } = true;
     public string? Notes { get; set; }
 
     public ICollection<Visit> Visits { get; set; } = new List<Visit>();

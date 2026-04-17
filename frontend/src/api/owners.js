@@ -16,3 +16,12 @@ export async function addPetToOwner(ownerId, petPayload) {
   return res.data
 }
 
+export async function fetchOwner(ownerId) {
+  const res = await http.get(`/owners/${ownerId}`)
+  return res.data
+}
+
+export async function deletePet(petId) {
+  const res = await http.delete(`/pets/${petId}`)
+  return res.data
+}

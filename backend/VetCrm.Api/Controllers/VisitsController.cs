@@ -7,7 +7,7 @@ using VetCrm.Api.Services;
 using VetCrm.Api.Storage;
 using VetCrm.Domain.Entities;
 using VetCrm.Infrastructure.Data;
-
+using System.Security.Claims;
 
 namespace VetCrm.Api.Controllers;
 
@@ -29,78 +29,272 @@ public class VisitsController : ControllerBase
         _currentUser = currentUser;
         _storage = storage;
     }
+        
+private void SyncRemindersForVisit(Visit visit, List<VisitPlanCreateDto>? plans)
+{
+    var oldReminders    = _db.Reminders.Where(r => r.VisitId == visit.Id);
+    var oldPlans        = _db.VisitPlans.Where(p => p.VisitId == visit.Id);
+    var oldAppointments = _db.Appointments.Where(a => a.VisitId == visit.Id);
 
-    private void SyncRemindersForVisit(Visit visit, List<VisitPlanCreateDto>? plans)
+    _db.Reminders.RemoveRange(oldReminders);
+    _db.VisitPlans.RemoveRange(oldPlans);
+    _db.Appointments.RemoveRange(oldAppointments);
+
+    if (plans == null || plans.Count == 0)
     {
-        var oldReminders    = _db.Reminders   .Where(r => r.VisitId == visit.Id);
-        var oldPlans        = _db.VisitPlans  .Where(p => p.VisitId == visit.Id);
-        var oldAppointments = _db.Appointments.Where(a => a.VisitId == visit.Id);
-
-        _db.Reminders.RemoveRange(oldReminders);
-        _db.VisitPlans.RemoveRange(oldPlans);
-        _db.Appointments.RemoveRange(oldAppointments);
-
-        if (plans == null || plans.Count == 0)
-        {
-            if (visit.NextDate is null)
-                return;
-
-            var next = visit.NextDate.Value;
-            var due  = next.AddDays(-1);
-
-            _db.Reminders.Add(new Reminder
-            {
-                VisitId = visit.Id,
-                DueDate = due,
-                Status  = ReminderStatus.Pending
-            });
-
-            _db.Appointments.Add(new Appointment
-            {
-                VisitId     = visit.Id,
-                OwnerId     = visit.Pet.OwnerId,
-                PetId       = visit.PetId,
-                ScheduledAt = next.ToDateTime(new TimeOnly(10, 30)),
-                Purpose     = visit.Purpose,
-                DoctorId    = visit.DoctorId,
-            });
-
+        if (visit.NextDate is null)
             return;
-        }
 
-        foreach (var p in plans)
+        var utc = IstanbulDateOnlyToUtc(visit.NextDate.Value);
+
+        _db.Reminders.Add(new Reminder
         {
-            if (p == null || p.Date == default)
-                continue;
+            VisitId = visit.Id,
+            DueDate = visit.NextDate.Value.AddDays(-1),
+            Status  = ReminderStatus.Pending
+        });
 
-            var vp = new VisitPlan
-            {
-                VisitId  = visit.Id,
-                Date     = p.Date,
-                Purpose  = p.Purpose,
-                DoctorId = p.DoctorId,
-            };
-            _db.VisitPlans.Add(vp);
+        _db.Appointments.Add(new Appointment
+        {
+            VisitId     = visit.Id,
+            OwnerId     = visit.Pet.OwnerId,
+            PetId       = visit.PetId,
+            ScheduledAt = utc,                 // ✅ UTC
+            Purpose     = visit.Purpose,
+            DoctorId    = visit.DoctorId,
+        });
 
-            var due = p.Date.AddDays(-1);
-            _db.Reminders.Add(new Reminder
-            {
-                VisitId = visit.Id,
-                DueDate = due,
-                Status  = ReminderStatus.Pending
-            });
+        return;
+    }
 
-            _db.Appointments.Add(new Appointment
+    foreach (var p in plans)
+    {
+        if (p == null || p.Date == default)
+            continue;
+
+        _db.VisitPlans.Add(new VisitPlan
+        {
+            VisitId  = visit.Id,
+            Date     = p.Date,
+            Purpose  = p.Purpose,
+            DoctorId = p.DoctorId,
+        });
+
+        _db.Reminders.Add(new Reminder
+        {
+            VisitId = visit.Id,
+            DueDate = p.Date.AddDays(-1),
+            Status  = ReminderStatus.Pending
+        });
+
+        var utc = IstanbulDateOnlyToUtc(p.Date);
+
+        _db.Appointments.Add(new Appointment
+        {
+            VisitId     = visit.Id,
+            OwnerId     = visit.Pet.OwnerId,
+            PetId       = visit.PetId,
+            ScheduledAt = utc,                
+            Purpose     = p.Purpose,
+            DoctorId    = p.DoctorId,
+        });
+    }
+}
+
+public class UpdateVisitCollectedDto
+{
+    public decimal? CollectedAmountTl { get; set; }
+    public string? Note { get; set; }
+}
+
+[HttpPatch("{id:int}/collected")]
+public async Task<IActionResult> UpdateVisitCollected([FromRoute] int id, [FromBody] UpdateVisitCollectedDto dto)
+{
+    if (dto == null) return BadRequest();
+    if (dto.CollectedAmountTl is < 0) return BadRequest("CollectedAmountTl cannot be negative.");
+
+    var visit = await _db.Visits.FirstOrDefaultAsync(v => v.Id == id);
+    if (visit is null) return NotFound();
+
+    // 1) Visit'e yaz (UI'nın kalıcı görmesi için şart)
+    visit.CollectedAmountTl = dto.CollectedAmountTl;
+
+    // 2) UserId: tahsilatı yapan
+    var actorUserId = _currentUser.UserId ?? visit.CreatedByUserId;
+    if (!actorUserId.HasValue)
+        return Unauthorized("UserId bulunamadı.");
+
+    // 3) Amount
+    var amount = dto.CollectedAmountTl ?? 0m;
+
+    // 4) Idempotent: aynı visit + aynı user için tek satır
+    var existing = await _db.LedgerEntries.FirstOrDefaultAsync(x =>
+        x.VisitId == visit.Id &&
+        x.UserId == actorUserId.Value &&
+        x.IsIncome == true &&
+        x.Category == "VisitCollected"
+    );
+
+    if (amount <= 0m)
+    {
+        if (existing != null) _db.LedgerEntries.Remove(existing);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    var note = string.IsNullOrWhiteSpace(dto.Note)
+        ? $"Visit collected (VisitId={visit.Id})"
+        : dto.Note.Trim();
+
+    if (existing == null)
+    {
+        _db.LedgerEntries.Add(new LedgerEntry
+        {
+            UserId = actorUserId.Value,
+            VisitId = visit.Id,
+            Date = DateOnly.FromDateTime(DateTime.UtcNow),
+            Amount = amount,
+            IsIncome = true,
+            Category = "VisitCollected",
+            Note = note,
+            CreatedAt = DateTime.UtcNow
+        });
+    }
+    else
+    {
+        existing.Amount = amount;
+        existing.Note = note;
+        existing.Date = DateOnly.FromDateTime(DateTime.UtcNow);
+        // existing.CreatedAt dokunma
+    }
+
+    await _db.SaveChangesAsync();
+    return NoContent();
+}
+
+[HttpPatch("{id:int}/status")]
+public async Task<IActionResult> UpdateVisitStatus(int id, [FromBody] VisitStatusUpdateDto dto)
+{
+    var visit = await _db.Visits.FirstOrDefaultAsync(v => v.Id == id);
+    if (visit is null) return NotFound();
+
+    if (dto == null || string.IsNullOrWhiteSpace(dto.Status))
+        return BadRequest("Status zorunludur.");
+
+    // string -> enum
+    Visit.VisitStatus newStatus;
+    switch (dto.Status.Trim().ToLowerInvariant())
+    {
+        case "completed":
+        case "yapildi":
+            newStatus = Visit.VisitStatus.Completed;
+            break;
+
+        case "missed":
+        case "yapilmadi":
+            newStatus = Visit.VisitStatus.Missed;
+            break;
+
+        case "pending":
+            newStatus = Visit.VisitStatus.Pending;
+            break;
+
+        default:
+            return BadRequest("Geçersiz status. (Completed|Missed|Pending)");
+    }
+
+    // idempotent
+    if (visit.Status == newStatus)
+        return NoContent();
+   visit.Status = newStatus;
+
+
+  // --- LEDGER HOOK (user bazlı) ---
+if (visit.CreatedByUserId.HasValue)
+{
+    var userId = visit.CreatedByUserId.Value;
+
+    // Gelir miktarı: Burada kuralı AmountTl üzerinden yazıyorum.
+    // (Eğer sizde gelir = tahsil edilen vs ise sonra değiştiririz.)
+    var total = visit.AmountTl ?? 0m;
+var credit = visit.CreditAmountTl ?? 0m;
+var collected = total - credit;
+if (collected < 0m) collected = 0m;
+
+var amount = collected;
+
+
+    if (newStatus == Visit.VisitStatus.Completed)
+    {
+        if (amount > 0)
+        {
+            // idempotent: var mı?
+            var exists = await _db.LedgerEntries.AnyAsync(x =>
+                x.UserId == userId &&
+                x.VisitId == visit.Id &&
+                x.IsIncome == true
+            );
+
+            if (!exists)
             {
-                VisitId     = visit.Id,
-                OwnerId     = visit.Pet.OwnerId,
-                PetId       = visit.PetId,
-                ScheduledAt = p.Date.ToDateTime(new TimeOnly(10, 30)),
-                Purpose     = p.Purpose,
-                DoctorId    = p.DoctorId,
-            });
+                _db.LedgerEntries.Add(new LedgerEntry
+                {
+                    UserId = userId,
+                    VisitId = visit.Id,
+                    Date = DateOnly.FromDateTime(DateTime.UtcNow),
+                    Amount = amount,
+                    IsIncome = true,
+                    Category = "Visit",
+                    Note = $"Visit Completed (VisitId={visit.Id})",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
         }
     }
+    else
+    {
+        // Completed dışına çekildiyse (Pending/Missed): daha önce yazılmış geliri geri al
+        var incomes = await _db.LedgerEntries
+            .Where(x =>
+                x.UserId == userId &&
+                x.VisitId == visit.Id &&
+                x.IsIncome == true
+            )
+            .ToListAsync();
+
+        if (incomes.Count > 0)
+            _db.LedgerEntries.RemoveRange(incomes);
+    }
+}
+ 
+visit.StatusUpdatedAt = DateTime.UtcNow;
+
+if (newStatus == Visit.VisitStatus.Completed && visit.PerformedAt == default)
+    visit.PerformedAt = DateTime.UtcNow;
+
+await _db.SaveChangesAsync();
+return NoContent();
+
+}
+
+
+[HttpPatch("{id:int}/credit")]
+public async Task<IActionResult> UpdateVisitCredit([FromRoute] int id, [FromBody] UpdateVisitCreditDto dto)
+{
+    if (dto == null) return BadRequest();
+
+    // Negatif olmasın
+    if (dto.CreditAmountTl is < 0)
+        return BadRequest("CreditAmountTl cannot be negative.");
+
+    var visit = await _db.Visits.FirstOrDefaultAsync(v => v.Id == id);
+    if (visit == null) return NotFound();
+
+    visit.CreditAmountTl = dto.CreditAmountTl;
+    await _db.SaveChangesAsync();
+
+    return NoContent();
+}
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<VisitDto>>> GetVisits(
@@ -141,6 +335,8 @@ public class VisitsController : ControllerBase
                 DoctorId = v.DoctorId,
                 DoctorName = v.Doctor != null ? v.Doctor.FullName : null,
                 CreatedByUserId = v.CreatedByUserId,
+                CreditAmountTl = v.CreditAmountTl,
+                CollectedAmountTl = v.CollectedAmountTl,
                 CreatedByUsername = v.CreatedByUsername,
                 CreatedByName = v.CreatedByName,
                 ImageUrl = v.ImageUrl,
@@ -179,71 +375,69 @@ public class VisitsController : ControllerBase
         return Ok(visits);
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<VisitDto>> GetVisit(int id)
+[HttpGet("{id:int}")]
+public async Task<ActionResult<VisitDto>> GetVisit(int id)
+{
+    var v = await _db.Visits
+        .AsNoTracking()
+        .Include(x => x.Pet)
+            .ThenInclude(p => p.Owner)
+        .Include(x => x.CreatedByUser)
+        .Include(x => x.Doctor)
+        .Include(x => x.Images)
+        .Include(x => x.Plans)
+            .ThenInclude(p => p.Doctor)
+        .FirstOrDefaultAsync(x => x.Id == id);
+
+    if (v == null) return NotFound();
+
+    var dto = new VisitDto
     {
-        var dto = await _db.Visits
-            .Include(v => v.Pet)
-                .ThenInclude(p => p.Owner)
-            .Include(v => v.CreatedByUser)
-            .Include(v => v.Doctor)
-            .Include(v => v.Images)
-            .Include(v => v.Plans)
-                .ThenInclude(p => p.Doctor)
-            .Where(v => v.Id == id)
-            .Select(v => new VisitDto
+        Id = v.Id,
+        PetId = v.PetId,
+        PetName = v.Pet?.Name,
+        OwnerId = v.Pet?.OwnerId ?? 0,
+        OwnerName = v.Pet?.Owner?.FullName,
+        PerformedAt = v.PerformedAt,
+        Procedures = v.Procedures,
+        AmountTl = v.AmountTl,
+        Notes = v.Notes,
+        NextDate = v.NextDate,
+        Purpose = v.Purpose,
+        CreatedByUserId = v.CreatedByUserId,
+        CreatedByUsername = v.CreatedByUser?.Username ?? v.CreatedByUsername,
+        CreatedByName = v.CreatedByUser?.FullName ?? v.CreatedByName,
+        DoctorId = v.DoctorId,
+        DoctorName = v.Doctor != null ? v.Doctor.FullName : null,
+        ImageUrl = v.ImageUrl,
+        MicrochipNumber = v.MicrochipNumber,
+        CollectedAmountTl = v.CollectedAmountTl,
+        CreditAmountTl = v.CreditAmountTl,
+
+        Images = (v.Images ?? new List<VisitImage>())
+            .OrderByDescending(i => i.CreatedAt)
+            .Select(i => new VisitImageDto
             {
-                Id = v.Id,
-                PetId = v.PetId,
-                PetName = v.Pet.Name,
-                OwnerId = v.Pet.OwnerId,
-                OwnerName = v.Pet.Owner.FullName,
-                PerformedAt = v.PerformedAt,
-                Procedures = v.Procedures,
-                AmountTl = v.AmountTl,
-                Notes = v.Notes,
-                NextDate = v.NextDate,
-                Purpose = v.Purpose,
-                CreatedByUserId = v.CreatedByUserId,
-                CreatedByUsername = v.CreatedByUsername,
-                CreatedByName = v.CreatedByName,
-                DoctorId = v.DoctorId,
-                DoctorName = v.Doctor != null ? v.Doctor.FullName : null,
-                ImageUrl = v.ImageUrl,
-                MicrochipNumber = v.MicrochipNumber,
-
-                Images = v.Images
-                    .OrderByDescending(i => i.CreatedAt)
-                    .Select(i => new VisitImageDto
-                    {
-                        Id = i.Id,
-                        ImageUrl = i.ImageUrl,
-                        CreatedAt = i.CreatedAt
-                    })
-                    .ToList(),
-
-                Plans = v.Plans
-                    .OrderBy(p => p.Date)
-                    .Select(p => new VisitPlanDto
-                    {
-                        Id = p.Id,
-                        Date = p.Date,
-                        Purpose = p.Purpose,
-                        DoctorId = p.DoctorId,
-                        DoctorName = p.Doctor != null ? p.Doctor.FullName : null
-                    })
-                    .ToList()
+                Id = i.Id,
+                ImageUrl = i.ImageUrl,
+                CreatedAt = i.CreatedAt
             })
-            .FirstOrDefaultAsync();
+            .ToList(),
 
-        if (dto is null)
-            return NotFound();
+        Plans = (v.Plans ?? new List<VisitPlan>())
+            .OrderBy(p => p.Date)
+            .Select(p => new VisitPlanDto
+            {
+                Date = p.Date,
+                Purpose = p.Purpose,
+                DoctorId = p.DoctorId,
+                DoctorName = p.Doctor != null ? p.Doctor.FullName : null
+            })
+            .ToList()
+    };
 
-        if (dto.ImageUrl == null)
-            dto.ImageUrl = dto.Images.FirstOrDefault()?.ImageUrl;
-
-        return Ok(dto);
-    }
+    return Ok(dto);
+}
 
     [HttpPost]
     public async Task<ActionResult<VisitDto>> CreateVisit([FromBody] VisitCreateDto dto)
@@ -289,6 +483,7 @@ public class VisitsController : ControllerBase
                 CreatedByUserId   = _currentUser.UserId,
                 CreatedByUsername = _currentUser.Username,
                 CreatedByName     = _currentUser.FullName,
+                CreditAmountTl = dto.CreditAmountTl,
                 MicrochipNumber   = dto.MicrochipNumber
             };
 
@@ -298,15 +493,11 @@ public class VisitsController : ControllerBase
 
             _db.Visits.Add(visit);
             await _db.SaveChangesAsync();
-            _db.Entry(visit).Reference(v => v.Pet).Load();
 
-            SyncRemindersForVisit(visit, dto.Plans);
-            await _db.SaveChangesAsync();
+            await _db.Entry(visit).Reference(v => v.Pet).LoadAsync();
+            await _db.Entry(visit.Pet).Reference(p => p.Owner).LoadAsync();
 
-            _db.Entry(visit).Reference(v => v.Pet).Load();
-            _db.Entry(visit.Pet).Reference(p => p.Owner).Load();
-
-            SyncRemindersForVisit(visit, dto.Plans);
+            SyncRemindersForVisit(visit, (dto.Plans != null && dto.Plans.Count > 0) ? dto.Plans : null);
             await _db.SaveChangesAsync();
 
             var result = new VisitDto
@@ -372,8 +563,7 @@ public class VisitsController : ControllerBase
         visit.Purpose  = dto.Purpose;
 
 
-        SyncRemindersForVisit(visit, dto.Plans);
-
+        SyncRemindersForVisit(visit, (dto.Plans != null && dto.Plans.Count > 0) ? dto.Plans : null);
         await _db.SaveChangesAsync();
 
         return NoContent();
@@ -429,48 +619,93 @@ public class VisitsController : ControllerBase
 
         return Ok(upcoming);
     }
+  [HttpPost("{id:int}/images")]
+  public async Task<ActionResult<List<VisitImageDto>>> UploadImages(
+    int id,
+    [FromForm] List<IFormFile> files)
+{
+    var visit = await _db.Visits.FindAsync(id);
+    if (visit is null) return NotFound();
 
-    [HttpPost("{id:int}/images")]
-    public async Task<ActionResult<List<VisitImageDto>>> UploadImages(
-        int id,
-        [FromForm] List<IFormFile> files)
+    if (files == null || files.Count == 0)
+        return BadRequest("Dosya yok.");
+
+    var created = new List<VisitImage>();
+    string? lastUrl = null;
+
+    foreach (var file in files)
     {
-        var visit = await _db.Visits.FindAsync(id);
-        if (visit is null)
-            return NotFound();
+        await using var stream = file.OpenReadStream();
 
-        if (files == null || files.Count == 0)
-            return BadRequest("Dosya yok.");
+        var url = await _storage.UploadVisitImageAsync(
+            visitId: visit.Id,
+            stream: stream,
+            contentType: file.ContentType ?? "application/octet-stream"
+        );
 
-        var results = new List<VisitImageDto>();
+        lastUrl = url;
 
-        foreach (var file in files)
+        var image = new VisitImage
         {
-            await using var stream = file.OpenReadStream();
-            var url = await _storage.UploadVisitImageAsync(
-                visitId: visit.Id,
-                stream: stream,
-                contentType: file.ContentType ?? "image/jpeg"
-            );
+            VisitId = visit.Id,
+            ImageUrl = url,
+            CreatedAt = DateTime.UtcNow,
+            // CreatedByUserId varsa burada setleyebilirsin
+        };
 
-            var image = new VisitImage
-            {
-                VisitId  = visit.Id,
-                ImageUrl = url,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _db.VisitImages.Add(image);
-
-            results.Add(new VisitImageDto
-            {
-                Id       = image.Id,
-                ImageUrl = url,
-                CreatedAt = image.CreatedAt
-            });
-        }
-
-        await _db.SaveChangesAsync();
-        return Ok(results);
+        created.Add(image);
     }
+
+    // toplu ekle
+    _db.VisitImages.AddRange(created);
+
+    // tek kural: her zaman en son yüklenen
+    if (!string.IsNullOrWhiteSpace(lastUrl))
+        visit.ImageUrl = lastUrl;
+
+    await _db.SaveChangesAsync();
+
+    var results = created
+        .OrderByDescending(x => x.CreatedAt)
+        .Select(x => new VisitImageDto
+        {
+            Id = x.Id,
+            ImageUrl = x.ImageUrl,
+            CreatedAt = x.CreatedAt
+        })
+        .ToList();
+
+    return Ok(results);
+}
+private static TimeZoneInfo GetIstanbulTimeZone()
+{
+    try
+    {
+        // Linux
+        return TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+    }
+    catch
+    {
+        // Windows
+        return TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+    }
+}
+
+private static DateTime IstanbulDateOnlyToUtc(DateOnly date, int hour = 10, int minute = 30)
+{
+    var tz = GetIstanbulTimeZone();
+
+    var local = new DateTime(
+        date.Year,
+        date.Month,
+        date.Day,
+        hour,
+        minute,
+        0,
+        DateTimeKind.Unspecified
+    );
+
+    return TimeZoneInfo.ConvertTimeToUtc(local, tz);
+}
+
 }

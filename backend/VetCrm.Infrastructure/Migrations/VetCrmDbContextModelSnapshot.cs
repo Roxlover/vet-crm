@@ -73,7 +73,8 @@ namespace VetCrm.Infrastructure.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<string>("Category")
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -87,9 +88,20 @@ namespace VetCrm.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Note")
-                        .HasColumnType("text");
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("VisitId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("VisitId");
 
                     b.ToTable("LedgerEntries");
                 });
@@ -171,6 +183,9 @@ namespace VetCrm.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AgeMonths")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("AgeYears")
                         .HasColumnType("integer");
 
@@ -179,6 +194,9 @@ namespace VetCrm.Infrastructure.Migrations
 
                     b.Property<string>("Breed")
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -332,6 +350,12 @@ namespace VetCrm.Infrastructure.Migrations
                     b.Property<string>("Purpose")
                         .HasColumnType("text");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("StatusUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
@@ -435,6 +459,24 @@ namespace VetCrm.Infrastructure.Migrations
                     b.Navigation("Owner");
 
                     b.Navigation("Pet");
+
+                    b.Navigation("Visit");
+                });
+
+            modelBuilder.Entity("VetCrm.Domain.Entities.LedgerEntry", b =>
+                {
+                    b.HasOne("VetCrm.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("VetCrm.Domain.Entities.Visit", "Visit")
+                        .WithMany()
+                        .HasForeignKey("VisitId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("User");
 
                     b.Navigation("Visit");
                 });
