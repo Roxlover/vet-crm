@@ -7,127 +7,8 @@
       </p>
     </header>
 
-    <!-- LİSTE / TAKVİM SEKMELERİ -->
-    <section class="view-tabs">
-      <button
-        class="tab-btn"
-        :class="{ active: activeView === 'list' }"
-        @click="activeView = 'list'"
-      >
-        Liste
-      </button>
-      <button
-        class="tab-btn"
-        :class="{ active: activeView === 'calendar' }"
-        @click="showCalendar"
-      >
-        Takvim
-      </button>
-    </section>
-
-    <!-- LİSTE GÖRÜNÜMÜ -->
-    <section v-if="activeView === 'list'">
-      <!-- 4 KUTU -->
-      <section class="cards">
-        <div
-          class="card kpi today"
-          :class="{ active: activeFilter === 'today' }"
-          @click="loadList('today')"
-        >
-          <h2>Bugün</h2>
-          <p class="value">{{ summary?.pendingToday ?? 0 }}</p>
-          <p class="label">hatırlatma</p>
-        </div>
-
-        <div
-          class="card kpi tomorrow"
-          :class="{ active: activeFilter === 'tomorrow' }"
-          @click="loadList('tomorrow')"
-        >
-          <h2>Yarın</h2>
-          <p class="value">{{ summary?.pendingTomorrow ?? 0 }}</p>
-          <p class="label">hatırlatma</p>
-        </div>
-
-        <div
-          class="card kpi overdue"
-          :class="{ active: activeFilter === 'overdue' }"
-          @click="loadList('overdue')"
-        >
-          <h2>Geciken</h2>
-          <p class="value">{{ summary?.overdue ?? 0 }}</p>
-          <p class="label">henüz işlenmemiş</p>
-        </div>
-
-        <div
-          class="card kpi done"
-          :class="{ active: activeFilter === 'done' }"
-          @click="loadList('done')"
-        >
-          <h2>İşlem Yapıldı</h2>
-          <p class="value">{{ summary?.completed ?? 0 }}</p>
-          <p class="label">tamamlanan</p>
-        </div>
-      </section>
-
-      <!-- TABLO -->
-      <section class="card upcoming">
-        <div class="card-header">
-          <h2>{{ titleForFilter() }}</h2>
-        </div>
-
-        <div v-if="listLoading" class="state">
-          Yükleniyor...
-        </div>
-
-        <div
-          v-else-if="!reminderList || reminderList.length === 0"
-          class="state"
-        >
-          Kayıt bulunamadı.
-        </div>
-
-        <div v-else class="table-wrapper">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Hatırlatma</th>
-                <th>Randevu</th>
-                <th>Hasta</th>
-                <th>Sahip</th>
-                <th>İşlem</th>
-              </tr>
-            </thead>
-            <tbody>
-            <tr
-              v-for="item in reminderList"
-              :key="item?.id"
-              @click="item && openVisit(item)"
-              class="clickable-row"
-            >
-              <td>{{ formatDate(item?.reminderDate) }}</td>
-              <td>{{ formatDate(item?.appointmentDate) }}</td>
-              <td>{{ item?.petName || '—' }}</td>
-              <td>{{ item?.ownerName || '—' }}</td>
-              <td class="procedure-cell">
-                {{ item?.procedures || '—' }}
-                <span
-                  v-if="item?.creditAmountTl"
-                  class="credit-pill"
-                >
-                  • Veresiye: {{ item.creditAmountTl }} TL
-                </span>
-              </td>
-            </tr>
-
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </section>
-
     <!-- TAKVİM GÖRÜNÜMÜ -->
-    <section v-else class="calendar-section">
+    <section class="calendar-section">
       <section class="card calendar-card">
         <div class="calendar-header">
           <div class="calendar-nav">
@@ -416,40 +297,6 @@
         </p>
 
         <hr class="divider" />
-
-        <!-- İŞLEM DURUMU (Yapıldı / Yapılmadı) -->
-        <div
-          v-if="canEditIslemDurumu"
-          class="status-row"
-        >
-          <div class="status-text">
-            <strong>İşlem durumu:</strong>
-            <span>Bu işlem işleme alındı mı?</span>
-          </div>
-         <div class="status-buttons">
-<button
-  class="btn-fail"
-  type="button"
-  @click="markReminder(false)"
-  :disabled="statusSaving"
->
-  Yapılmadı
-</button>
-
-<button
-  class="btn-success"
-  type="button"
-  @click="markReminder(true)"
-  :disabled="statusSaving"
->
-  Yapıldı
-</button>
-
-</div>
-
-<p v-if="statusError" class="state state-error">{{ statusError }}</p>
-
-        </div>
 
 <!-- Görsel alanı (çoklu) -->
 <div v-if="selectedVisit">
@@ -771,7 +618,7 @@ const collectedEditOpen = ref(false)
 const collectedInput = ref(null)
 const collectedSaving = ref(false)
 const collectedError = ref('')
-const activeView = ref('list')          // 'list' | 'calendar'
+const activeView = ref('calendar')      // sadece 'calendar'
 const appointmentSaving = ref(false)
 const selectedReminderId = ref(null)
 const imageUploading = ref(false)
@@ -1077,8 +924,7 @@ async function onVisitImagesSelected(e) {
 }
 
 onMounted(async () => {
-  await loadSummary()
-  await loadList('upcoming')
+  await goToToday()
 })
 
 
