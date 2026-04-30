@@ -7,127 +7,8 @@
       </p>
     </header>
 
-    <!-- LİSTE / TAKVİM SEKMELERİ -->
-    <section class="view-tabs">
-      <button
-        class="tab-btn"
-        :class="{ active: activeView === 'list' }"
-        @click="activeView = 'list'"
-      >
-        Liste
-      </button>
-      <button
-        class="tab-btn"
-        :class="{ active: activeView === 'calendar' }"
-        @click="showCalendar"
-      >
-        Takvim
-      </button>
-    </section>
-
-    <!-- LİSTE GÖRÜNÜMÜ -->
-    <section v-if="activeView === 'list'">
-      <!-- 4 KUTU -->
-      <section class="cards">
-        <div
-          class="card kpi today"
-          :class="{ active: activeFilter === 'today' }"
-          @click="loadList('today')"
-        >
-          <h2>Bugün</h2>
-          <p class="value">{{ summary?.pendingToday ?? 0 }}</p>
-          <p class="label">hatırlatma</p>
-        </div>
-
-        <div
-          class="card kpi tomorrow"
-          :class="{ active: activeFilter === 'tomorrow' }"
-          @click="loadList('tomorrow')"
-        >
-          <h2>Yarın</h2>
-          <p class="value">{{ summary?.pendingTomorrow ?? 0 }}</p>
-          <p class="label">hatırlatma</p>
-        </div>
-
-        <div
-          class="card kpi overdue"
-          :class="{ active: activeFilter === 'overdue' }"
-          @click="loadList('overdue')"
-        >
-          <h2>Geciken</h2>
-          <p class="value">{{ summary?.overdue ?? 0 }}</p>
-          <p class="label">henüz işlenmemiş</p>
-        </div>
-
-        <div
-          class="card kpi done"
-          :class="{ active: activeFilter === 'done' }"
-          @click="loadList('done')"
-        >
-          <h2>İşlem Yapıldı</h2>
-          <p class="value">{{ summary?.completed ?? 0 }}</p>
-          <p class="label">tamamlanan</p>
-        </div>
-      </section>
-
-      <!-- TABLO -->
-      <section class="card upcoming">
-        <div class="card-header">
-          <h2>{{ titleForFilter() }}</h2>
-        </div>
-
-        <div v-if="listLoading" class="state">
-          Yükleniyor...
-        </div>
-
-        <div
-          v-else-if="!reminderList || reminderList.length === 0"
-          class="state"
-        >
-          Kayıt bulunamadı.
-        </div>
-
-        <div v-else class="table-wrapper">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Hatırlatma</th>
-                <th>Randevu</th>
-                <th>Hasta</th>
-                <th>Sahip</th>
-                <th>İşlem</th>
-              </tr>
-            </thead>
-            <tbody>
-            <tr
-              v-for="item in reminderList"
-              :key="item?.id"
-              @click="item && openVisit(item)"
-              class="clickable-row"
-            >
-              <td>{{ formatDate(item?.reminderDate) }}</td>
-              <td>{{ formatDate(item?.appointmentDate) }}</td>
-              <td>{{ item?.petName || '—' }}</td>
-              <td>{{ item?.ownerName || '—' }}</td>
-              <td class="procedure-cell">
-                {{ item?.procedures || '—' }}
-                <span
-                  v-if="item?.creditAmountTl"
-                  class="credit-pill"
-                >
-                  • Veresiye: {{ item.creditAmountTl }} TL
-                </span>
-              </td>
-            </tr>
-
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </section>
-
     <!-- TAKVİM GÖRÜNÜMÜ -->
-    <section v-else class="calendar-section">
+    <section class="calendar-section">
       <section class="card calendar-card">
         <div class="calendar-header">
           <div class="calendar-nav">
@@ -746,8 +627,6 @@
 <script setup>
 import { onMounted, ref, computed, reactive, nextTick } from 'vue'
 import {
-  fetchReminderSummary,
-  fetchReminders,
   fetchVisitDetail,
   fetchDoctors,
   fetchOwnerPets,
@@ -771,14 +650,10 @@ const collectedEditOpen = ref(false)
 const collectedInput = ref(null)
 const collectedSaving = ref(false)
 const collectedError = ref('')
-const activeView = ref('list')          // 'list' | 'calendar'
 const appointmentSaving = ref(false)
 const selectedReminderId = ref(null)
 const imageUploading = ref(false)
 const imageUploadError = ref('')
-const loading = ref(false)
-const error = ref('')
-const summary = ref(null)
 const statusSaving = ref(false)
 const statusError = ref('')
 const visitDetail = ref(null)           // (şimdilik kullanılmıyor)
@@ -791,10 +666,6 @@ const visitSaving = ref(false)
 const showDetail = ref(false)
 const detailLoading = ref(false)
 const selectedVisit = ref(null)
-
-const listLoading = ref(false)
-const reminderList = ref([])
-const activeFilter = ref('upcoming')
 const collectedShown = computed(() =>
   selectedVisit.value?.collectedAmountTl ??
   selectedVisit.value?.CollectedAmountTl ??
@@ -923,9 +794,6 @@ async function saveCollected() {
     visitDetail.value = fresh
 
     collectedEditOpen.value = false
-
-    await loadSummary()
-    await loadList(activeFilter.value)
   } catch (e) {
     console.error('[COLLECTED] save error', e)
     const msg = e?.response?.data
@@ -1035,9 +903,6 @@ const performedAt = `${performedAtLocal}:00`
 
     visitEditOpen.value = false
     visitDraft.value = null
-
-    await loadSummary()
-    await loadList(activeFilter.value)
   } catch (e) {
     console.error('[VISIT_EDIT] save error', e)
     const msg = e?.response?.data
@@ -1077,17 +942,11 @@ async function onVisitImagesSelected(e) {
 }
 
 onMounted(async () => {
-  await loadSummary()
-  await loadList('upcoming')
+  await goToToday()
 })
 
 
-async function showCalendar() {
-  activeView.value = 'calendar'
-  if (calendarWeeks.value.length === 0) {
-    await goToToday()
-  }
-}
+// showCalendar removed
 
 async function markSelectedVisitCompleted() {
   if (!selectedVisit.value?.id) return
@@ -1101,11 +960,6 @@ async function markSelectedVisitCompleted() {
     // detail refresh
     const detail = await fetchVisitDetail(selectedVisit.value.id)
     selectedVisit.value = detail?.data ?? detail
-
-    // KPI + liste refresh
-    await loadSummary()
-    await loadList('done') // Completed olduysa done'a al
-
   } catch (e) {
     console.error(e)
     statusError.value = 'Durum güncellenemedi.'
@@ -1126,13 +980,6 @@ async function markSelectedVisitMissed() {
     // detail refresh
     const detail = await fetchVisitDetail(selectedVisit.value.id)
     selectedVisit.value = detail?.data ?? detail
-
-    // KPI + liste refresh
-    await loadSummary()
-
-    // Missed olduysa done'dan çıkmalı. Overdue listesine geç.
-    await loadList('overdue')
-
   } catch (e) {
     console.error(e)
     statusError.value = 'Durum güncellenemedi.'
@@ -1446,14 +1293,8 @@ async function saveCredit() {
       selectedVisit.value = { ...selectedVisit.value, creditAmountTl: val }
     }
 
-    // 5) Liste/KPI güncellensin
-    await loadSummary()
-    await loadList(activeFilter.value)
-
     // 6) Takvim açıksa takvimi tazele
-    if (activeView.value === 'calendar') {
-      await loadCalendarForMonth(currentMonth.value)
-    }
+    await loadCalendarForMonth(currentMonth.value)
 
     // 7) İstersen backend’den taze veri çek (modal kesin doğru kalsın)
     try {
@@ -1490,13 +1331,9 @@ async function markReminder(completed) {
       !completed // yapılmadı seçilince overdue'a düşürmek istiyorsan kalsın
     )
 
-    // KPI güncelle
-    await loadSummary()
-
     // Listeyi doğru filtreye al
     const nextFilter = completed ? 'done' : 'overdue'
     activeFilter.value = nextFilter
-    await loadList(nextFilter)
 
     // Modal açıksa detail'i tazele + collected alanını yeniden hesapla
     const visitId =
@@ -1600,20 +1437,7 @@ function closeDetail() {
   statusError.value = ''
 }
 
-async function loadSummary() {
-  loading.value = true
-  error.value = ''
-  try {
-    const result = await fetchReminderSummary()
-    console.log('SUMMARY FROM API >>>', result)
-    summary.value = result
-  } catch (e) {
-    console.error(e)
-    error.value = 'Hatırlatma özeti yüklenirken bir hata oluştu.'
-  } finally {
-    loading.value = false
-  }
-}
+// loadSummary removed
 
 function isTimeWithinWorkingHours(timeStr) {
   if (!timeStr) return false
@@ -1674,8 +1498,6 @@ async function submitAppointment() {
 
   try {
     await createAppointment(payload)
-    await loadSummary()
-    await loadList(activeFilter.value)
     await loadCalendarForMonth(currentMonth.value)
     showNewAppointment.value = false
   }finally {
@@ -1684,50 +1506,9 @@ async function submitAppointment() {
 
 }
 
-async function loadList(filter) {
-  activeFilter.value = filter
-  listLoading.value = true
-  try {
-    const raw = await fetchReminders(filter)
+// loadList removed
 
-    const cleaned = (raw || []).filter(
-      (r) =>
-        r &&
-        (r.id != null || r.Id != null) &&
-        (r.petName || r.ownerName)
-    )
-
-    // ÇİFT GÖRÜNME FIX: id bazlı dedupe
-    reminderList.value = uniqById(cleaned)
-  } catch (e) {
-    console.error('loadList error', e)
-    reminderList.value = []
-  } finally {
-    listLoading.value = false
-  }
-}
-
-
-function formatDate(dateOnlyString) {
-  if (!dateOnlyString) return '—'
-  const [y, m, d] = dateOnlyString.split('-')
-  return `${d}.${m}.${y}`
-}
-
-function titleForFilter() {
-  switch (activeFilter.value) {
-    case 'today':
-      return 'Bugünkü hatırlatmalar'
-    case 'tomorrow':
-      return 'Yarının hatırlatmaları'
-    case 'overdue':
-      return 'Geciken hatırlatmalar'
-    case 'done':
-      return 'Tamamlanan işlemler'
-    default:
-      return 'Yaklaşan hatırlatmalar'
-  }
-}
+// titleForFilter removed
 </script>
 
 <style scoped>
@@ -1758,131 +1539,7 @@ function titleForFilter() {
   color: #6b7280;
 }
 
-.cards {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-@media (max-width: 900px) {
-  .cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 600px) {
-  .cards {
-    grid-template-columns: 1fr;
-  }
-}
-
-.card {
-  background: #ffffff;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-}
-
-.kpi {
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.kpi:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
-}
-
-.kpi.active {
-  outline: 2px solid #4ade80;
-}
-
-.kpi h2 {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #4b5563;
-}
-
-.kpi .value {
-  margin: 0.25rem 0 0;
-  font-size: 2rem;
-  font-weight: 700;
-}
-
-.kpi .label {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.today {
-  border-top: 3px solid #22c55e;
-}
-
-.tomorrow {
-  border-top: 3px solid #0ea5e9;
-}
-
-.overdue {
-  border-top: 3px solid #f97316;
-}
-
-.card-header {
-  margin-bottom: 0.5rem;
-}
-
-.card-header h2 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.state {
-  font-size: 0.9rem;
-  color: #6b7280;
-  padding: 0.4rem 0;
-}
-
-.table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-  min-width: 640px;
-}
-
-.table th,
-.table td {
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.table th {
-  text-align: left;
-  font-weight: 600;
-  color: #4b5563;
-  font-size: 0.8rem;
-}
-
-.procedure-cell {
-  max-width: 320px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.clickable-row {
-  cursor: pointer;
-}
-
-.clickable-row:hover {
-  background: #f9fafb;
-}
+/* .cards styles removed */
 
 .modal-backdrop {
   position: fixed;
@@ -2056,25 +1713,7 @@ function titleForFilter() {
   font-size: 0.85rem;
 }
 
-.view-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.tab-btn {
-  border: none;
-  padding: 0.35rem 0.9rem;
-  border-radius: 999px;
-  background: #e5e7eb;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.tab-btn.active {
-  background: #111827;
-  color: #fff;
-}
+/* .view-tabs styles removed */
 
 .visit-image-thumb img {
   max-width: 100%;
