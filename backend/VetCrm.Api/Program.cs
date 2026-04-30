@@ -136,6 +136,13 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// ✅ Otomatik Migration Uygula
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<VetCrmDbContext>();
+    db.Database.Migrate();
+}
+
 var enableSwagger = builder.Configuration.GetValue<bool>("EnableSwagger");
 if (app.Environment.IsDevelopment() || enableSwagger)
 {
