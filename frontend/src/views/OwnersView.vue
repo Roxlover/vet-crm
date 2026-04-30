@@ -832,6 +832,7 @@ textarea:focus {
 
 .kv {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
 
@@ -893,8 +894,29 @@ textarea:focus {
 }
 
 @media (max-width: 768px) {
+  .modal-backdrop {
+    padding: 8px;
+  }
+  
+  .modal {
+    max-height: 96vh;
+    border-radius: 8px;
+  }
+
+  .modal-body {
+    padding: 12px;
+  }
+
   .pet-add-grid {
     grid-template-columns: 1fr;
+  }
+
+  .kv {
+    grid-template-columns: 1fr;
+  }
+  
+  .note-textarea {
+    font-size: 16px; /* Mobilde zoom yapmasın diye */
   }
 }
 
