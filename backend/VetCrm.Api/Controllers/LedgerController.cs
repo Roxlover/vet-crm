@@ -342,9 +342,9 @@ var visits = await visitsQ.ToListAsync();
                 {
                     VisitId = v.Id,
                     PerformedAt = v.PerformedAt,
-                    PetName = v.Pet!.Name,
-                    OwnerName = v.Pet.Owner!.FullName,
-                    OwnerPhoneE164 = v.Pet.Owner.PhoneE164,
+                    PetName = v.Pet?.Name ?? "—",
+                    OwnerName = v.Pet?.Owner?.FullName ?? "—",
+                    OwnerPhoneE164 = v.Pet?.Owner?.PhoneE164,
                     TotalAmount = total,
                     CollectedAmount = collected,
                     CreditAmount = credit,
