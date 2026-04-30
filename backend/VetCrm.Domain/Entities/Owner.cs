@@ -13,4 +13,5 @@ public class Owner
 
     // Navigation
     public ICollection<Pet> Pets { get; set; } = new List<Pet>();
+    public ICollection<OwnerNote> Notes { get; set; } = new List<OwnerNote>();
 }

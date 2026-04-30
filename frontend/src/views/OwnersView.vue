@@ -12,9 +12,18 @@
       <div class="card">
         <div class="card-header">
           <h2>Liste</h2>
-          <button class="btn btn-sm" @click="loadOwners" :disabled="loading">
-            Yenile
-          </button>
+          <div class="header-actions">
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="Ara (İsim veya Telefon)..." 
+              class="search-input"
+              @input="handleSearch"
+            />
+            <button class="btn btn-sm" @click="loadOwners" :disabled="loading">
+              Yenile
+            </button>
+          </div>
         </div>
 
         <div v-if="loading" class="state">Yükleniyor...</div>
@@ -141,10 +150,42 @@
         </div>
 
         <div v-else class="modal-body">
-          <div class="kv">
-            <div><strong>Ad Soyad:</strong> {{ ownerDetail.fullName }}</div>
-            <div><strong>Telefon:</strong> {{ ownerDetail.phoneE164 }}</div>
           </div>
+          
+          <!-- ✅ Notlar Bölümü (En Üstte) -->
+          <section class="notes-section">
+            <h4 class="section-title">Hasta Sahibi Notları</h4>
+            
+            <div class="note-add">
+              <textarea 
+                v-model="noteText" 
+                placeholder="Bu hasta sahibi için yeni bir not yazın..."
+                rows="2"
+                class="note-textarea"
+              ></textarea>
+              <div class="note-add-actions">
+                <button 
+                  class="btn btn-sm" 
+                  type="button" 
+                  @click="handleAddNote" 
+                  :disabled="noteAdding || !noteText.trim()"
+                >
+                  {{ noteAdding ? 'Ekleniyor...' : 'Not Ekle' }}
+                </button>
+                <span v-if="noteError" class="state state-error">{{ noteError }}</span>
+              </div>
+            </div>
+
+            <div v-if="ownerDetail.notes && ownerDetail.notes.length > 0" class="notes-history">
+              <div v-for="note in ownerDetail.notes" :key="note.id" class="note-item">
+                <div class="note-content">{{ note.note }}</div>
+                <div class="note-meta">
+                  {{ new Date(note.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
+                </div>
+              </div>
+            </div>
+            <p v-else class="muted no-notes">Henüz not eklenmemiş.</p>
+          </section>
 
           <h4 class="section-title">Evcil Hayvanlar</h4>
 
@@ -227,9 +268,10 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { fetchOwners, createOwner, fetchOwner, addPetToOwner, deletePet } from '../api/owners'
+import { fetchOwners, createOwner, fetchOwner, addPetToOwner, deletePet, addOwnerNote, searchOwners } from '../api/owners'
 
 const owners = ref([])
+const searchQuery = ref('')
 const loading = ref(false)
 const error = ref('')
 const petDeleteError = ref('')
@@ -244,6 +286,10 @@ const formSuccess = ref('')
 
 const petAdding = ref(false)
 const petAddError = ref('')
+
+const noteText = ref('')
+const noteAdding = ref(false)
+const noteError = ref('')
 
 const form = reactive({
   fullName: '',
@@ -276,6 +322,7 @@ function resetNewPet() {
 async function loadOwners() {
   loading.value = true
   error.value = ''
+  searchQuery.value = ''
   try {
     const res = await fetchOwners()
     owners.value = res?.data ?? res
@@ -285,6 +332,27 @@ async function loadOwners() {
   } finally {
     loading.value = false
   }
+}
+
+let searchTimeout = null
+function handleSearch() {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(async () => {
+    if (!searchQuery.value.trim()) {
+      loadOwners()
+      return
+    }
+    
+    loading.value = true
+    try {
+      const res = await searchOwners(searchQuery.value.trim())
+      owners.value = res?.data ?? res
+    } catch (err) {
+      console.error(err)
+    } finally {
+      loading.value = false
+    }
+  }, 400)
 }
 
 async function openOwnerDetail(id) {
@@ -342,6 +410,26 @@ async function addPet() {
     petAddError.value = 'Pet eklenirken hata oluştu.'
   } finally {
     petAdding.value = false
+  }
+}
+
+async function handleAddNote() {
+  if (!selectedOwner.value || !noteText.value.trim()) return
+
+  noteError.value = ''
+  noteAdding.value = true
+  try {
+    await addOwnerNote(selectedOwner.value, noteText.value.trim())
+    noteText.value = ''
+    
+    // Yenile
+    const res = await fetchOwner(selectedOwner.value)
+    ownerDetail.value = res?.data ?? res
+  } catch (err) {
+    console.error(err)
+    noteError.value = 'Not eklenirken bir hata oluştu.'
+  } finally {
+    noteAdding.value = false
   }
 }
 
@@ -467,6 +555,22 @@ onMounted(loadOwners)
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
+  gap: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.search-input {
+  max-width: 200px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
 }
 
 .card-header h2 {
@@ -784,5 +888,79 @@ textarea:focus {
   .pet-add-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Notes Section */
+.notes-section {
+  margin: 1rem 0 1.5rem;
+  padding: 1rem;
+  background: #fdfaf3;
+  border-radius: 12px;
+  border: 1px solid #f3e8d2;
+}
+
+.note-add {
+  margin-bottom: 1rem;
+}
+
+.note-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 60px;
+  margin-bottom: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.note-add-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notes-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.note-item {
+  padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.note-content {
+  font-size: 0.9rem;
+  color: #1e293b;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.note-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 6px;
+  text-align: right;
+}
+
+.no-notes {
+  font-size: 0.85rem;
+  font-style: italic;
+  margin: 0.5rem 0;
+}
+
+.notes-history::-webkit-scrollbar {
+  width: 5px;
+}
+
+.notes-history::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
 }
 </style>

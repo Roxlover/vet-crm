@@ -12,6 +12,7 @@ public class OwnerDto
     public int PetCount { get; set; }
 
     public List<OwnerPetFullDto> Pets { get; set; } = new();
+    public List<OwnerNoteDto> Notes { get; set; } = new();
 
     public static (int years, int months)? CalcAge(DateOnly? birthDate)
     {
@@ -47,4 +48,16 @@ public class OwnerPetFullDto
 
     public int? AgeYears { get; set; }
     public int? AgeMonths { get; set; }
+}
+
+public class OwnerNoteDto
+{
+    public int Id { get; set; }
+    public string Note { get; set; } = null!;
+    public DateTime CreatedAt { get; set; }
+}
+
+public class AddOwnerNoteRequest
+{
+    public string Note { get; set; } = null!;
 }

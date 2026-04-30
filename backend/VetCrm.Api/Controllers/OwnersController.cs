@@ -60,6 +60,7 @@ public async Task<ActionResult<OwnerDto>> GetOwner(int id)
 {
     var ownerEntity = await _db.Owners
         .Include(o => o.Pets)
+        .Include(o => o.Notes)
         .FirstOrDefaultAsync(o => o.Id == id);
 
     if (ownerEntity is null)
@@ -90,6 +91,15 @@ public async Task<ActionResult<OwnerDto>> GetOwner(int id)
                     AgeYears = age?.years,
                     AgeMonths = age?.months
                 };
+            })
+            .ToList(),
+        Notes = ownerEntity.Notes
+            .OrderByDescending(n => n.CreatedAt)
+            .Select(n => new OwnerNoteDto
+            {
+                Id = n.Id,
+                Note = n.Note,
+                CreatedAt = n.CreatedAt
             })
             .ToList()
     };
@@ -209,6 +219,34 @@ var pet = new Pet
         breed = pet.Breed,
         birthDate = pet.BirthDate,
         notes = pet.Notes
+    });
+}
+
+[HttpPost("{ownerId}/notes")]
+public async Task<ActionResult> AddNoteToOwner(int ownerId, [FromBody] AddOwnerNoteRequest request)
+{
+    var owner = await _db.Owners.FindAsync(ownerId);
+    if (owner == null)
+        return NotFound();
+
+    if (string.IsNullOrWhiteSpace(request.Note))
+        return BadRequest("Not içeriği boş olamaz.");
+
+    var note = new OwnerNote
+    {
+        OwnerId = ownerId,
+        Note = request.Note.Trim(),
+        CreatedAt = DateTime.UtcNow
+    };
+
+    _db.OwnerNotes.Add(note);
+    await _db.SaveChangesAsync();
+
+    return Ok(new OwnerNoteDto
+    {
+        Id = note.Id,
+        Note = note.Note,
+        CreatedAt = note.CreatedAt
     });
 }
  

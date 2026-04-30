@@ -25,3 +25,13 @@ export async function deletePet(petId) {
   const res = await http.delete(`/pets/${petId}`)
   return res.data
 }
+
+export async function addOwnerNote(ownerId, note) {
+  const res = await http.post(`/owners/${ownerId}/notes`, { note })
+  return res.data
+}
+
+export async function searchOwners(query) {
+  const res = await http.get('/owners/search', { params: { query } })
+  return res.data
+}

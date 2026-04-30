@@ -21,6 +21,7 @@ public class VetCrmDbContext : DbContext
     public DbSet<Notification> Notifications { get; set; } = null!;
     public DbSet<VisitPlan> VisitPlans { get; set; } = null!;
     public DbSet<Appointment> Appointments { get; set; } = null!;
+    public DbSet<OwnerNote> OwnerNotes { get; set; } = null!;
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -154,6 +155,16 @@ public class VetCrmDbContext : DbContext
                 .WithMany(v => v.Images)
                 .HasForeignKey(x => x.VisitId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OwnerNote>(b =>
+        {
+            b.HasOne(x => x.Owner)
+                .WithMany(o => o.Notes)
+                .HasForeignKey(x => x.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.Property(x => x.Note).IsRequired();
+            b.Property(x => x.CreatedAt).HasDefaultValueSql("NOW()");
         });
 
     }
