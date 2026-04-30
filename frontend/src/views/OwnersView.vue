@@ -150,6 +150,9 @@
         </div>
 
         <div v-else class="modal-body">
+          <div class="kv">
+            <div><strong>Ad Soyad:</strong> {{ ownerDetail.fullName }}</div>
+            <div><strong>Telefon:</strong> {{ ownerDetail.phoneE164 }}</div>
           </div>
           
           <!-- ✅ Notlar Bölümü (En Üstte) -->
