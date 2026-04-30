@@ -298,40 +298,6 @@
 
         <hr class="divider" />
 
-        <!-- İŞLEM DURUMU (Yapıldı / Yapılmadı) -->
-        <div
-          v-if="canEditIslemDurumu"
-          class="status-row"
-        >
-          <div class="status-text">
-            <strong>İşlem durumu:</strong>
-            <span>Bu işlem işleme alındı mı?</span>
-          </div>
-         <div class="status-buttons">
-<button
-  class="btn-fail"
-  type="button"
-  @click="markReminder(false)"
-  :disabled="statusSaving"
->
-  Yapılmadı
-</button>
-
-<button
-  class="btn-success"
-  type="button"
-  @click="markReminder(true)"
-  :disabled="statusSaving"
->
-  Yapıldı
-</button>
-
-</div>
-
-<p v-if="statusError" class="state state-error">{{ statusError }}</p>
-
-        </div>
-
 <!-- Görsel alanı (çoklu) -->
 <div v-if="selectedVisit">
   <div
