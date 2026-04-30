@@ -803,6 +803,9 @@ textarea:focus {
 
 .modal {
   width: min(820px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
@@ -819,6 +822,8 @@ textarea:focus {
 
 .modal-body {
   padding: 16px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .modal-state {
