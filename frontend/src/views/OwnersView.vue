@@ -196,6 +196,10 @@
                       <strong>{{ p.name }}</strong>
                       <span>{{ p.species }} <template v-if="p.breed">({{ p.breed }})</template></span>
                     </div>
+                    <div class="p-budget">
+                      <span class="total-badge" title="Toplam Bütçe">💰 {{ p.totalAmount?.toFixed(2) }} ₺</span>
+                      <span v-if="p.totalCredit > 0" class="credit-badge" title="Veresiye">⏳ {{ p.totalCredit?.toFixed(2) }} ₺</span>
+                    </div>
                     <button class="delete-icon-btn" @click.stop="removePet(p.id)">🗑️</button>
                   </div>
                   <div v-if="!ownerDetail.pets?.length" class="empty-pets-hint">
@@ -960,6 +964,28 @@ onMounted(loadOwners)
 .p-info {
   display: flex;
   flex-direction: column;
+}
+
+.p-budget {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.total-badge {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--success);
+}
+
+.credit-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--danger);
+  background: #fef2f2;
+  padding: 2px 6px;
+  border-radius: 6px;
 }
 
 .p-info strong {

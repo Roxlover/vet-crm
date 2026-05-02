@@ -124,12 +124,12 @@
 
                 <div class="visit-finances">
                   <div class="finance-item">
-                    <span class="label">Tutar</span>
-                    <span class="value" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.amountTl || v.AmountTl) }}</span>
+                    <span class="label">Alınan Bütçe</span>
+                    <span class="value success" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.amountTl || v.AmountTl) }}</span>
                     <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.amountTl" class="edit-input tiny" />
                   </div>
                   <div class="finance-item">
-                    <span class="label">Veresiye</span>
+                    <span class="label">Veresiye (Borç)</span>
                     <span class="value danger" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.creditAmountTl || v.CreditAmountTl) }}</span>
                     <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.creditAmountTl" class="edit-input tiny" />
                   </div>

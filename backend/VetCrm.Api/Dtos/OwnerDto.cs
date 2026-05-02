@@ -48,6 +48,9 @@ public class OwnerPetFullDto
 
     public int? AgeYears { get; set; }
     public int? AgeMonths { get; set; }
+
+    public decimal TotalAmount { get; set; }
+    public decimal TotalCredit { get; set; }
 }
 
 public class OwnerNoteDto
