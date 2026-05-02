@@ -117,10 +117,7 @@
         
         <div v-else-if="ownerDetail" class="modal-content">
           <header class="modal-header-section">
-            <div class="owner-avatar-large">
-              {{ ownerDetail.fullName[0].toUpperCase() }}
-            </div>
-            <div class="owner-main-info">
+            <div class="owner-main-info" style="text-align: center; width: 100%;">
               <h2>{{ ownerDetail.fullName }}</h2>
               <div class="contact-pill">
                 <span>📞 {{ ownerDetail.phoneE164 }}</span>
@@ -189,12 +186,17 @@
                 </div>
 
                 <div class="pets-mini-list">
-                  <div v-for="p in (ownerDetail.pets || [])" :key="p.id" class="pet-mini-card">
+                  <div 
+                    v-for="p in (ownerDetail.pets || [])" 
+                    :key="p.id" 
+                    class="pet-mini-card clickable"
+                    @click="goToPetProfile(p.id)"
+                  >
                     <div class="p-info">
                       <strong>{{ p.name }}</strong>
                       <span>{{ p.species }} <template v-if="p.breed">({{ p.breed }})</template></span>
                     </div>
-                    <button class="delete-icon-btn" @click="removePet(p.id)">🗑️</button>
+                    <button class="delete-icon-btn" @click.stop="removePet(p.id)">🗑️</button>
                   </div>
                   <div v-if="!ownerDetail.pets?.length" class="empty-pets-hint">
                     Henüz hayvan kaydı yok.
@@ -210,9 +212,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { fetchOwners, createOwner, fetchOwner, addPetToOwner, deletePet, addOwnerNote, searchOwners } from '../api/owners'
 
+const router = useRouter()
 const owners = ref([])
 const searchQuery = ref('')
 const loading = ref(false)
@@ -377,6 +380,11 @@ async function handleAddNote() {
   } finally {
     noteAdding.value = false
   }
+}
+
+function goToPetProfile(petId) {
+  closeOwnerDetail()
+  router.push({ name: 'Pets', query: { id: petId } })
 }
 
 async function removePet(petId) {
@@ -936,6 +944,17 @@ onMounted(loadOwners)
   background: #f8fafc;
   border-radius: 16px;
   border: 1px solid #f1f5f9;
+  transition: all 0.2s;
+}
+
+.pet-mini-card.clickable {
+  cursor: pointer;
+}
+
+.pet-mini-card.clickable:hover {
+  background: #f1f5f9;
+  border-color: var(--primary-light);
+  transform: scale(1.02);
 }
 
 .p-info {

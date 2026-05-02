@@ -150,10 +150,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { http, API_BASE } from '@/api/http'
 import { fetchOwners } from '@/api/owners'
 
+const route = useRoute()
 const pets = ref([])
 const owners = ref([])
 const loadingList = ref(false)
@@ -188,6 +190,18 @@ const filteredPets = computed(() => {
 
 onMounted(async () => {
   await loadList()
+  
+  // URL'den gelen ID varsa aç
+  if (route.query.id) {
+    openPet(Number(route.query.id))
+  }
+})
+
+// Query param değişirse (örneğin aynı sayfadayken başka pete geçilirse)
+watch(() => route.query.id, (newId) => {
+  if (newId) {
+    openPet(Number(newId))
+  }
 })
 
 function normalizeMediaUrl(rawUrl) {
