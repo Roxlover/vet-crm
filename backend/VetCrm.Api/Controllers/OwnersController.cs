@@ -90,8 +90,8 @@ public async Task<ActionResult<OwnerDto>> GetOwner(int id)
                     BirthDate = p.BirthDate,
                     AgeYears = age?.years,
                     AgeMonths = age?.months,
-                    TotalAmount = _db.Visits.Where(v => v.PetId == p.Id).Sum(v => v.AmountTl),
-                    TotalCredit = _db.Visits.Where(v => v.PetId == p.Id).Sum(v => v.CreditAmountTl)
+                    TotalAmount = _db.Visits.Where(v => v.PetId == p.Id).Sum(v => v.AmountTl) ?? 0,
+                    TotalCredit = _db.Visits.Where(v => v.PetId == p.Id).Sum(v => v.CreditAmountTl) ?? 0
                 };
             })
             .ToList(),

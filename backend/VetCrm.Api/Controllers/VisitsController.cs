@@ -395,9 +395,9 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
     {
         Id = v.Id,
         PetId = v.PetId,
-        PetName = v.Pet?.Name,
+        PetName = v.Pet?.Name ?? "—",
         OwnerId = v.Pet?.OwnerId ?? 0,
-        OwnerName = v.Pet?.Owner?.FullName,
+        OwnerName = v.Pet?.Owner?.FullName ?? "—",
         PerformedAt = v.PerformedAt,
         Procedures = v.Procedures,
         AmountTl = v.AmountTl,
