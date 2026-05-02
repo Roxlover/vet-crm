@@ -124,11 +124,25 @@
     <div v-if="detailLoading" class="state">Yükleniyor...</div>
 
     <!-- SADECE seçili ziyaret yok *ve* yeni randevu modu kapalıysa "kayıt yok" de -->
-    <div v-else-if="!selectedVisit && !showNewAppointment" class="state">
-      Kayıt bulunamadı.
-    </div>
       <div v-else class="detail-body">
-        <h3>{{ selectedVisit.petName }} – {{ selectedVisit.ownerName }}</h3>
+        <template v-if="selectedDayEvents.length > 0">
+          <h3>{{ formatMonthDay(selectedDayDate) }} - Günün Randevuları</h3>
+          <div class="day-events-list">
+            <div 
+              v-for="ev in selectedDayEvents" 
+              :key="ev.id" 
+              class="day-event-row"
+              @click="openVisitFromCalendar(ev)"
+            >
+              <span class="ev-time">{{ formatTime(ev.scheduledAt) }}</span>
+              <span class="ev-info"><strong>{{ ev.petName }}</strong> ({{ ev.ownerName }})</span>
+              <span class="ev-purpose">{{ ev.purpose || '—' }}</span>
+            </div>
+          </div>
+          <hr class="divider" />
+        </template>
+
+        <h3 v-if="!showNewAppointment">{{ selectedVisit?.petName }} – {{ selectedVisit?.ownerName }}</h3>
         <div
   class="row"
   style="display:flex; gap:.5rem; justify-content:flex-end; align-items:center; margin:.25rem 0 .75rem;"
@@ -631,6 +645,9 @@ const appointmentPurpose = ref('')
 const selectedPetIds = ref([])
 const appointmentMode = ref('multiple')
 
+const selectedDayEvents = ref([])
+const selectedDayDate = ref(null)
+
 const currentMonth = ref(new Date())
 const calendarLoading = ref(false)
 const calendarAppointments = ref([])
@@ -1101,10 +1118,17 @@ async function openVisitFromCalendar(event) {
 }
 
 function openNewAppointmentFromCalendar(day) {
+  selectedDayEvents.value = day.appointments || []
+  selectedDayDate.value = day.date
+  
   showDetail.value = true
   detailLoading.value = false
   selectedReminderId.value = null
-  showNewAppointment.value = true
+  
+  // Eğer o gün randevu varsa, hemen formu açmayalım, listeyi gösterelim. 
+  // Ama kullanıcı "yeni randevu oluşturulduğunda oraya düşsün" diyorsa formu da görebilir.
+  showNewAppointment.value = true 
+  
   appointmentDate.value = day.iso
   appointmentTime.value = ''
   appointmentPurpose.value = ''
@@ -1429,6 +1453,11 @@ function formatDateTime(dt) {
   return d.toLocaleDateString('tr-TR')
 }
 
+function formatMonthDay(dt) {
+  if (!dt) return ''
+  return dt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
+}
+
 function closeDetail() {
   showDetail.value = false
   showDetailModal.value = false
@@ -1439,6 +1468,8 @@ function closeDetail() {
   selectedVisit.value = null
   visitDetail.value = null
   selectedReminderId.value = null
+  selectedDayEvents.value = []
+  selectedDayDate.value = null
 
   collectedEditOpen.value = false
   collectedInput.value = null
@@ -2019,5 +2050,47 @@ async function submitAppointment() {
     flex-direction: row;
     justify-content: space-between;
   }
+}
+
+/* Day Events List */
+.day-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.day-event-row {
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.day-event-row:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.day-event-row .ev-time {
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 0.85rem;
+}
+
+.day-event-row .ev-info {
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+.day-event-row .ev-purpose {
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 </style>

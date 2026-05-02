@@ -83,7 +83,7 @@
             </div>
             <div class="info-card">
               <span class="label">Yaş</span>
-              <div class="value">{{ formatAge(profile.ageYears, profile.ageMonths) }}</div>
+              <div class="value">{{ formatAge(profile.ageYears ?? profile.AgeYears, profile.ageMonths ?? profile.AgeMonths) }}</div>
             </div>
             <div class="info-card wide">
               <span class="label">Notlar</span>
@@ -94,21 +94,21 @@
 
           <h3 class="section-title">Ziyaret Geçmişi</h3>
 
-          <div v-if="!profile.visits?.length" class="empty-visits">
+          <div v-if="!(profile.visits?.length || profile.Visits?.length)" class="empty-visits">
             <p>Bu hasta için henüz ziyaret kaydı bulunmuyor.</p>
           </div>
 
           <div v-else class="visit-timeline">
-            <div v-for="v in profile.visits" :key="v.visitId" class="modern-visit-card">
+            <div v-for="v in (profile.visits || profile.Visits)" :key="v.visitId || v.VisitId" class="modern-visit-card">
               <div class="visit-header">
                 <div class="visit-meta">
-                  <span class="visit-date" v-if="visitEditId !== v.visitId">{{ formatDt(v.performedAt) }}</span>
+                  <span class="visit-date" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ formatDt(v.performedAt || v.PerformedAt) }}</span>
                   <input v-else-if="visitDraft" type="datetime-local" v-model="visitDraft.performedAt" class="edit-input" />
-                  <span class="visit-purpose" v-if="visitEditId !== v.visitId">{{ v.purpose || '—' }}</span>
+                  <span class="visit-purpose" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ v.purpose || v.Purpose || '—' }}</span>
                   <input v-else-if="visitDraft" type="text" v-model="visitDraft.purpose" class="edit-input" placeholder="Amaç..." />
                 </div>
                 <div class="visit-actions">
-                  <button v-if="visitEditId !== v.visitId" class="btn btn-sm btn-ghost" @click="openVisitEdit(v)">Düzenle</button>
+                  <button v-if="visitEditId !== (v.visitId || v.VisitId)" class="btn btn-sm btn-ghost" @click="openVisitEdit(v)">Düzenle</button>
                   <template v-else>
                     <button class="btn btn-sm btn-ghost" @click="cancelVisitEdit" :disabled="visitSaving">İptal</button>
                     <button class="btn btn-sm btn-primary" @click="saveVisitEdit(v)" :disabled="visitSaving">Kaydet</button>
@@ -117,26 +117,26 @@
               </div>
 
               <div class="visit-content">
-                <div class="procedure-text" v-if="visitEditId !== v.visitId">
-                  {{ v.procedures || '—' }}
+                <div class="procedure-text" v-if="visitEditId !== (v.visitId || v.VisitId)">
+                  {{ v.procedures || v.Procedures || '—' }}
                 </div>
                 <textarea v-else-if="visitDraft" v-model="visitDraft.procedures" class="edit-input" rows="3"></textarea>
 
                 <div class="visit-finances">
                   <div class="finance-item">
                     <span class="label">Tutar</span>
-                    <span class="value" v-if="visitEditId !== v.visitId">{{ fmtMoney(v.amountTl) }}</span>
+                    <span class="value" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.amountTl || v.AmountTl) }}</span>
                     <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.amountTl" class="edit-input tiny" />
                   </div>
                   <div class="finance-item">
                     <span class="label">Veresiye</span>
-                    <span class="value danger" v-if="visitEditId !== v.visitId">{{ fmtMoney(v.creditAmountTl) }}</span>
+                    <span class="value danger" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.creditAmountTl || v.CreditAmountTl) }}</span>
                     <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.creditAmountTl" class="edit-input tiny" />
                   </div>
                 </div>
 
                 <div v-if="getVisitImages(v).length" class="visit-gallery">
-                  <a v-for="img in getVisitImages(v)" :key="img.id" :href="normalizeMediaUrl(getImageUrl(img))" target="_blank" class="gallery-item">
+                  <a v-for="img in getVisitImages(v)" :key="img.id || img.Id" :href="normalizeMediaUrl(getImageUrl(img))" target="_blank" class="gallery-item">
                     <img :src="normalizeMediaUrl(getImageUrl(img))" loading="lazy" />
                   </a>
                 </div>
@@ -200,19 +200,20 @@ function normalizeMediaUrl(rawUrl) {
 
 function toVisitDraft(v) {
   if (!v) return null
+  const perf = v.performedAt || v.PerformedAt || ''
   return {
-    performedAt: v.performedAt ? new Date(v.performedAt).toISOString().slice(0, 16) : '',
-    purpose: v.purpose ?? '',
-    procedures: v.procedures ?? '',
-    amountTl: v.amountTl ?? null,
-    notes: v.notes ?? '',
-    creditAmountTl: Number(v.creditAmountTl ?? 0),
+    performedAt: perf ? new Date(perf).toISOString().slice(0, 16) : '',
+    purpose: v.purpose || v.Purpose || '',
+    procedures: v.procedures || v.Procedures || '',
+    amountTl: v.amountTl ?? v.AmountTl ?? null,
+    notes: v.notes || v.Notes || '',
+    creditAmountTl: Number(v.creditAmountTl ?? v.CreditAmountTl ?? 0),
   }
 }
 
 function openVisitEdit(v) {
   visitSaveError.value = ''
-  visitEditId.value = v.visitId
+  visitEditId.value = v.visitId || v.VisitId
   visitDraft.value = toVisitDraft(v)
 }
 
@@ -223,7 +224,7 @@ function cancelVisitEdit() {
 }
 
 async function saveVisitEdit(v) {
-  const visitId = v?.visitId
+  const visitId = v?.visitId || v?.VisitId
   if (!visitId || !visitDraft.value) return
   visitSaving.value = true
   try {
@@ -239,9 +240,10 @@ async function saveVisitEdit(v) {
     await http.patch(`/visits/${visitId}/credit`, { creditAmountTl: credit })
     
     // Local update
-    const idx = profile.value.visits.findIndex(x => x.visitId === visitId)
+    const visits = profile.value.visits || profile.value.Visits
+    const idx = visits.findIndex(x => (x.visitId || x.VisitId) === visitId)
     if (idx >= 0) {
-      profile.value.visits[idx] = { ...profile.value.visits[idx], ...payload, creditAmountTl: credit }
+      visits[idx] = { ...visits[idx], ...payload, creditAmountTl: credit }
     }
     cancelVisitEdit()
   } catch (e) {
