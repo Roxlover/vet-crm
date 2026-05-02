@@ -70,7 +70,49 @@
         <button class="btn-text">Tümünü Gör</button>
       </div>
       <section class="card calendar-card">
-        <FullCalendar :options="calendarOptions" />
+        <div class="calendar-header">
+          <div class="month-info">
+            <h3>{{ formatMonthYear(currentMonth) }}</h3>
+          </div>
+          <div class="calendar-nav">
+            <button class="nav-btn" @click="goToPrevMonth">‹</button>
+            <button class="nav-btn today-btn" @click="goToToday">Bugün</button>
+            <button class="nav-btn" @click="goToNextMonth">›</button>
+          </div>
+        </div>
+
+        <div class="calendar-grid-wrapper">
+          <div class="calendar-grid">
+            <!-- Gün Başlıkları -->
+            <div class="weekday-header">
+              <div v-for="l in weekdayLabels" :key="l" class="weekday">{{ l }}</div>
+            </div>
+
+            <!-- Günler -->
+            <div v-for="(week, wIdx) in calendarWeeks" :key="wIdx" class="calendar-week">
+              <div
+                v-for="day in week"
+                :key="day.iso"
+                class="calendar-day"
+                :class="{ 'not-current': !day.inCurrentMonth, 'is-today': day.isToday }"
+                @click="openNewAppointmentFromCalendar(day)"
+              >
+                <div class="day-number">{{ day.date.getDate() }}</div>
+                <div class="day-events">
+                  <div
+                    v-for="event in day.appointments"
+                    :key="event.id"
+                    class="event-pill"
+                    @click.stop="openVisitFromCalendar(event)"
+                  >
+                    <span class="time">{{ formatTime(event.scheduledAt) }}</span>
+                    <span class="pet">{{ event.petName }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </section>
   </main>
@@ -1699,77 +1741,136 @@ async function submitAppointment() {
 .calendar-card {
   background: #ffffff;
   border-radius: var(--radius-xl);
-  padding: 2.5rem;
+  padding: 1.5rem;
   border: 1px solid #f1f5f9;
   box-shadow: var(--shadow-lg);
   margin-top: 1rem;
 }
 
-.section-title {
+.calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 2rem;
   margin-bottom: 1.5rem;
   padding: 0 0.5rem;
 }
 
-.section-title h2 {
-  font-size: 1.5rem;
+.calendar-header h3 {
+  font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: -0.03em;
   color: var(--text-main);
+  text-transform: capitalize;
 }
 
-.btn-text {
-  background: var(--primary-light);
-  border: none;
-  color: var(--primary);
-  font-weight: 700;
-  font-size: 0.9rem;
-  padding: 0.5rem 1rem;
-  border-radius: 12px;
+.calendar-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.nav-btn {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
   cursor: pointer;
+  font-weight: 700;
   transition: var(--transition);
 }
 
-.btn-text:hover {
+.nav-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.today-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.calendar-grid-wrapper {
+  overflow-x: auto;
+}
+
+.calendar-grid {
+  min-width: 600px;
+}
+
+.weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 0.5rem;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 0.5rem;
+}
+
+.calendar-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-top: 1px solid #f1f5f9;
+}
+
+.calendar-day {
+  min-height: 100px;
+  padding: 0.75rem;
+  border-right: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.calendar-day:last-child {
+  border-right: none;
+}
+
+.calendar-day:hover {
+  background: #f8fafc;
+}
+
+.calendar-day.not-current {
+  background: #fafafa;
+  opacity: 0.5;
+}
+
+.calendar-day.is-today {
+  background: var(--primary-light);
+}
+
+.day-number {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+}
+
+.day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.event-pill {
   background: var(--primary);
   color: #ffffff;
-}
-
-/* TAKVİM İÇİ MODERNİZASYON */
-:deep(.fc) {
-  --fc-border-color: #f1f5f9;
-  --fc-today-bg-color: #f8fafc;
-  --fc-button-bg-color: var(--primary);
-  --fc-button-border-color: var(--primary);
-  --fc-button-hover-bg-color: var(--primary-dark);
-  font-family: 'Inter', sans-serif;
-}
-
-:deep(.fc-toolbar-title) {
-  font-family: 'Outfit', sans-serif !important;
-  font-weight: 800 !important;
-  font-size: 1.5rem !important;
-  color: var(--text-main);
-  letter-spacing: -0.03em;
-}
-
-:deep(.fc-button) {
-  border-radius: 12px !important;
-  font-weight: 700 !important;
-  text-transform: capitalize !important;
-  padding: 0.6rem 1.2rem !important;
-}
-
-:deep(.fc-event) {
-  border-radius: 8px;
   padding: 4px 8px;
-  font-size: 0.85rem;
-  border: none;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  margin: 1px 2px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+}
+
+.event-pill .time {
+  opacity: 0.8;
 }
 
 /* MODAL REFINEMENTS */
