@@ -42,15 +42,11 @@ private static bool HasWork(Visit v)
 private IQueryable<Visit> ApplyLedgerInclusionRule(IQueryable<Visit> q)
 {
     return q.Where(v =>
-        // 1) Reminder completed ise dahil
-        _db.Reminders.Any(r => r.VisitId == v.Id && r.IsCompleted)
-
-        // 2) Reminder yok ama “işlem yapılmış” görünüyorsa dahil
-        || (!_db.Reminders.Any(r => r.VisitId == v.Id) &&
-            ((v.AmountTl ?? 0m) > 0m
-             || v.Procedures != null && v.Procedures != ""
-             || v.Purpose != null && v.Purpose != ""
-             || v.Notes != null && v.Notes != ""))
+        (v.AmountTl ?? 0m) > 0m
+        || _db.Reminders.Any(r => r.VisitId == v.Id && r.IsCompleted)
+        || v.Procedures != null && v.Procedures != ""
+        || v.Purpose != null && v.Purpose != ""
+        || v.Notes != null && v.Notes != ""
     );
 }
 

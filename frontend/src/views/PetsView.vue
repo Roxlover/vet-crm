@@ -240,10 +240,12 @@ async function saveVisitEdit(v) {
     await http.patch(`/visits/${visitId}/credit`, { creditAmountTl: credit })
     
     // Local update
-    const visits = profile.value.visits || profile.value.Visits
+    const visits = profile.value.visits || profile.value.Visits || []
     const idx = visits.findIndex(x => (x.visitId || x.VisitId) === visitId)
     if (idx >= 0) {
-      visits[idx] = { ...visits[idx], ...payload, creditAmountTl: credit }
+      const updated = { ...visits[idx], ...payload, creditAmountTl: credit }
+      if (profile.value.visits) profile.value.visits[idx] = updated
+      if (profile.value.Visits) profile.value.Visits[idx] = updated
     }
     cancelVisitEdit()
   } catch (e) {
@@ -283,6 +285,8 @@ async function openPet(id) {
   loadingProfile.value = true
   try {
     const res = await http.get(`/pets/${id}/profile`)
+    console.log('--- PET PROFILE DATA ---', res.data)
+    console.log('Visits property:', res.data.visits || res.data.Visits)
     profile.value = res.data
   } catch (e) {
     error.value = 'Profil yüklenemedi.'
