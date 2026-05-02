@@ -1,126 +1,79 @@
 <template>
-  <div class="page">
-    <header class="page-header">
-      <h1>Genel Bakış</h1>
-      <p class="subtitle">
-        Bugünkü, yarınki ve geciken hatırlatmaları özet halinde görün.
-      </p>
-    </header>
+  <main class="page-dashboard">
+    <!-- TOP HIGHLIGHTS (Premium CRM Style) -->
+    <section class="highlights-grid">
+      <!-- Activity Line Chart (Dynamic SVG) -->
+      <div class="card highlight-card activity-chart">
+        <div class="chart-header">
+          <h3>Haftalık Aktivite</h3>
+          <span class="trend-up" v-if="trendValue >= 0">+{{ trendValue }}% ↑</span>
+          <span class="trend-down" v-else>{{ trendValue }}% ↓</span>
+        </div>
+        <div class="svg-wrapper">
+          <svg viewBox="0 0 100 30" class="line-chart">
+            <path :d="activityPath" fill="none" stroke="var(--primary)" stroke-width="2" />
+            <circle
+              v-for="(p, i) in activityPoints"
+              :key="i"
+              :cx="p.x"
+              :cy="p.y"
+              r="1.5"
+              fill="var(--primary)"
+            />
+          </svg>
+        </div>
+        <div class="chart-labels">
+          <span v-for="label in activityLabels" :key="label">{{ label }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATS GRID - PREMIUM MOBILE CRM STYLE -->
+    <section class="stats-grid">
+      <div class="stat-card purple">
+        <div class="stat-icon">📅</div>
+        <div class="stat-info">
+          <span class="stat-label">Bugünkü Randevu</span>
+          <div class="stat-value">{{ stats.todayAppointmentsCount }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card green">
+        <div class="stat-icon">🐾</div>
+        <div class="stat-info">
+          <span class="stat-label">Aktif Hasta</span>
+          <div class="stat-value">{{ stats.activePetsCount }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card blue">
+        <div class="stat-icon">💰</div>
+        <div class="stat-info">
+          <span class="stat-label">Aylık Tahsilat</span>
+          <div class="stat-value">₺{{ formatCurrency(stats.monthlyRevenue) }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card orange">
+        <div class="stat-icon">🔔</div>
+        <div class="stat-info">
+          <span class="stat-label">Hatırlatıcılar</span>
+          <div class="stat-value">{{ stats.pendingRemindersCount }}</div>
+        </div>
+      </div>
+    </section>
 
     <!-- TAKVİM GÖRÜNÜMÜ -->
     <section class="calendar-section">
+      <div class="section-title">
+        <h2>Randevu Takvimi</h2>
+        <button class="btn-text">Tümünü Gör</button>
+      </div>
       <section class="card calendar-card">
-        <div class="calendar-header">
-          <div class="calendar-nav">
-            <button class="icon-btn" @click="goToPrevMonth">‹</button>
-            <div class="month-title">
-              {{ formatMonthYear(currentMonth) }}
-            </div>
-            <button class="icon-btn" @click="goToNextMonth">›</button>
-          </div>
-          <button class="btn-today" @click="goToToday">
-            Bugün
-          </button>
-        </div>
-
-        <div v-if="calendarLoading" class="state">
-          Yükleniyor...
-        </div>
-
-        <div v-else class="calendar-grid">
-          <!-- Gün isimleri -->
-          <div class="calendar-weekdays">
-            <div
-              v-for="d in weekdayLabels"
-              :key="d"
-              class="weekday"
-            >
-              {{ d }}
-            </div>
-          </div>
-
-          <!-- Haftalar -->
-          <div class="calendar-weeks">
-            <div
-              v-for="(week, wi) in calendarWeeks"
-              :key="wi"
-              class="calendar-week"
-            >
-              <div
-                v-for="day in week"
-                :key="day.iso"
-                class="calendar-day"
-                :class="{
-                  'other-month': !day.inCurrentMonth,
-                  today: day.isToday,
-                }"
-              @click="day.appointments && day.appointments.length && openVisitFromCalendar(day.appointments[0])"
-              >
-                <div class="day-number">
-                  {{ day.date.getDate() }}
-                </div>
-
-                <div class="day-events">
-                  <div
-                    v-for="appt in day.appointments"
-                    :key="appt?.reminderId ?? appt?.id ?? appt?.visitId"
-                    class="event-pill"
-                    @click.stop="appt && openVisitFromCalendar(appt)"
-                  >
-                  <span
-                    class="event-time"
-                    v-if="appt?.scheduledAt"
-                  >
-                    {{ formatTime(appt.scheduledAt) }}
-                  </span>
-
-                    <span class="event-text">
-                      {{ appt?.petName || '—' }} – {{ appt?.ownerName || '—' }}
-                    </span>
-
-                    <span
-                      v-if="appt?.purpose"
-                      class="event-purpose"
-                    >
-                      {{ appt.purpose }}
-                    </span>
-
-                    <div class="event-meta">
-                      <span v-if="appt?.doctorName">
-                        Dr: {{ appt.doctorName }}
-                      </span>
-                      <span
-                        v-if="
-                          appt?.createdByUsername ||
-                          appt?.createdByName
-                        "
-                      >
-                        • Ekleyen:
-                        {{
-                          appt.createdByUsername ||
-                          appt.createdByName
-                        }}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div
-                    v-if="
-                      !day.appointments ||
-                      day.appointments.length === 0
-                    "
-                    class="no-event-placeholder"
-                  >
-                    —
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <FullCalendar :options="calendarOptions" />
       </section>
     </section>
-  </div>
+  </main>
 
   <!-- MODAL -->
   <div v-if="showDetail" class="modal-backdrop" @click.self="closeDetail">
@@ -300,10 +253,7 @@
 
 <!-- Görsel alanı (çoklu) -->
 <div v-if="selectedVisit">
-  <div
-    v-if="visitImages.length"
-    class="visit-image-block"
-  >
+  <div v-if="visitImages.length" class="visit-image-block">
     <button
       type="button"
       class="btn-secondary"
@@ -314,10 +264,7 @@
 
     <div v-if="showImagePreview" class="visit-image-preview">
       <!-- Büyük ana görsel -->
-      <div
-        v-if="visitImageSrc"
-        class="visit-image-main"
-      >
+      <div v-if="visitImageSrc" class="visit-image-main">
         <img
           :src="visitImageSrc"
           alt="Ziyaret görseli"
@@ -326,10 +273,7 @@
       </div>
 
       <!-- Thumbnail listesi -->
-      <div
-        v-if="visitImages.length > 1"
-        class="visit-image-thumbs"
-      >
+      <div v-if="visitImages.length > 1" class="visit-image-thumbs">
         <button
           v-for="(img, idx) in visitImages"
           :key="img.id || idx"
@@ -346,7 +290,6 @@
       </div>
     </div>
   </div>
-
   <div v-else class="visit-image-empty">
     Bu ziyarete ait kayıtlı görsel bulunmuyor.
   </div>
@@ -600,6 +543,7 @@ import {
   fetchCalendarAppointments,
   searchOwners,
   updateReminderStatus,
+  fetchDashboardStats,
 } from '../api/dashboard'
 import { http, API_BASE } from '@/api/http'
 import { useRouter } from 'vue-router'
@@ -667,6 +611,49 @@ const savingCredit = ref(false)
 
 const showImagePreview = ref(false)
 const showImageModal = ref(false)
+
+const stats = reactive({
+  activePetsCount: 0,
+  monthlyRevenue: 0,
+  todayAppointmentsCount: 0,
+  pendingRemindersCount: 0,
+  weeklyActivity: []
+})
+
+const trendValue = ref(0)
+
+const activityLabels = computed(() => {
+  if (!stats.weeklyActivity.length) return []
+  return stats.weeklyActivity.map(d => {
+    const date = new Date(d.date)
+    return date.toLocaleDateString('tr-TR', { weekday: 'short' })
+  })
+})
+
+const activityPoints = computed(() => {
+  if (!stats.weeklyActivity.length) return []
+  const max = Math.max(...stats.weeklyActivity.map(d => d.visitCount), 1)
+  return stats.weeklyActivity.map((d, i) => ({
+    x: (i / (stats.weeklyActivity.length - 1)) * 100,
+    y: 25 - (d.visitCount / max) * 20
+  }))
+})
+
+const activityPath = computed(() => {
+  if (!activityPoints.value.length) return ''
+  const pts = activityPoints.value
+  let d = `M ${pts[0].x} ${pts[0].y}`
+  for (let i = 1; i < pts.length; i++) {
+    d += ` L ${pts[i].x} ${pts[i].y}`
+  }
+  return d
+})
+
+function formatCurrency(val) {
+  if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M'
+  if (val >= 1000) return (val / 1000).toFixed(1) + 'k'
+  return val.toString()
+}
 
 const rawUser = getUser()
 
@@ -908,8 +895,22 @@ async function onVisitImagesSelected(e) {
 }
 
 onMounted(async () => {
+  await loadStats()
   await goToToday()
 })
+
+async function loadStats() {
+  try {
+    const data = await fetchDashboardStats()
+    Object.assign(stats, data)
+
+    // Basit bir trend hesaplama (son gün vs önceki gün ortalaması gibi bir şey uydurabiliriz ya da 0 bırakırız)
+    // Şimdilik sadece görsellik için 0 kalsın veya backend'den gelmesini bekleyelim.
+    trendValue.value = 0
+  } catch (e) {
+    console.error('Stats fetch error', e)
+  }
+}
 
 
 // showCalendar removed
@@ -1478,740 +1479,444 @@ async function submitAppointment() {
 </script>
 
 <style scoped>
-.next-visits-list {
-  margin: 0.5rem 0 0;
-  padding-left: 1.1rem;
-}
-.next-visits-list li {
-  margin: 0.25rem 0;
-  line-height: 1.35;
-  word-break: break-word;
+.page-dashboard {
+  animation: fadeIn 0.4s ease-out;
 }
 
-.page {
-  width: 100%;
-  max-width: 1024px;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* HIGHLIGHTS GRID - CRM STYLE */
+.highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.highlight-card {
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border: 1px solid #f1f5f9;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.highlight-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.highlight-info h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.highlight-info p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.badge-glow {
+  padding: 0.4rem 0.8rem;
+  background: #f5f3ff;
+  color: #7c3aed;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  box-shadow: 0 0 15px rgba(124, 58, 237, 0.1);
+}
+
+/* DONUT CHART */
+.progress-container {
+  width: 90px;
+  height: 90px;
+}
+
+.circular-chart {
+  display: block;
   margin: 0 auto;
-  padding: 1rem 1rem 1.5rem;
+  max-width: 100%;
+  max-height: 100%;
 }
 
-.page-header {
+.circle-bg {
+  fill: none;
+  stroke: #f1f5f9;
+  stroke-width: 3.8;
+}
+
+.circle {
+  fill: none;
+  stroke-width: 3.8;
+  stroke-linecap: round;
+  animation: progress 1s ease-out forwards;
+}
+
+@keyframes progress {
+  0% { stroke-dasharray: 0 100; }
+}
+
+.circular-chart.purple .circle { stroke: #7c3aed; }
+
+.percentage {
+  fill: var(--text-main);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.5rem;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+/* ACTIVITY CHART */
+.activity-chart {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
 }
 
-.subtitle {
-  margin: 0.25rem 0 0;
+.trend-up {
+  color: #10b981;
+  font-weight: 800;
   font-size: 0.85rem;
-  color: #6b7280;
+  background: #ecfdf5;
+  padding: 0.25rem 0.6rem;
+  border-radius: 8px;
 }
 
-/* .cards styles removed */
+.svg-wrapper {
+  height: 60px;
+  margin: 1rem 0;
+}
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+.line-chart {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.chart-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+}
+
+.page-header h1 {
+  font-size: 2.25rem;
+  letter-spacing: -0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+/* STATS GRID - PREMIUM MOBILE CRM STYLE */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3.5rem;
+}
+
+.stat-card {
+  padding: 1.75rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  transition: var(--transition);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-lg);
+}
+
+.stat-card.purple { background: #f5f3ff; color: #5b21b6; }
+.stat-card.green { background: #f0fdf4; color: #166534; }
+.stat-card.blue { background: #eff6ff; color: #1e40af; }
+.stat-card.orange { background: #fff7ed; color: #9a3412; }
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  font-size: 1.85rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.8;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+}
+
+.calendar-card {
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 2.5rem;
+  border: 1px solid #f1f5f9;
+  box-shadow: var(--shadow-lg);
+  margin-top: 1rem;
+}
+
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+}
+
+.section-title h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
+}
+
+.btn-text {
+  background: var(--primary-light);
+  border: none;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-text:hover {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+/* TAKVİM İÇİ MODERNİZASYON */
+:deep(.fc) {
+  --fc-border-color: #f1f5f9;
+  --fc-today-bg-color: #f8fafc;
+  --fc-button-bg-color: var(--primary);
+  --fc-button-border-color: var(--primary);
+  --fc-button-hover-bg-color: var(--primary-dark);
+  font-family: 'Inter', sans-serif;
+}
+
+:deep(.fc-toolbar-title) {
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 1.5rem !important;
+  color: var(--text-main);
+  letter-spacing: -0.03em;
+}
+
+:deep(.fc-button) {
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  text-transform: capitalize !important;
+  padding: 0.6rem 1.2rem !important;
+}
+
+:deep(.fc-event) {
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  border: none;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  margin: 1px 2px;
+}
+
+/* MODAL REFINEMENTS */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
 .modal {
-  background: white;
-  border-radius: 0.75rem;
-  padding: 1.25rem 1.5rem;
-  max-width: 600px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
+  width: 90%;
+  max-width: 550px;
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 3rem;
   position: relative;
+  box-shadow: var(--shadow-lg);
+  overflow-y: auto;
+  max-height: 90vh;
 }
 
 .modal .close {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   border: none;
-  background: transparent;
-  font-size: 1.5rem;
+  background: #f1f5f9;
   cursor: pointer;
-}
-
-.status-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 0.75rem;
-}
-
-.status-text span {
-  margin-left: 0.25rem;
-  font-size: 0.85rem;
-  color: #4b5563;
-}
-
-.status-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn-success,
-.btn-fail {
-  border: none;
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.btn-success {
-  background: #22c55e;
-  color: #fff;
-}
-
-.btn-fail {
-  background: #ef4444;
-  color: #fff;
-}
-
-.btn-success:disabled,
-.btn-fail:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.btn-secondary {
-  border: none;
-  padding: 0.35rem 0.9rem;
-  border-radius: 999px;
-  background: #e5e7eb;
-  color: #111827;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.divider {
-  margin: 0.75rem 0;
-  border: none;
-  border-top: 1px solid #e5e7eb;
-}
-
-.new-appointment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 0.5rem;
-  margin-bottom: 0.25rem;
-}
-
-.new-appointment-header h4 {
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.btn-toggle {
-  border: none;
-  background: #e5e7eb;
-  border-radius: 999px;
-  padding: 0.2rem 0.8rem;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-
-.new-appointment .field-row {
-  margin-top: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.85rem;
-}
-.visit-img-preview {
-  width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  background: #111;
-  border-radius: 10px;
-  display: block;
-}
-
-.new-appointment label {
-  font-weight: 600;
-}
-
-.new-appointment input[type='date'],
-.new-appointment input[type='time'],
-.new-appointment textarea {
-  border-radius: 0.5rem;
-  border: 1px solid #d1d5db;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.85rem;
-}
-
-.mode-row {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.8rem;
-}
-
-.pets-list {
-  margin-top: 0.35rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-}
-
-.pet-option {
-  font-size: 0.8rem;
-}
-
-.hint {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.new-appointment select {
-  border-radius: 0.5rem;
-  border: 1px solid #d1d5db;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.85rem;
-}
-
-/* .view-tabs styles removed */
-
-.visit-image-thumb img {
-  max-width: 100%;
-  max-height: 120px;
-  border-radius: 8px;
-  cursor: pointer;
-  object-fit: cover;
-  border: 1px solid #e5e7eb;
-}
-
-/* TAM EKRAN GÖRSEL MODAL */
-.image-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  font-size: 1.5rem;
+  transition: var(--transition);
 }
 
-.image-modal-content {
-  position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
+.modal .close:hover {
+  background: #e2e8f0;
+  transform: rotate(90deg);
 }
 
-.image-modal-content img {
-  max-width: 100%;
-  max-height: 100%;
-  display: block;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+.modal h3 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 1.5rem;
+  color: var(--text-main);
 }
 
-.image-modal-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  border: none;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  border-radius: 999px;
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-/* Takvim */
-.calendar-card {
-  margin-top: 0.5rem;
-  overflow-x: auto;
-}
-
-.event-purpose {
-  display: block;
-  font-size: 0.68rem;
-  color: #111827;
-}
-
-.calendar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.calendar-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.icon-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 0.2rem 0.6rem;
-  background: #e5e7eb;
-  cursor: pointer;
-}
-
-.month-title {
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.btn-today {
-  border: none;
-  padding: 0.3rem 0.9rem;
-  border-radius: 999px;
-  background: #111827;
-  color: #fff;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.calendar-grid {
-  margin-top: 0.25rem;
-}
-
-.calendar-weekdays,
-.calendar-week {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-}
-
-.weekday {
-  font-size: 0.75rem;
-  text-align: center;
-  color: #6b7280;
-  padding: 0.25rem 0;
-}
-
-.calendar-day {
-  border: 1px solid #e5e7eb;
-  min-height: 90px;
-  padding: 0.25rem;
-  font-size: 0.75rem;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-}
-
-.calendar-day.other-month {
-  background: #f9fafb;
-  color: #9ca3af;
-}
-
-.calendar-day.today {
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 1px #0ea5e9;
-}
-
-.day-number {
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.day-events {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.event-pill {
-  border-radius: 0.4rem;
-  padding: 0.15rem 0.3rem;
-  background: #eff6ff;
-  font-size: 0.7rem;
-  line-height: 1.2;
-}
-
-.event-time {
-  font-weight: 600;
-  margin-right: 0.2rem;
-}
-
-.no-event-placeholder {
-  font-size: 0.7rem;
-  color: #d1d5db;
-}
-
-.event-text {
-  display: block;
-}
-
-.event-meta {
-  font-size: 0.65rem;
-  color: #6b7280;
-}
-
-.owner-search {
-  position: relative;
-}
-
-.owner-input-wrapper {
-  position: relative;
-}
-
-.owner-input-wrapper input {
+.modal .input, .modal textarea, .modal select {
   width: 100%;
-  border-radius: 0.5rem;
-  border: 1px solid #d1d5db;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.85rem;
-}
-
-.owner-results {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #ffffff;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
-  margin-top: 0.2rem;
-  max-height: 220px;
-  overflow-y: auto;
-  z-index: 60;
-}
-
-.owner-result-item {
-  padding: 0.4rem 0.6rem;
-  cursor: pointer;
-}
-
-.owner-result-item:hover {
-  background: #f3f4f6;
-}
-
-.owner-name {
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.owner-phone {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.credit-row {
+  border: 1px solid #f1f5f9;
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  background: #f8fafc;
+  outline: none;
+  font-size: 1rem;
   margin-top: 0.75rem;
+  transition: var(--transition);
+}
+
+.modal .input:focus {
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-light);
+}
+
+.modal label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn {
+  padding: 1rem 1.5rem;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: var(--transition);
+  border: none;
+}
+
+.btn.primary {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px -10px rgba(79, 70, 229, 0.5);
+}
+
+.btn-success { background: var(--success); color: white; }
+.btn-fail { background: var(--danger); color: white; }
+
+.next-visits-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.next-visits-list li {
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 0.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.85rem;
-}
-
-.credit-text span {
-  margin-left: 0.25rem;
-}
-
-.btn-credit {
-  border: none;
-  padding: 0.35rem 0.9rem;
-  border-radius: 999px;
-  background: #facc15;
-  color: #78350f;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.credit-form {
-  margin-top: 0.5rem;
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  font-size: 0.85rem;
-}
-
-.credit-form input {
-  max-width: 120px;
-  border-radius: 0.5rem;
-  border: 1px solid #d1d5db;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.85rem;
-}
-
-.credit-pill {
-  margin-left: 0.25rem;
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background: #fef3c7;
-  color: #92400e;
-  font-size: 0.72rem;
-}
-
-.visit-image-block {
-  margin-top: 12px;
-}
-
-.visit-image-preview {
-  margin-top: 8px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e5e5e5;
-  max-height: 260px;
-  background: #f7f7f7;
-}
-
-.visit-image-preview img {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-}
-
-.visit-image-empty {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #999;
 }
 
 @media (max-width: 768px) {
-  .page {
-    padding: 1rem;
-  }
-
-  .calendar-day {
-    min-height: 72px;
-    padding: 0.2rem;
-  }
-
-  .day-number {
-    font-size: 0.7rem;
-  }
-
-  .event-pill {
-    font-size: 0.65rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .page {
-    padding-bottom: 2rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .page {
-    padding: 0.75rem;
-  }
-
-  .page-header h1 {
-    font-size: 1.1rem;
-  }
-
-  .subtitle {
-    font-size: 0.8rem;
-  }
-
-  .cards {
-    gap: 0.75rem;
-  }
-
-  .modal {
-    max-width: 100%;
-    margin: 0 8px;
-    padding: 1rem;
-  }
-}
-.visit-image-main img {
-  width: 100%;
-  max-height: 220px;
-  object-fit: contain;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.visit-image-thumbs {
-  margin-top: 8px;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.visit-image-thumbs .thumb {
-  border: none;
-  padding: 0;
-  background: transparent;
-  border-radius: 6px;
-  overflow: hidden;
-  cursor: pointer;
-  border: 2px solid transparent;
-}
-
-.visit-image-thumbs .thumb.active {
-  border-color: #0ea5e9;
-}
-
-.visit-image-thumbs img {
-  width: 64px;
-  height: 64px;
-  object-fit: cover;
-  display: block;
-}
-.next-visits-list {
-  margin: 0.25rem 0 0;
-  padding-left: 1rem;
-  font-size: 0.85rem;
-}
-
-.next-visits-list li + li {
-  margin-top: 0.15rem;
-}
-.visit-img-thumb {
-  width: 72px;
-  height: 72px;
-  object-fit: cover;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.visit-img-preview {
-  width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  background: #111;
-  border-radius: 10px;
-}
-/* -------------------------
-   VISIT EDIT (Modal) UI
--------------------------- */
-
-/* Düzenle / İptal / Kaydet butonlarının bulunduğu üst satır */
-.visit-edit-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  align-items: center;
-  margin: 0.25rem 0 0.75rem;
-}
-
-/* Edit modda satırların düzeni */
-.visit-edit-field {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 0.6rem;
-  align-items: start;
-  margin: 0.5rem 0;
-}
-
-@media (max-width: 640px) {
-  .visit-edit-field {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Label/strong görünümü */
-.visit-edit-field strong {
-  display: block;
-  font-size: 0.85rem;
-  color: #374151;
-  margin-top: 0.35rem;
-}
-
-/* Modal içindeki input/textarea/select ortak görünüm */
-.modal .input,
-.modal input[type="text"],
-.modal input[type="number"],
-.modal input[type="date"],
-.modal input[type="time"],
-.modal input[type="datetime-local"],
-.modal textarea,
-.modal select {
-  width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 0.6rem;
-  padding: 0.55rem 0.65rem;
-  font-size: 0.9rem;
-  background: #fff;
-  outline: none;
-}
-
-.modal textarea {
-  resize: vertical;
-  min-height: 72px;
-}
-
-.modal input:focus,
-.modal textarea:focus,
-.modal select:focus {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-
-/* “Düzenleme hazırlanıyor…” state */
-.modal .state {
-  padding: 0.65rem 0.75rem;
-  border-radius: 0.6rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-}
-
-.modal .state-error {
-  background: #fef2f2;
-  border-color: #fecaca;
-}
-
-/* Küçük butonlar (btn-sm) varsa daha sıkı */
-.btn.btn-sm {
-  padding: 0.45rem 0.65rem;
-  font-size: 0.85rem;
-  border-radius: 0.55rem;
-}
-
-/* Secondary buton (görselleri göster/gizle gibi) */
-.btn-secondary {
-  border: 1px solid #d1d5db;
-  background: #fff;
-  border-radius: 0.6rem;
-  padding: 0.45rem 0.65rem;
-  font-size: 0.85rem;
-}
-
-/* Edit kutuları (tahsilat/veresiye) */
-.edit-box,
-.field-row {
-  margin-top: 0.6rem;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-}
-
-.edit-box label,
-.field-row label {
-  display: block;
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin-bottom: 0.35rem;
-}
-
-/* Modal içindeki “row” satırları daha tutarlı olsun */
-.modal .row {
-  display: flex;
-  gap: 0.6rem;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0.5rem 0;
-}
-
-@media (max-width: 640px) {
-  .modal .row {
+  .page-header {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
   }
-  .modal .row > button {
-    width: 100%;
+  .highlights-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .modal {
+    padding: 2rem 1.5rem;
+    width: 95%;
+  }
+  .modal h3 {
+    font-size: 1.5rem;
+  }
+  .section-title {
+    flex-direction: row;
+    justify-content: space-between;
   }
 }
-
 </style>

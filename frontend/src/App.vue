@@ -10,58 +10,54 @@
         class="sidebar"
         :class="{ 'sidebar--mobile-open': sidebarOpen }"
       >
-        <div class="logo">
-          <span class="logo-mark">
-            <img src="./logo.png" alt="BullVet Logo" />
-          </span>
-          <div class="logo-text">
-            <div class="title">e-Bull Vet</div>
-            <div class="subtitle">Klinik Paneli</div>
+        <div class="sidebar-header">
+          <div class="logo">
+            <span class="logo-mark">
+              <img src="./logo.png" alt="BullVet Logo" />
+            </span>
+            <div class="logo-text">
+              <div class="title">BullVet</div>
+              <div class="subtitle">Klinik Yönetimi</div>
+            </div>
           </div>
         </div>
-        <nav class="nav">
-          <RouterLink
-            to="/"
-            class="nav-item"
-            :class="{ active: route.name === 'dashboard' }"
-          >
-            🏠 <span>Dashboard</span>
+
+        <nav class="nav-links">
+          <RouterLink to="/" class="nav-item" :class="{ active: route.name === 'dashboard' }">
+            <span class="nav-icon">📊</span>
+            <span>Dashboard</span>
           </RouterLink>
 
-          <RouterLink
-            to="/owners"
-            class="nav-item"
-            :class="{ active: route.name === 'owners' }"
-          >
-            👤 <span>Hasta Sahipleri</span>
+          <RouterLink to="/owners" class="nav-item" :class="{ active: route.name === 'owners' }">
+            <span class="nav-icon">👥</span>
+            <span>Sahipler</span>
           </RouterLink>
 
-          <RouterLink
-            to="/visits"
-            class="nav-item"
-            :class="{ active: route.name === 'visits' }"
-          >
-            📋 <span>Ziyaretler</span>
+          <RouterLink to="/visits" class="nav-item" :class="{ active: route.name === 'visits' }">
+            <span class="nav-icon">📝</span>
+            <span>Ziyaretler</span>
           </RouterLink>
 
-          <RouterLink 
-            to="/pets" 
-            class="nav-item" 
-             :class="{ active: route.name === 'pets' }"
-           >
-            🐕🐈 <span>Hastalar</span>
+          <RouterLink to="/pets" class="nav-item" :class="{ active: route.name === 'pets' }">
+            <span class="nav-icon">🐶</span>
+            <span>Hastalar</span>
           </RouterLink>
           
-         <RouterLink
-  v-if="canSeeBilanco"
-  to="/bilanco"
-  class="nav-item"
-  :class="{ active: route.name === 'Bilanco' }"
->
-  💰 <span>Bilanço</span>
-</RouterLink>
-
+          <RouterLink v-if="canSeeBilanco" to="/bilanco" class="nav-item" :class="{ active: route.name === 'Bilanco' }">
+            <span class="nav-icon">📈</span>
+            <span>Bilanço</span>
+          </RouterLink>
         </nav>
+
+        <div class="sidebar-footer" v-if="rawUser">
+          <div class="user-brief">
+            <div class="avatar">{{ (rawUser.username || 'V').charAt(0).toUpperCase() }}</div>
+            <div class="user-meta">
+              <span class="name">{{ rawUser.username }}</span>
+              <span class="role">{{ canSeeBilanco ? 'Yönetici' : 'Personel' }}</span>
+            </div>
+          </div>
+        </div>
       </aside>
 
       <!-- MOBİLDE KARARAN ARKA PLAN -->
@@ -74,53 +70,34 @@
       <!-- ANA ALAN -->
       <main class="main">
         <header class="topbar">
-          <!-- MOBİL: HAMBURGER BUTON -->
-          <button
-            v-if="isMobile"
-            class="topbar-menu-btn"
-            type="button"
-            @click="toggleSidebar"
-          >
-            ☰
-          </button>
-
-          <div class="topbar-title">
-            e-Bull Vet – Veteriner Aşı Takip Paneli
+          <div class="topbar-left">
+            <button v-if="isMobile" class="topbar-menu-btn" @click="toggleSidebar">☰</button>
+            <div class="search-pill">
+              <span class="search-icon">🔍</span>
+              <input type="text" placeholder="Hızlı hasta veya sahip ara..." />
+            </div>
           </div>
 
-          <!-- SAĞ ÜST ZİL -->
-          <div class="notif-wrapper">
-            <button
-              class="notif-bell"
-              type="button"
-              @click="togglePanel"
-            >
-              🔔
-              <span v-if="unreadCount > 0" class="badge">
-                {{ unreadCount }}
-              </span>
-            </button>
-
-            <div v-if="open" class="notif-panel">
-              <div
-                v-if="notifications.length === 0"
-                class="notif-empty"
-              >
-                Bildirim yok.
-              </div>
-
-              <div
-                v-for="n in notifications"
-                :key="n.id"
-                class="notif-item"
-              >
-                <div class="notif-message">
-                  {{ n.message }}
-                </div>
-                <div class="notif-time">
-                  {{ new Date(n.createdAt).toLocaleString('tr-TR') }}
+          <div class="topbar-right">
+            <div class="notif-wrapper">
+              <button class="notif-btn" @click="togglePanel">
+                <span class="btn-icon">🔔</span>
+                <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
+              </button>
+              
+              <div v-if="open" class="notif-panel">
+                <div class="panel-header">Bildirimler</div>
+                <div v-if="notifications.length === 0" class="notif-empty">Henüz bir bildirim yok.</div>
+                <div v-for="n in notifications" :key="n.id" class="notif-item">
+                  <div class="notif-message">{{ n.message }}</div>
+                  <div class="notif-time">{{ new Date(n.createdAt).toLocaleDateString('tr-TR') }}</div>
                 </div>
               </div>
+            </div>
+
+            <div class="top-user-pill" v-if="rawUser">
+              <div class="avatar-mini">{{ (rawUser.username || 'V').charAt(0).toUpperCase() }}</div>
+              <span class="user-name-mini">{{ rawUser.username }}</span>
             </div>
           </div>
         </header>
@@ -140,6 +117,7 @@ import {
   onBeforeUnmount,
   ref,
   computed,
+  watch,
 } from 'vue'
 import {
   fetchNotifications,
@@ -221,6 +199,16 @@ const isAuthRoute = computed(() =>
   ['login'].includes(route.name),
 )
 
+// Sayfa değiştiğinde (link tıklandığında) mobilde menüyü kapat
+watch(
+  () => route.path,
+  () => {
+    if (isMobile.value) {
+      sidebarOpen.value = false
+    }
+  }
+)
+
 onMounted(() => {
   handleResize()
   window.addEventListener('resize', handleResize)
@@ -235,302 +223,311 @@ onBeforeUnmount(() => {
 })
 </script>
 
-<style scoped>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap');
+
 .app-root {
   min-height: 100vh;
+  background-color: var(--bg-main);
 }
 
-/* GENEL LAYOUT */
 .layout {
   display: flex;
   min-height: 100vh;
 }
 
-/* SIDEBAR */
+/* SIDEBAR - MODERN WHITE */
 .sidebar {
-  width: 260px;
-  background-color: #020617;
-  background-image: radial-gradient(
-      1.5px 1.5px at 10px 10px,
-      #ffffff 0,
-      transparent 55%
-    ),
-    radial-gradient(
-      1.5px 1.5px at 30px 40px,
-      #ffffff 0,
-      transparent 55%
-    ),
-    radial-gradient(
-      1.5px 1.5px at 50px 20px,
-      #ffffff 0,
-      transparent 55%
-    ),
-    radial-gradient(
-      1.5px 1.5px at 70px 50px,
-      #ffffff 0,
-      transparent 55%
-    );
-  background-size: 80px 80px;
-  color: #e5e7eb;
-  padding: 1.25rem 1rem;
+  width: 300px;
+  background-color: #ffffff;
+  border-right: 1px solid #f1f5f9;
   display: flex;
   flex-direction: column;
+  padding: 2.5rem 1.5rem;
+  transition: var(--transition);
+  z-index: 100;
+}
+
+.sidebar-header {
+  margin-bottom: 3rem;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  gap: 1.25rem;
+}
+
+.logo-mark {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
 .logo-mark img {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .logo-text .title {
-  font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--text-main);
+  letter-spacing: -0.04em;
+  line-height: 1;
 }
 
 .logo-text .subtitle {
-  font-size: 0.75rem;
-  color: #9ca3af;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-top: 4px;
 }
 
-.nav {
+.nav-links {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
+  flex: 1;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.75rem;
-  border-radius: 0.6rem;
-  font-size: 0.9rem;
-  color: #e5e7eb;
+  gap: 1.1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.95rem;
   text-decoration: none;
-  opacity: 0.85;
-}
-
-.nav-item span {
-  flex: 1;
+  transition: var(--transition);
 }
 
 .nav-item:hover {
-  background: rgba(15, 23, 42, 0.9);
-  opacity: 1;
+  background-color: var(--primary-light);
+  color: var(--primary);
+  transform: translateX(6px);
 }
 
 .nav-item.active {
-  background: #f97316;
-  color: #111827;
+  background-color: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.3);
 }
 
-.main {
-  flex: 1;
+.nav-icon {
+  font-size: 1.25rem;
+}
+
+.sidebar-footer {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.user-brief {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.user-meta {
   display: flex;
   flex-direction: column;
-  background: #f3f4f6;
-
-  min-width: 0;         /* içerik ne kadar geniş olursa olsun main büyümesin */
-  overflow-x: hidden;   /* emniyet kilidi: main sağa taşmasın */
 }
 
-/* içerik */
-.content {
-  padding: 1.25rem;
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto 1.25rem;
+.user-meta .name {
+  font-weight: 800;
+  color: var(--text-main);
+  font-size: 0.9rem;
 }
 
-@media (max-width: 768px) {
-  .main {
-    padding: 0;               /* dış padding yok */
-  }
-
-  .topbar {
-    padding: 0.75rem 1rem;    /* hamburger + başlık için */
-  }
-
-  .content {
-    padding: 0 1rem 1.5rem;   /* Dashboard .page ile aynı hizaya gelsin */
-    margin-top: 0.5rem;
-  }
+.user-meta .role {
+  font-size: 0.7rem;
+  color: var(--primary);
+  font-weight: 700;
 }
 
-
+/* TOPBAR REFINEMENT */
 .topbar {
-  height: 56px;
-  padding: 0 1.25rem;
+  height: 85px;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  padding: 0 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+
+.search-pill {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 14px;
+  padding: 0.7rem 1.25rem;
+  width: 100%;
+  max-width: 400px;
+  transition: var(--transition);
+}
+
+.search-pill:focus-within {
   background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-sm);
 }
 
-.topbar-title {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #111827;
-}
-
-/* hamburger */
-.topbar-menu-btn {
+.search-pill input {
   border: none;
   background: transparent;
-  font-size: 1.5rem;
-  margin-right: 0.75rem;
-  cursor: pointer;
-}
-
-
-/* BİLDİRİM ZİLİ */
-.notif-wrapper {
-  position: relative;
-}
-
-.notif-bell {
-  border: none;
-  background: #f9fafb;
-  border-radius: 999px;
-  padding: 0.4rem 0.75rem;
-  cursor: pointer;
+  margin-left: 0.85rem;
   font-size: 0.95rem;
-  position: relative;
+  width: 100%;
+  outline: none;
+  font-weight: 600;
 }
 
-.badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: #ef4444;
-  color: #fff;
-  border-radius: 999px;
-  font-size: 0.65rem;
-  padding: 0 0.3rem;
-  min-width: 16px;
-  text-align: center;
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.notif-btn {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: var(--transition);
+}
+
+.notif-btn:hover {
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.top-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.avatar-mini {
+  width: 32px;
+  height: 32px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+
+.user-name-mini {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-main);
 }
 
 .notif-panel {
   position: absolute;
   right: 0;
-  margin-top: 0.4rem;
-  width: 260px;
-  max-height: 320px;
-  overflow-y: auto;
+  top: 100%;
+  margin-top: 1.25rem;
+  width: 360px;
   background: #ffffff;
-  border-radius: 0.75rem;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
-  padding: 0.5rem 0.75rem;
-  z-index: 30;
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid #f1f5f9;
+  padding: 1.5rem;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
 }
 
-.notif-empty {
-  font-size: 0.8rem;
-  color: #6b7280;
-  padding: 0.25rem 0;
+.panel-header {
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.notif-item {
-  padding: 0.35rem 0.25rem;
-  border-bottom: 1px solid #f3f4f6;
-  font-size: 0.8rem;
+.main {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
 }
 
-.notif-item:last-child {
-  border-bottom: none;
+.content {
+  padding: 2rem;
+  width: 100%;
+  max-width: 100%;
 }
 
-.notif-message {
-  margin-bottom: 0.15rem;
-}
-
-.notif-time {
-  font-size: 0.7rem;
-  color: #9ca3af;
-}
-
-/* MOBİL DAVRANIŞ */
-.sidebar-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  z-index: 35;
-}
-
+/* RESPONSIVE */
 @media (max-width: 768px) {
+  .topbar { padding: 0 1rem; height: 70px; }
+  .search-pill { display: none; }
+  .user-name-mini { display: none; }
+  .content { padding: 1rem; }
+  
   .layout {
-    min-height: 100vh;
+    display: block;
   }
 
   .sidebar {
+    width: 280px;
     position: fixed;
-    inset: 0 auto 0 0;
-    width: 260px;
-    transform: translateX(-100%);
-    transition: transform 0.25s ease-out;
-    z-index: 40;
-    background-color: #020617;
-    background-image: radial-gradient(
-      1.5px 1.5px at 10px 10px,
-      #ffffff 0,
-      transparent 55%
-    ),
-    radial-gradient(
-      1.5px 1.5px at 30px 40px,
-      #ffffff 0,
-      transparent 55%
-    ),
-    radial-gradient(
-      1.5px 1.5px at 50px 20px,
-      #ffffff 0,
-      transparent 55%
-    ),
-    radial-gradient(
-      1.5px 1.5px at 70px 50px,
-      #ffffff 0,
-      transparent 55%
-    );
-  color: #e5e7eb;
+    left: -280px;
+    top: 0;
+    bottom: 0;
+    box-shadow: 20px 0 50px rgba(0,0,0,0.1);
   }
-
+  
   .sidebar--mobile-open {
-    transform: translateX(0);
+    left: 0;
   }
 
-  .content {
-    padding: 0.85rem;
+  .topbar-menu-btn {
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .topbar {
-    padding: 0 0.85rem;
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
-  .topbar-title {
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .content {
-    padding: 0.75rem 0.65rem 1rem;
-  }
-
-  .topbar-title {
-    font-size: 0.85rem;
-  }
-
-  .notif-bell {
-    padding: 0.3rem 0.6rem;
-  }
+  h1 { font-size: 1.75rem !important; }
+  h2 { font-size: 1.5rem !important; }
+  h3 { font-size: 1.25rem !important; }
 }
 </style>

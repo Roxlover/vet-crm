@@ -1,47 +1,70 @@
-/* style.css – global reset ve temel tipografi
-   Layout, sidebar, topbar, content, notif vb.
-   TAMAMEN App.vue içindeki scoped stillerden gelsin. */
-
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    sans-serif;
-  color-scheme: light;
-  color: #111827;
-  background-color: #f3f4f6;
+  /* Renk Paleti - Daha Soft ve Premium */
+  --primary: #4f46e5;
+  --primary-dark: #4338ca;
+  --primary-light: #eef2ff;
+  
+  --secondary: #7c3aed;
+  --accent-purple: #f3e8ff;
+  --accent-blue: #dbeafe;
+  --accent-orange: #ffedd5;
+  --accent-green: #dcfce7;
+
+  --bg-main: #f8fafc;
+  --sidebar-bg: #ffffff; /* Daha temiz, beyaz sidebar */
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --card-bg: #ffffff;
+  
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+
+  /* Mobile CRM Estetiği: Geniş Köşeler ve Soft Gölgeler */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+
+  /* Floating Card Etkisi İçin Yaygın Gölgeler */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 20px 40px -12px rgba(0, 0, 0, 0.08);
 }
 
-/* Box-sizing reset */
-*,
-*::before,
-*::after {
+* {
   box-sizing: border-box;
-}
-
-/* Body reset */
-html,
-body {
   margin: 0;
   padding: 0;
 }
 
-/* Linkler */
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+h1, h2, h3, h4, .logo-text .title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700; /* Daha kalın ve profesyonel başlıklar */
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
 a {
   color: inherit;
   text-decoration: none;
+  transition: all 0.2s ease;
 }
 
-/* Görseller responsive */
-img {
-  max-width: 100%;
-  display: block;
+button {
+  font-family: inherit;
 }
 
-/* Basit yardımcı sınıflar (istersen kullan) */
-.hidden {
-  display: none !important;
-}
-
-/* Erişilebilirlik için ekran okuyucu sınıfı */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -52,4 +75,20 @@ img {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

@@ -1,29 +1,28 @@
 <template>
-  <div class="page">
+  <main class="page-owners">
     <header class="page-header">
-      <div>
+      <div class="header-content">
         <h1>Hasta Sahipleri</h1>
-        <p class="subtitle">Kliniğinizde kayıtlı tüm hasta sahiplerini yönetin.</p>
+        <p class="subtitle">Klinik kayıtlarınızı ve müşteri notlarını buradan yönetin.</p>
       </div>
     </header>
 
-    <section class="grid">
+    <div class="owners-grid">
       <!-- Sol: Liste -->
-      <div class="card">
-        <div class="card-header">
-          <h2>Liste</h2>
-          <div class="header-actions">
+      <div class="list-container">
+        <div class="search-section">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
             <input 
               v-model="searchQuery" 
               type="text" 
-              placeholder="Ara (İsim veya Telefon)..." 
-              class="search-input"
+              placeholder="İsim veya telefon ile ara..." 
               @input="handleSearch"
             />
-            <button class="btn btn-sm" @click="loadOwners" :disabled="loading">
-              Yenile
-            </button>
           </div>
+          <button class="btn btn-secondary" @click="loadOwners" :disabled="loading" style="padding: 0 1.5rem; border-radius: 16px;">
+            Yenile
+          </button>
         </div>
 
         <div v-if="loading" class="state">Yükleniyor...</div>
@@ -32,116 +31,89 @@
           Henüz hasta sahibi eklenmemiş.
         </div>
 
-        <table v-else class="table">
-          <thead>
-            <tr>
-              <th>İsim</th>
-              <th>Telefon</th>
-              <th>Pet sayısı</th>
-              <th class="actions-col"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="owner in owners" :key="owner.id">
-              <td>{{ owner.fullName }}</td>
-              <td>{{ owner.phoneE164 }}</td>
-              <td>{{ owner.petCount }}</td>
-              <td class="actions">
-                <button class="btn btn-sm" type="button" @click="openOwnerDetail(owner.id)">
-                  Detay
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div v-else class="owners-list">
+          <div v-for="owner in owners" :key="owner.id" class="owner-card">
+            <div class="owner-info">
+              <span class="name">{{ owner.fullName }}</span>
+              <span class="phone">{{ owner.phoneE164 }}</span>
+            </div>
+            <div class="owner-actions">
+              <span class="pet-badge">{{ owner.petCount }} Pet</span>
+              <button class="btn" style="background: #ffffff; color: var(--primary); padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.9rem;" @click="openOwnerDetail(owner.id)">
+                Detay
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Sağ: Yeni ekleme formu -->
-      <div class="card">
-        <div class="card-header">
-          <h2>Yeni Hasta Sahibi</h2>
-        </div>
+      <div class="form-card">
+        <h2>Yeni Hasta Sahibi</h2>
 
         <form class="form" @submit.prevent="handleCreate">
           <div class="form-group">
             <label for="fullName">Ad Soyad</label>
-            <input id="fullName" v-model="form.fullName" type="text" required />
+            <input id="fullName" v-model="form.fullName" type="text" placeholder="Müşteri Adı" required />
           </div>
 
           <div class="form-group">
             <label for="phone">Telefon</label>
-            <input id="phone" v-model="form.phoneE164" type="tel" required />
-            <small class="hint">0 yazmadan, ülke kodu ile birlikte (Türkiye için 90).</small>
+            <input id="phone" v-model="form.phoneE164" type="tel" placeholder="905xxxxxxxxx" required />
+            <small class="hint" style="margin-top: 0.5rem; display: block;">Ülke kodu ile birlikte (Örn: 90).</small>
           </div>
 
           <section class="pets-section">
-            <div class="pets-header">
-              <h3>Evcil Hayvanları</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+              <h3 style="font-size: 1.1rem; font-weight: 800;">Evcil Hayvanlar</h3>
             </div>
 
-            <div v-for="(pet, index) in form.pets" :key="index" class="pet-card">
-              <div class="pet-card-header">
-                <button
-                  v-if="form.pets.length > 1"
-                  type="button"
-                  class="link-button"
-                  @click="removePetRow(index)"
-                >
-                  Bu peti kaldır
-                </button>
-              </div>
+            <div v-for="(pet, index) in form.pets" :key="index" class="pet-edit-card">
+              <button
+                v-if="form.pets.length > 1"
+                type="button"
+                class="remove-btn"
+                @click="removePetRow(index)"
+              >
+                ✕
+              </button>
 
-              <div class="pet-card-grid">
-  <div class="field">
-    <label>Pet adı</label>
-    <input v-model="pet.name" type="text" />
-  </div>
+              <div class="pet-grid">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label>Ad</label>
+                  <input v-model="pet.name" type="text" placeholder="Pamuk" />
+                </div>
 
-  <div class="field">
-    <label>Tür</label>
-    <input v-model="pet.species" type="text" />
-  </div>
-
-  <div class="field field-small">
-    <label>Yıl</label>
-    <input v-model.number="pet.ageYears" type="number" min="0" />
-  </div>
-
-  <div class="field field-small">
-    <label>Ay</label>
-    <input v-model.number="pet.ageMonths" type="number" min="0" max="11" />
-  </div>
-</div>
- 
-              <div class="field">
-                <label>Geçmiş</label>
-                <input v-model="pet.notes" type="text" />
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label>Tür</label>
+                  <input v-model="pet.species" type="text" placeholder="Kedi" />
+                </div>
               </div>
             </div>
 
-            <button type="button" class="btn-secondary add-pet-button" @click="addPetRow">
-              + Pet ekle
+            <button type="button" class="btn btn-ghost" @click="addPetRow">
+              + Başka Pet Ekle
             </button>
           </section>
 
-          <div class="form-actions">
-            <button class="btn" type="submit" :disabled="creating">
-              {{ creating ? 'Kaydediliyor...' : 'Kaydet' }}
+          <div class="form-actions" style="margin-top: 2rem;">
+            <button class="btn btn-primary" type="submit" :disabled="creating">
+              {{ creating ? 'Kaydediliyor...' : 'Kaydı Tamamla' }}
             </button>
           </div>
 
-          <p v-if="formError" class="state state-error">{{ formError }}</p>
-          <p v-if="formSuccess" class="state state-success">{{ formSuccess }}</p>
+          <p v-if="formError" class="state state-error" style="margin-top: 1rem;">{{ formError }}</p>
+          <p v-if="formSuccess" class="state state-success" style="margin-top: 1rem;">{{ formSuccess }}</p>
         </form>
       </div>
-    </section>
+    </div>
 
     <!-- Owner Detail Modal -->
     <div v-if="showDetailModal" class="modal-backdrop" @click.self="closeOwnerDetail">
       <div class="modal">
         <div class="modal-header">
           <h3>Hasta Sahibi Detayı</h3>
-          <button class="btn btn-sm" type="button" @click="closeOwnerDetail">Kapat</button>
+          <button class="btn btn-sm btn-secondary" type="button" @click="closeOwnerDetail">Kapat</button>
         </div>
 
         <div v-if="detailLoading" class="state modal-state">Yükleniyor...</div>
@@ -155,7 +127,6 @@
             <div><strong>Telefon:</strong> {{ ownerDetail.phoneE164 }}</div>
           </div>
           
-          <!-- ✅ Notlar Bölümü (En Üstte) -->
           <section class="notes-section">
             <h4 class="section-title">Hasta Sahibi Notları</h4>
             
@@ -192,7 +163,6 @@
 
           <h4 class="section-title">Evcil Hayvanlar</h4>
 
-          <!-- ✅ Pet Ekle Formu -->
           <div class="pet-add">
             <div class="pet-add-grid">
               <div class="field">
@@ -257,16 +227,15 @@
                 </div>
                 <div v-if="p.notes" class="muted">Not: {{ p.notes }}</div>
               </div>
-            <button class="btn btn-sm" type="button" @click="removePet(p.id)">
-              Sil
-           </button>
+              <button class="btn btn-sm btn-secondary" type="button" @click="removePet(p.id)">
+                Sil
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
-
-  </div>
+  </main>
 </template>
 
 <script setup>
@@ -442,12 +411,11 @@ async function removePet(petId) {
   petDeleteError.value = ''
 
   try {
-    await deletePet(petId) // (Aşağıda API wrapper kısmını netleştiriyorum)
+    await deletePet(petId) 
     const res = await fetchOwner(selectedOwner.value)
     ownerDetail.value = res?.data ?? res
     await loadOwners()
   } catch (err) {
-    // axios ise:
     const msg = err?.response?.data || 'Pet silinirken hata oluştu.'
     petDeleteError.value = typeof msg === 'string' ? msg : (msg?.message || 'Pet silinirken hata oluştu.')
     console.error(err)
@@ -509,488 +477,528 @@ onMounted(loadOwners)
 </script>
 
 <style scoped>
-.page {
-  width: 100%;
-  max-width: 1024px;
-  margin: 0 auto;
-  padding: 1rem;
+.page-owners {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 1rem;
+  align-items: center;
+  margin-bottom: 2.5rem;
 }
 
 .page-header h1 {
-  margin: 0;
-  font-size: 1.4rem;
+  font-size: 2.25rem;
+  letter-spacing: -0.05em;
+  font-weight: 800;
 }
 
 .subtitle {
-  margin: 0.25rem 0 0;
-  font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--text-muted);
+  font-size: 1.1rem;
 }
 
-.grid {
+.owners-grid {
   display: grid;
-  grid-template-columns: 2fr 1.2fr;
+  grid-template-columns: 1fr 400px;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+/* LIST CARD */
+.list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.search-section {
+  display: flex;
   gap: 1rem;
-}
-
-@media (max-width: 900px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.card {
-  background: #ffffff;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-  gap: 1rem;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 1;
-  justify-content: flex-end;
-}
-
-.search-input {
-  max-width: 200px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.8rem;
-  border-radius: 8px;
-}
-
-.card-header h2 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  padding: 0.45rem 0.9rem;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #ffe2ab;
-  color: #4c5137;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
-}
-
-.btn:hover {
-  background: #fde1c4;
-  border-color: #ebc458;
-  box-shadow: 0 4px 10px rgba(187, 208, 255, 0.08);
-  transform: translateY(-0.5px);
-}
-
-.btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-  box-shadow: none;
-}
-
-.btn-sm {
-  padding: 0.3rem 0.7rem;
-  font-size: 0.8rem;
-}
-
-.state {
-  font-size: 0.9rem;
-  color: #6b7280;
-  padding: 0.4rem 0;
-}
-
-.state-error {
-  color: #b91c1c;
-}
-
-.state-success {
-  color: #15803d;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.table th,
-.table td {
-  padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.table th {
-  text-align: left;
-  font-weight: 600;
-  color: #4b5563;
-  font-size: 0.8rem;
-}
-
-.actions-col {
-  width: 1%;
-  white-space: nowrap;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #374151;
-}
-
-input,
-textarea {
-  border-radius: 0.5rem;
-  border: 1px solid #d1d5db;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.85rem;
-  font-family: inherit;
-}
-
-input:focus,
-textarea:focus {
-  outline: none;
-  border-color: #22c55e;
-  box-shadow: 0 0 0 1px #22c55e33;
-}
-
-.hint {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.form-actions {
-  margin-top: 0.5rem;
-}
-
-.pets-section {
-  margin-top: 1.5rem;
-  padding: 1.25rem;
-  background: #f9fafb;
-  border-radius: 0.75rem;
-  border: 1px dashed #e5e7eb;
-}
-
-.pets-header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
-}
-
-.pets-header h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.pet-card {
-  background: #ffffff;
-  border-radius: 0.75rem;
-  padding: 0.75rem 0.9rem;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-  margin-bottom: 0.75rem;
-}
-
-.pet-card-header {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.link-button {
-  border: none;
-  background: transparent;
-  font-size: 0.75rem;
-  color: #dc2626;
-  cursor: pointer;
-  padding: 0;
-}
-
-.link-button:hover {
-  text-decoration: underline;
-}
-
-.pet-card-grid {
-  display: grid;
-  grid-template-columns: 2fr 2fr 1fr 1fr;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.field-small input {
-  max-width: 140px;
-}
-
-.btn-secondary {
-  border-radius: 999px;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  padding: 0.45rem 0.9rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.btn-secondary:hover {
-  background: #f3f4f6;
-}
-
-.add-pet-button {
-  margin-top: 0.25rem;
-  width: 100%;
-  justify-content: center;
-}
-
-@media (max-width: 768px) {
-  .pet-card-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Modal */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  z-index: 9999;
-}
-
-.modal {
-  width: min(820px, 100%);
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-  overflow: hidden;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid #eee;
-}
-
-.modal-body {
-  padding: 16px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.modal-state {
-  padding: 16px;
-}
-
-.kv {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.section-title {
-  margin-top: 16px;
-  margin-bottom: 10px;
-}
-
-.muted {
-  opacity: 0.7;
-}
-
-/* Pet list in modal */
-.pets-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.pet-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  border: 1px solid #eee;
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.pet-main {
-  display: grid;
-  gap: 4px;
-}
-
-/* Pet add in modal */
-.pet-add {
-  margin: 12px 0 12px;
-  padding: 12px;
-  border: 1px dashed #e5e7eb;
-  border-radius: 10px;
-  background: #fafafa;
-}
-
-.pet-add-grid {
-  display: grid;
-  grid-template-columns: 2fr 2fr 1fr 1fr;
-  gap: 12px;
-}
-
-.pet-add-grid .full {
-  grid-column: 1 / -1;
-}
-
-.pet-add-actions {
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-@media (max-width: 768px) {
-  .modal-backdrop {
-    padding: 8px;
-  }
-  
-  .modal {
-    max-height: 96vh;
-    border-radius: 8px;
-  }
-
-  .modal-body {
-    padding: 12px;
-  }
-
-  .pet-add-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .kv {
-    grid-template-columns: 1fr;
-  }
-  
-  .note-textarea {
-    font-size: 16px; /* Mobilde zoom yapmasın diye */
-  }
-}
-
-/* Notes Section */
-.notes-section {
-  margin: 1rem 0 1.5rem;
-  padding: 1rem;
-  background: #fdfaf3;
-  border-radius: 12px;
-  border: 1px solid #f3e8d2;
-}
-
-.note-add {
   margin-bottom: 1rem;
 }
 
-.note-textarea {
+.search-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.search-input-wrapper input {
   width: 100%;
-  resize: vertical;
-  min-height: 60px;
-  margin-bottom: 0.5rem;
-  border: 1px solid #e5e7eb;
-  background: #fff;
+  padding: 1rem 1.25rem 1rem 3rem;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  background: #ffffff;
+  font-size: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
 }
 
-.note-add-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.search-input-wrapper input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-light);
+  outline: none;
 }
 
-.notes-history {
+.search-icon {
+  position: absolute;
+  left: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+/* OWNER CARDS */
+.owners-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.owner-card {
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 250px;
-  overflow-y: auto;
-  padding-right: 4px;
+  gap: 1rem;
 }
 
-.note-item {
-  padding: 10px;
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+.owner-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
 }
 
-.note-content {
-  font-size: 0.9rem;
-  color: #1e293b;
-  white-space: pre-wrap;
-  line-height: 1.4;
+/* Renkli Kart Varyasyonları */
+.owner-card:nth-child(4n+1) { background: #f5f3ff; } /* Lavanta */
+.owner-card:nth-child(4n+2) { background: #f0fdf4; } /* Mint */
+.owner-card:nth-child(4n+3) { background: #eff6ff; } /* Blue */
+.owner-card:nth-child(4n+4) { background: #fff7ed; } /* Peach */
+
+.owner-info .name {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
 }
 
-.note-meta {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-top: 6px;
-  text-align: right;
+.owner-info .phone {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
-.no-notes {
-  font-size: 0.85rem;
-  font-style: italic;
-  margin: 0.5rem 0;
+.owner-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0,0,0,0.05);
 }
 
-.notes-history::-webkit-scrollbar {
-  width: 5px;
-}
-
-.notes-history::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
+.pet-badge {
+  background: #ffffff;
+  padding: 0.4rem 0.8rem;
   border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+/* FORM CARD */
+.form-card {
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid #f1f5f9;
+  position: sticky;
+  top: 2rem;
+}
+
+.form-card h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 2rem;
+  letter-spacing: -0.03em;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  background: #f8fafc;
+  font-size: 1rem;
+  transition: var(--transition);
+}
+
+.form-group input:focus {
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-light);
+  outline: none;
+}
+
+/* PET ROWS IN FORM */
+.pets-section {
+  margin-top: 2rem;
+  border-top: 2px dashed #f1f5f9;
+  padding-top: 2rem;
+}
+
+.pet-edit-card {
+  background: #f8fafc;
+  padding: 1.25rem;
+  border-radius: 16px;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.pet-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.remove-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 28px;
+  height: 28px;
+  background: #ffffff;
+  border: 1px solid #fee2e2;
+  color: var(--danger);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+
+/* BUTTONS */
+.btn {
+  padding: 1rem 1.5rem;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: var(--transition);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+  width: 100%;
+  box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px -10px rgba(79, 70, 229, 0.5);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.9rem;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+/* MODAL */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  width: 90%;
+  max-width: 800px;
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 3rem;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.owner-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Renkli Kart Varyasyonları */
+.owner-card:nth-child(4n+1) { background: #f5f3ff; } /* Lavanta */
+.owner-card:nth-child(4n+2) { background: #f0fdf4; } /* Mint */
+.owner-card:nth-child(4n+3) { background: #eff6ff; } /* Blue */
+.owner-card:nth-child(4n+4) { background: #fff7ed; } /* Peach */
+
+.owner-info .name {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.owner-info .phone {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.owner-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+.pet-badge {
+  background: #ffffff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+/* FORM CARD */
+.form-card {
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid #f1f5f9;
+  position: sticky;
+  top: 2rem;
+}
+
+.form-card h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 2rem;
+  letter-spacing: -0.03em;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  background: #f8fafc;
+  font-size: 1rem;
+  transition: var(--transition);
+}
+
+.form-group input:focus {
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-light);
+  outline: none;
+}
+
+/* PET ROWS IN FORM */
+.pets-section {
+  margin-top: 2rem;
+  border-top: 2px dashed #f1f5f9;
+  padding-top: 2rem;
+}
+
+.pet-edit-card {
+  background: #f8fafc;
+  padding: 1.25rem;
+  border-radius: 16px;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.pet-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.remove-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 28px;
+  height: 28px;
+  background: #ffffff;
+  border: 1px solid #fee2e2;
+  color: var(--danger);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+
+/* BUTTONS */
+.btn {
+  padding: 1rem 1.5rem;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: var(--transition);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+  width: 100%;
+  box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px -10px rgba(79, 70, 229, 0.5);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.9rem;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+/* MODAL */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  width: 90%;
+  max-width: 800px;
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 3rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 1024px) {
+  .owners-grid { grid-template-columns: 1fr; }
+  .form-card { position: static; }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .search-pill {
+    width: 100%;
+    max-width: none;
+  }
+
+  .modal {
+    padding: 2rem 1.5rem;
+  }
+
+  .owner-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .owner-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .pet-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .pet-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 </style>

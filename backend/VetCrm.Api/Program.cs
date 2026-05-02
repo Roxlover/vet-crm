@@ -136,11 +136,24 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// ✅ Otomatik Migration Uygula
+// ✅ Otomatik Migration ve Seed Data
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<VetCrmDbContext>();
     db.Database.Migrate();
+
+    // Eğer hiç kullanıcı yoksa varsayılan kullanıcıları ekle
+    if (!db.Users.Any())
+    {
+        db.Users.Add(new VetCrm.Domain.Entities.User
+        {
+            FullName = "BullBoss Admin",
+            Username = "BullBoss",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
+            Role = "Admin"
+        });
+        db.SaveChanges();
+    }
 }
 
 var enableSwagger = builder.Configuration.GetValue<bool>("EnableSwagger");

@@ -1,256 +1,131 @@
 <template>
-  <div class="page">
+  <main class="page-visits">
     <header class="page-header">
-      <h1>Ziyaret Kartı / İşlem Kaydı</h1>
-      <p class="subtitle">
-        Her ziyaret için aşağıdaki kartı doldurun; hatırlatmalar otomatik oluşsun.
-      </p>
+      <div class="header-content">
+        <h1>Ziyaretler</h1>
+        <p class="subtitle">Klinik ziyaretlerini ve tedavi geçmişlerini buradan izleyin.</p>
+      </div>
     </header>
 
-    <section class="selector-card">
-<div class="field">
-  <label>Hasta Sahibi</label>
+    <div class="visits-layout">
+      <!-- Sol: Filtreler ve Liste -->
+      <div class="list-section">
+        <div class="filters-bar">
+          <div class="filter-item">
+            <span class="filter-icon">📅</span>
+            <input type="date" v-model="filterDate" @change="loadVisits" />
+          </div>
+          <div class="filter-item">
+            <span class="filter-icon">🔍</span>
+            <input type="text" v-model="searchQuery" placeholder="Pet veya sahip ismi..." @input="handleSearch" />
+          </div>
+        </div>
 
-  <div class="combo" ref="ownerComboRef">
-    <!-- Seçili chip -->
-    <div v-if="selectedOwner" class="chip">
-      <span class="chip-text">
-        {{ selectedOwner.fullName }} ({{ selectedOwner.phoneE164 }})
-      </span>
-      <button type="button" class="chip-x" @click="clearOwner" aria-label="Seçimi temizle">
-        ×
-      </button>
-    </div>
+        <div v-if="loading" class="state">Yükleniyor...</div>
+        <div v-else-if="error" class="state state-error">{{ error }}</div>
+        <div v-else-if="visits.length === 0" class="state">
+          Henüz ziyaret kaydı bulunamadı.
+        </div>
 
-    <!-- Arama inputu -->
-    <input
-      v-else
-      ref="ownerInputRef"
-      class="combo-input"
-      type="text"
-      v-model="ownerQuery"
-      placeholder="En az 2 harf yazın..."
-      @focus="openOwnerDropdown"
-      @click="openOwnerDropdown"
-      @keydown.down.prevent="moveOwnerActive(1)"
-      @keydown.up.prevent="moveOwnerActive(-1)"
-      @keydown.enter.prevent="selectActiveOwner"
-      @keydown.esc.prevent="closeOwnerDropdown"
-      autocomplete="off"
-      role="combobox"
-      :aria-expanded="ownerDropdownOpen ? 'true' : 'false'"
-      aria-autocomplete="list"
-    />
+        <div v-else class="visit-list">
+          <div v-for="visit in visits" :key="visit.id" class="visit-card">
+            <div class="visit-header">
+              <div>
+                <span class="pet-name">{{ visit.petName }}</span>
+                <span class="owner-info">{{ visit.ownerName }}</span>
+              </div>
+              <div class="visit-time">
+                {{ new Date(visit.performedAt).toLocaleDateString('tr-TR') }}
+              </div>
+            </div>
 
-    <!-- Dropdown -->
-    <div v-if="ownerDropdownOpen" class="combo-popover">
-      <div class="combo-hint" v-if="ownerQuery.trim().length < 2">
-        Aramak için en az 2 karakter yazın.
+            <div class="treatment-info">
+              <p><strong>İşlemler:</strong> {{ visit.procedures || 'Belirtilmedi' }}</p>
+              <p v-if="visit.notes"><strong>Notlar:</strong> {{ visit.notes }}</p>
+            </div>
+
+            <div class="visit-footer">
+              <span class="amount-badge">{{ visit.amountTl }} TL</span>
+              <span v-if="visit.creditAmountTl > 0" style="color: var(--danger); font-weight: 700;">
+                Veresiye: {{ visit.creditAmountTl }} TL
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <ul
-        v-else
-        class="combo-list"
-        role="listbox"
-      >
-        <li
-          v-for="(owner, idx) in filteredOwners"
-          :key="owner.id"
-          class="combo-item"
-          :class="{ active: idx === ownerActiveIndex }"
-          role="option"
-          @mousedown.prevent="selectOwner(owner)"
-          @mousemove="ownerActiveIndex = idx"
-        >
-          <div class="combo-title">{{ owner.fullName }}</div>
-          <div class="combo-sub">{{ owner.phoneE164 }}</div>
-        </li>
+      <!-- Sağ: Yeni Ziyaret Formu -->
+      <div class="form-card">
+        <h2>Yeni Ziyaret</h2>
 
-        <li v-if="!filteredOwners.length" class="combo-empty">
-          Sonuç bulunamadı.
-        </li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-      <div class="field">
-        <label>Hasta (Hayvan)</label>
-        <select v-model="selectedPetId" :disabled="!selectedOwnerId">
-          <option value="">Seçiniz</option>
-          <option
-            v-for="pet in petsForSelectedOwner"
-            :key="pet.id"
-            :value="pet.id"
-          >
-            {{ pet.name }} – {{ pet.species }}
-          </option>
-        </select>
-      </div>
-    </section>
-
-    <section class="visit-card">
-      <header class="visit-header">
-        <div>
-          <div><strong>Hasta sahibi:</strong> {{ ownerName || '—' }}</div>
-          <div><strong>Hasta adı:</strong> {{ petName || '—' }}</div>
-        </div>
-        <div>
-          <div><strong>Tel:</strong> {{ ownerPhone || '—' }}</div>
-        </div>
-      </header>
-
-      <div class="visit-body">
-        <div class="field">
-          <label>Neler uygulandı?</label>
-          <textarea v-model="form.procedures" rows="2" />
-        </div>
-
-        <div class="field">
-          <label>Hangi aşılar uygulandı?</label>
-          <textarea v-model="form.vaccines" rows="2" />
-        </div>
-
-       <div class="field-row money-row">
-  <div class="field">
-    <label>Ne zaman uygulandı?</label>
-    <input type="datetime-local" v-model="form.performedAt" />
-  </div>
-
-  <div class="field">
-    <label>Ne kadar aldım (TL)?</label>
-    <input
-      type="number"
-      min="0"
-      step="0.01"
-      v-model.number="form.amountTl"
-      placeholder="Örn: 500"
-    />
-  </div>
-
-  <div class="field">
-    <label>Veresiye (TL)</label>
-    <input
-      v-model="form.creditAmountTl"
-      type="number"
-      min="0"
-      step="0.01"
-      placeholder="Örn: 750"
-    />
-  </div>
-</div>
- 
-        <div class="form-row-inline">
-        <div class="field-group">
-          <label>Ne zaman / ne için gelecek?</label>
-
-          <div
-            v-for="(item, index) in nextVisits"
-            :key="index"
-            class="next-visit-row"
-          >
+        <div class="form-group">
+          <label>Hasta Sahibi</label>
+          <div class="combo" ref="ownerComboRef">
+            <div v-if="selectedOwner" class="chip" style="background: var(--primary-light); border: none; padding: 0.75rem 1rem; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+              <span class="chip-text" style="font-weight: 700; color: var(--primary);">
+                {{ selectedOwner.fullName }}
+              </span>
+              <button type="button" class="chip-x" @click="clearOwner" style="border: none; background: transparent; font-size: 1.2rem; cursor: pointer; color: var(--primary);">×</button>
+            </div>
             <input
-              type="date"
-              v-model="item.date"
-            />
-
-            <input
+              v-else
+              ref="ownerInputRef"
+              class="combo-input"
               type="text"
-              v-model="item.purpose"
-              placeholder="Örn: iç/dış parazit, karma aşı..."
+              v-model="ownerQuery"
+              placeholder="Sahip ara..."
+              @focus="openOwnerDropdown"
             />
-
-            <button
-              v-if="nextVisits.length > 1"
-              type="button"
-              class="btn-small"
-              @click="removeNextVisitRow(index)"
-            >
-              -
-            </button>
-          </div>
-
-          <button
-            type="button"
-            class="btn-secondary"
-            @click="addNextVisitRow"
-          >
-            + Tarih ekle
-          </button>
-
-          <p class="hint">
-            En az bir tarih girebilirsin, istersen birden fazla satır ekle.
-          </p>
-        </div>
-
-
-          <div class="form-group">
-            <label>Ne için gelecek</label>
-            <input
-              type="text"
-              v-model="form.purpose"
-            />
-          </div>
-
-          <div class="form-group">
-            <label>Mikroçip numarası</label>
-            <input
-              type="text"
-              v-model="form.microchipNumber"
-
-            />
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Hasta sahibi durumu</label>
-          <textarea v-model="form.ownerStatus" rows="2" />
-        </div>
-
-        <div class="field">
-          <label>Hasta sahibi için not</label>
-          <textarea v-model="form.notes" rows="3" />
-        </div>
-
-        <div class="field">
-          <label>Görsel çek / ekle</label>
-
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            @change="onFilesChange"
-          />
-
-          <small class="hint">
-            Örn: yara fotoğrafı, faturanın görüntüsü vb.
-          </small>
-
-          <div
-            v-if="form.imagePreviews && form.imagePreviews.length"
-            class="visit-image-preview-grid"
-          >
-            <div
-              v-for="(src, idx) in form.imagePreviews"
-              :key="idx"
-              class="visit-image-thumb"
-            >
-              <img :src="src" :alt="`Görsel ${idx + 1}`" />
+            <div v-if="ownerDropdownOpen" class="combo-popover">
+              <div v-for="(owner, idx) in filteredOwners" :key="owner.id" class="combo-item" @mousedown="selectOwner(owner)">
+                <div class="combo-title">{{ owner.fullName }}</div>
+                <div class="combo-sub">{{ owner.phoneE164 }}</div>
+              </div>
+              <div v-if="ownerQuery.length >= 2 && !filteredOwners.length" class="combo-item">Sonuç bulunamadı.</div>
             </div>
           </div>
         </div>
 
-        <p v-if="error" class="state state-error">{{ error }}</p>
-        <p v-if="success" class="state state-success">{{ success }}</p>
-      </div>
+        <div class="form-group">
+          <label>Hasta (Pet)</label>
+          <select v-model="selectedPetId" :disabled="!selectedOwnerId">
+            <option value="">Seçiniz</option>
+            <option v-for="pet in petsForSelectedOwner" :key="pet.id" :value="pet.id">
+              {{ pet.name }} ({{ pet.species }})
+            </option>
+          </select>
+        </div>
 
-      <footer class="visit-footer">
-        <button class="btn" @click="handleSave" :disabled="saving">
-          {{ saving ? 'Kaydediliyor...' : 'Kaydet' }}
+        <div class="form-group">
+          <label>Uygulanan Tedavi</label>
+          <textarea v-model="form.procedures" rows="3" placeholder="Neler yapıldı?"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Zaman</label>
+          <input type="datetime-local" v-model="form.performedAt" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Tutar (TL)</label>
+            <input type="number" v-model.number="form.amountTl" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label>Veresiye (TL)</label>
+            <input type="number" v-model.number="form.creditAmountTl" placeholder="0.00" />
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="margin-top: 1rem;" @click="handleSave" :disabled="saving">
+          {{ saving ? 'Kaydediliyor...' : 'Ziyareti Kaydet' }}
         </button>
-      </footer>
-    </section>
-  </div>
+
+        <p v-if="error" class="state state-error" style="margin-top: 1rem;">{{ error }}</p>
+        <p v-if="success" class="state state-success" style="margin-top: 1rem;">{{ success }}</p>
+      </div>
+    </div>
+  </main>
 </template>
 
 <script setup>
@@ -259,16 +134,15 @@ import { fetchOwners } from '../api/owners'
 import { fetchPetsByOwner } from '../api/pets'
 import { http } from '@/api/http'
 
+const visits = ref([])
 const owners = ref([])
 const pets = ref([])
+const loading = ref(false)
+const filterDate = ref(new Date().toISOString().substr(0, 10))
+const searchQuery = ref('')
 
 const selectedOwnerId = ref('')
 const selectedPetId = ref('')
-
-const ownerName = ref('')
-const petName = ref('')
-const ownerPhone = ref('')
-
 const error = ref('')
 const success = ref('')
 const saving = ref(false)
@@ -276,28 +150,19 @@ const saving = ref(false)
 const form = reactive({
   procedures: '',
   vaccines: '',
-  performedAt: '',
+  performedAt: new Date().toISOString().substr(0, 16),
   creditAmountTl: '',
   amountTl: null,
-  nextDate: '',
-  purpose: '',
-  ownerStatus: '',
   notes: '',
-  imageFiles: [],     
-  imagePreviews: [],   
-  microchipNumber: '', 
+  imageFiles: [],
+  microchipNumber: '',
 })
-const nextVisits = ref([
-  { date: '', purpose: '' },
-])
+
 const ownerQuery = ref('')
 const ownerDropdownOpen = ref(false)
-const ownerActiveIndex = ref(0)
-
 const ownerComboRef = ref(null)
 const ownerInputRef = ref(null)
 
-// selectedOwnerId zaten var; bunu kullanıyoruz
 const selectedOwner = computed(() => {
   const idNum = Number(selectedOwnerId.value)
   if (!idNum) return null
@@ -307,109 +172,26 @@ const selectedOwner = computed(() => {
 const filteredOwners = computed(() => {
   const q = ownerQuery.value.trim().toLowerCase()
   if (q.length < 2) return []
-
-  // fullName + phone içinde arama
-  return owners.value
-    .filter(o => {
-      const haystack = `${o.fullName || ''} ${o.phoneE164 || ''}`.toLowerCase()
-      return haystack.includes(q)
-    })
-    .slice(0, 50) // çok uzunsa sınırlayalım
+  return owners.value.filter(o => 
+    (o.fullName || '').toLowerCase().includes(q) || (o.phoneE164 || '').includes(q)
+  ).slice(0, 50)
 })
-
-function openOwnerDropdown() {
-  ownerDropdownOpen.value = true
-  ownerActiveIndex.value = 0
-}
-
-function closeOwnerDropdown() {
-  ownerDropdownOpen.value = false
-}
-
-function selectOwner(owner) {
-  selectedOwnerId.value = String(owner.id)
-  // Chip görüneceği için query'yi temizleyelim
-  ownerQuery.value = ''
-  ownerActiveIndex.value = 0
-
-  // Seçince dropdown kapansın (isterseniz kapatma):
-  ownerDropdownOpen.value = false
-}
-
-function clearOwner() {
-  selectedOwnerId.value = ''
-  selectedPetId.value = ''
-  ownerName.value = ''
-  ownerPhone.value = ''
-  petName.value = ''
-
-  // Tekrar arama yapılabilsin
-  ownerQuery.value = ''
-  ownerDropdownOpen.value = true
-
-  // Mobilde klavye açılsın: inputa focus
-  nextTick(() => {
-    ownerInputRef.value?.focus()
-  })
-}
-
-function moveOwnerActive(delta) {
-  if (!ownerDropdownOpen.value) ownerDropdownOpen.value = true
-  if (ownerQuery.value.trim().length < 2) return
-  const len = filteredOwners.value.length
-  if (!len) return
-
-  const next = ownerActiveIndex.value + delta
-  if (next < 0) ownerActiveIndex.value = len - 1
-  else if (next >= len) ownerActiveIndex.value = 0
-  else ownerActiveIndex.value = next
-}
-
-function selectActiveOwner() {
-  if (ownerQuery.value.trim().length < 2) return
-  const owner = filteredOwners.value[ownerActiveIndex.value]
-  if (owner) selectOwner(owner)
-}
-
-// Dışarı tıklayınca kapat
-function onDocPointerDown(e) {
-  const root = ownerComboRef.value
-  if (!root) return
-  if (!root.contains(e.target)) {
-    ownerDropdownOpen.value = false
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('pointerdown', onDocPointerDown)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', onDocPointerDown)
-})
-
-// Seçim yoksa inputa tıklayınca klavye gelsin: dropdown aç + focus zaten inputta
-watch(ownerDropdownOpen, (open) => {
-  if (open && !selectedOwner.value) {
-    nextTick(() => ownerInputRef.value?.focus())
-  }
-})
-
-function addNextVisitRow() {
-  nextVisits.value.push({ date: '', purpose: '' })
-}
-
-function removeNextVisitRow(index) {
-  nextVisits.value.splice(index, 1)
-}
 
 const petsForSelectedOwner = computed(() =>
   pets.value.filter((p) => p.ownerId === Number(selectedOwnerId.value))
 )
 
-onMounted(async () => {
-  await loadOwnersAndPets()
-})
+async function loadVisits() {
+  loading.value = true
+  try {
+    const res = await http.get(`/visits?date=${filterDate.value}`)
+    visits.value = res.data
+  } catch (err) {
+    error.value = 'Ziyaretler yüklenemedi.'
+  } finally {
+    loading.value = false
+  }
+}
 
 async function loadOwnersAndPets() {
   try {
@@ -420,472 +202,383 @@ async function loadOwnersAndPets() {
     owners.value = ownersData
     pets.value = petsData
   } catch (e) {
-    console.error(e)
-    error.value = 'Sahip ve hasta bilgileri yüklenirken hata oluştu.'
+    error.value = 'Bilgiler yüklenirken hata oluştu.'
   }
 }
 
-watch(selectedOwnerId, (newId) => {
-  const idNum = Number(newId)
-  const owner = owners.value.find((o) => o.id === idNum)
-  if (owner) {
-    ownerName.value = owner.fullName
-    ownerPhone.value = owner.phoneE164
-  } else {
-    ownerName.value = ''
-    ownerPhone.value = ''
-  }
-  selectedPetId.value = '' 
-})
+function openOwnerDropdown() {
+  ownerDropdownOpen.value = true
+}
 
-watch(selectedPetId, (newId) => {
-  const idNum = Number(newId)
-  const pet = pets.value.find((p) => p.id === idNum)
-  petName.value = pet ? pet.name : ''
-})
+function selectOwner(owner) {
+  selectedOwnerId.value = String(owner.id)
+  ownerQuery.value = ''
+  ownerDropdownOpen.value = false
+}
 
-function onFilesChange(event) {
-  const input = event.target
-  const files = Array.from(input.files || [])
-
-  console.log('SEÇİLEN DOSYA SAYISI (BU SEÇİM) >>>', files.length)
-
-  if (!files.length) return
-
-  // Aynı dosya tekrar eklenmesin diye (name+size+lastModified ile)
-  const existingKey = new Set(
-    (form.imageFiles || []).map(f => `${f.name}_${f.size}_${f.lastModified}`)
-  )
-
-  const newFiles = files.filter(f => !existingKey.has(`${f.name}_${f.size}_${f.lastModified}`))
-
-  // APPEND: önceki seçimleri ezme
-  form.imageFiles = [...(form.imageFiles || []), ...newFiles]
-  form.imagePreviews = form.imageFiles.map(f => URL.createObjectURL(f))
-
-  console.log('TOPLAM DOSYA SAYISI (BİRİKTİRİLMİŞ) >>>', form.imageFiles.length)
-
-  // Kritik: aynı dosyayı tekrar seçebilmek için input'u sıfırla
-  input.value = ''
+function clearOwner() {
+  selectedOwnerId.value = ''
+  selectedPetId.value = ''
+  ownerQuery.value = ''
 }
 
 async function handleSave() {
   error.value = ''
   success.value = ''
-
   if (!selectedOwnerId.value || !selectedPetId.value) {
     error.value = 'Lütfen hasta sahibi ve hastayı seçin.'
     return
   }
-
-  if (!form.performedAt) {
-    error.value = 'Lütfen işlemin yapıldığı zamanı girin.'
-    return
-  }
-
   saving.value = true
-
   try {
-    // 1) Metin alanlarını birleştir
-    const proceduresText = form.vaccines
-      ? `${form.procedures || ''}\nAşılar: ${form.vaccines}`
-      : form.procedures || ''
-
-    const notesParts = []
-    if (form.ownerStatus) notesParts.push(`Sahip durumu: ${form.ownerStatus}`)
-    if (form.notes) notesParts.push(form.notes)
-    const notesText = notesParts.join('\n')
-
-
-    const credit =
-  form.creditAmountTl === '' || form.creditAmountTl === null || form.creditAmountTl === undefined
-    ? null
-    : Number(String(form.creditAmountTl).replace(',', '.'))
-
-if (credit !== null && (!Number.isFinite(credit) || credit < 0)) {
-  error.value = 'Veresiye negatif olamaz.'
-  return
-} 
-    // 2) Ziyaret payload
     const payload = {
       petId: Number(selectedPetId.value),
       performedAt: new Date(form.performedAt).toISOString(),
-      procedures: proceduresText,
+      procedures: form.procedures,
       amountTl: form.amountTl ?? 0,
-      creditAmountTl: credit,
-      notes: notesText,
-      plans: nextVisits.value
-       .filter(x => x.date)
-       .map(x => ({
-         Date: x.date,        // YYYY-MM-DD
-         Purpose: x.purpose || null,
-         DoctorId: null,
-         })),
- 
-      purpose: form.purpose || null,
-      microchipNumber: form.microchipNumber || null,
+      creditAmountTl: form.creditAmountTl ? Number(form.creditAmountTl) : null,
+      notes: form.notes,
     }
-
-    const res = await http.post('/visits', payload)
-    const createdVisit = res.data
-    const visitId = createdVisit.id || createdVisit.Id
-
-    if (form.imageFiles.length && visitId) {
-      const fd = new FormData()
-     for (const file of Array.from(form.imageFiles)) {
-       fd.append('files', file)
-     }
-
-      console.log('IMAGE UPLOAD START', {
-        visitId,
-        count: form.imageFiles.length,
-      })
-
-      try {
-        const resUpload = await http.post(`/visits/${visitId}/images`, fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
-      console.log('UPLOAD RESULT COUNT >>>', Array.isArray(resUpload.data) ? resUpload.data.length : resUpload.data)
-      success.value = `Ziyaret kaydedildi. ${Array.isArray(resUpload.data) ? resUpload.data.length : form.imageFiles.length} görsel yüklendi.`
-      console.log('IMAGE UPLOAD OK', resUpload.status, resUpload.data)
-      } catch (e) {
-        console.error(
-          'image upload error',
-          e.response?.status,
-          e.response?.data || e.message,
-        )
-      }
-
-      form.imageFiles = []
-      form.imagePreviews = []
-    }
-
-    success.value = 'Ziyaret kaydedildi.'
-    form.procedures = ''
-    form.vaccines = ''
-    form.performedAt = ''
-    form.creditAmountTl = ''
-    form.amountTl = null
-    form.nextDate = ''
-    form.purpose = ''
-    form.ownerStatus = ''
-    form.notes = ''
-    form.microchipNumber = ''
+    await http.post('/visits', payload)
+    success.value = 'Ziyaret başarıyla kaydedildi.'
+    loadVisits()
+    // Reset form...
   } catch (e) {
-    console.error('visit save error', e)
-    error.value = 'Ziyaret kaydedilirken bir hata oluştu.'
+    error.value = 'Kaydedilirken bir hata oluştu.'
   } finally {
     saving.value = false
   }
-  success.value = 'Ziyaret kaydedildi.'
-
-  setTimeout(() => {
-    window.location.href = '/'
-  }, 600)
-
 }
+
+function handleSearch() {
+  // Local or server search
+}
+
+function onDocPointerDown(e) {
+  if (ownerComboRef.value && !ownerComboRef.value.contains(e.target)) {
+    ownerDropdownOpen.value = false
+  }
+}
+
+onMounted(() => {
+  loadVisits()
+  loadOwnersAndPets()
+  document.addEventListener('pointerdown', onDocPointerDown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onDocPointerDown)
+})
 </script>
 
 <style scoped>
-.page {
-  width: 100%;
-  max-width: 1024px;
-  margin: 0 auto;
-  padding: 1rem;
+.page-visits {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .page-header {
-  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+}
+
+.page-header h1 {
+  font-size: 2.25rem;
+  letter-spacing: -0.05em;
+  font-weight: 800;
 }
 
 .subtitle {
-  margin: 0.25rem 0 0;
-  font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--text-muted);
+  font-size: 1.1rem;
 }
 
-.selector-card {
-  display: flex;
-  gap: 1rem;
-  background: #fff;
-  padding: 1rem;
-  border-radius: 0.75rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+.visits-layout {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 2.5rem;
+  align-items: start;
 }
 
-.field {
-  flex: 1;
+/* FILTERS & LIST */
+.list-section {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 2rem;
 }
 
-.field-row {
+.filters-bar {
   display: flex;
   gap: 1rem;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #f1f5f9;
 }
 
-label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #374151;
+.filter-item {
+  flex: 1;
+  position: relative;
 }
 
-input,
-textarea,
-select {
-  border-radius: 0.5rem;
-  border: 1px solid #d1d5db;
-  padding: 0.4rem 0.6rem;
-  font-size: 0.85rem;
-  font-family: inherit;
+.filter-item input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border-radius: 14px;
+  border: 1px solid #f1f5f9;
+  background: #f8fafc;
+  font-size: 0.95rem;
+  transition: var(--transition);
+}
+
+.filter-item input:focus {
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-light);
+  outline: none;
+}
+
+.filter-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* VISIT CARDS */
+.visit-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
 }
 
 .visit-card {
-  background: #fff;
-  border-radius: 0.75rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-  overflow: hidden;
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  border: 1px solid #f1f5f9;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+  position: relative;
+}
+
+.visit-card:hover {
+  transform: translateX(8px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-light);
+}
+
+.visit-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1.5rem;
+  bottom: 1.5rem;
+  width: 5px;
+  border-radius: 0 10px 10px 0;
+  background: var(--primary);
 }
 
 .visit-header {
   display: flex;
   justify-content: space-between;
-  padding: 0.9rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
-  font-size: 0.9rem;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-}
-.combo {
-  position: relative;
+.pet-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
 }
 
-.combo-input {
-  width: 100%;
+.owner-info {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
 }
 
-.combo-popover {
-  position: absolute;
-  z-index: 50;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.6rem;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.10);
-  overflow: hidden;
-}
-
-.combo-hint {
-  padding: 0.6rem 0.7rem;
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.combo-list {
-  list-style: none;
-  margin: 0;
-  padding: 0.25rem;
-  max-height: 260px;
-  overflow: auto;
-}
-
-.combo-item {
-  cursor: pointer;
-  padding: 0.55rem 0.6rem;
-  border-radius: 0.5rem;
-}
-
-.combo-item.active,
-.combo-item:hover {
-  background: #f3f4f6;
-}
-
-.combo-title {
+.visit-time {
   font-size: 0.85rem;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 0.4rem 0.8rem;
+  border-radius: 10px;
 }
 
-.combo-sub {
-  font-size: 0.78rem;
-  color: #6b7280;
-  margin-top: 0.1rem;
+.treatment-info {
+  background: #f8fafc;
+  padding: 1.25rem;
+  border-radius: 16px;
+  margin-bottom: 1.25rem;
 }
 
-.combo-empty {
-  padding: 0.7rem;
-  font-size: 0.82rem;
-  color: #6b7280;
-}
-
-.chip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  border: 1px solid #d1d5db;
-  border-radius: 999px;
-  padding: 0.35rem 0.55rem;
-  background: #f9fafb;
-}
-
-.chip-text {
-  font-size: 0.85rem;
-  color: #111827;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chip-x {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 1.1rem;
-  line-height: 1;
-  padding: 0 0.25rem;
-  color: #6b7280;
-}
-
-.chip-x:hover {
-  color: #111827;
-}
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.form-row-inline {
-  display: flex;
-  gap: 12px;
-}
-
-.form-row-inline .form-group {
-  flex: 1;
-}
-
-@media (max-width: 640px) {
-  .form-row-inline {
-    flex-direction: column;
-  }
-}
-
-.visit-body {
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.treatment-info p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-main);
 }
 
 .visit-footer {
-  padding: 0.8rem 1rem 1rem;
-  text-align: right;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
 }
 
+.amount-badge {
+  font-weight: 800;
+  color: var(--success);
+  font-size: 1.1rem;
+}
+
+/* FORM CARD (STICKY) */
+.form-card {
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid #f1f5f9;
+  position: sticky;
+  top: 2rem;
+}
+
+.form-card h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 2rem;
+  letter-spacing: -0.03em;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  background: #f8fafc;
+  font-size: 1rem;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-light);
+  outline: none;
+}
+
+/* COMBOBOX REFINEMENT */
+.combo-popover {
+  position: absolute;
+  z-index: 100;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid #f1f5f9;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.combo-item {
+  padding: 1rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.combo-item:hover, .combo-item.active {
+  background: var(--primary-light);
+}
+
+.combo-title { font-weight: 700; }
+.combo-sub { font-size: 0.85rem; color: var(--text-muted); }
+
+/* BUTTONS */
 .btn {
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  background: #22c55e;
-  color: #022c22;
-  font-weight: 600;
-  font-size: 0.85rem;
+  padding: 1rem 1.5rem;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 1rem;
   cursor: pointer;
-}
-
-.btn:hover {
-  filter: brightness(0.95);
-}
-
-.state {
-  font-size: 0.85rem;
-}
-
-.state-error {
-  color: #b91c1c;
-}
-
-.state-success {
-  color: #15803d;
-}
-
-.hint {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-/* küçük thumbnail grid’i */
-.visit-image-preview-grid {
-  margin-top: 0.5rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.visit-image-thumb img {
-  width: 72px;
-  height: 72px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-}
-
-.next-visit-row {
-  display: flex;
+  transition: var(--transition);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  margin-bottom: 0.4rem;
 }
 
-.next-visit-row input[type='date'] {
-  max-width: 150px;
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+  width: 100%;
+  box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
 }
 
-.next-visit-row input[type='text'] {
-  flex: 1;
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px -10px rgba(79, 70, 229, 0.5);
 }
 
-.btn-small {
-  border: none;
-  background: #fee2e2;
-  color: #b91c1c;
-  border-radius: 999px;
-  padding: 0 0.6rem;
-  cursor: pointer;
-}
-/* Para alanlarını mobilde düzgün kır */
-.money-row {
-  flex-wrap: wrap;
+@media (max-width: 1024px) {
+  .visits-layout { grid-template-columns: 1fr; }
+  .form-card { position: static; }
 }
 
-.money-row .field {
-  min-width: 0;
-  flex: 1 1 220px; /* daralınca alta iner */
-}
-
-@media (max-width: 640px) {
-  .selector-card {
-    flex-direction: column; /* Hasta sahibi / hayvan mobilde alt alta */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
   }
 
-  .field-row {
-    flex-direction: column; /* performedAt + amount + credit mobilde alt alta */
+  .visit-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .visit-time {
+    width: 100%;
+    text-align: center;
+  }
+
+  .form-card {
+    padding: 1.5rem;
+  }
+
+  .modal {
+    padding: 2rem 1.5rem;
   }
 }
-
 </style>

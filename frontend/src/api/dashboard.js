@@ -6,6 +6,11 @@ export async function fetchReminderSummary() {
   return data
 }
 
+export async function fetchDashboardStats() {
+  const { data } = await http.get('/dashboard/stats')
+  return data
+}
+
 // Filtreye göre liste (today / tomorrow / overdue / upcoming / done)
 export async function fetchReminders(filter) {
   const { data } = await http.get('/dashboard/reminders', {

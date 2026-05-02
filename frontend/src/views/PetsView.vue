@@ -1,305 +1,152 @@
-
 <template>
-  <div class="page">
+  <main class="page-pets">
     <header class="page-header">
-      <h1>Hastalar</h1>
-      <p class="subtitle">Tüm hayvanlar, ziyaret geçmişi ve görseller.</p>
+      <div class="header-content">
+        <h1>Hastalar</h1>
+        <p class="subtitle">Tüm hayvanlar, ziyaret geçmişi ve görselleri buradan yönetin.</p>
+      </div>
     </header>
 
     <div class="layout">
       <!-- Sol: Liste -->
-      <section class="card">
-        <div class="toolbar">
-          <input v-model="q" class="input" placeholder="Ara: isim / tür / sahip" />
-          <select v-model="ownerId" class="input">
-            <option value="">Tüm sahipler</option>
+      <aside class="sidebar-section">
+        <div class="search-card">
+          <div class="search-input-wrapper">
+            <span class="icon">🔍</span>
+            <input v-model="q" class="search-input" placeholder="İsim, tür veya sahip ara..." />
+          </div>
+          <select v-model="ownerId" class="owner-select">
+            <option value="">Tüm Sahipler</option>
             <option v-for="o in owners" :key="o.id" :value="String(o.id)">
               {{ o.fullName }}
             </option>
           </select>
         </div>
 
-        <div v-if="loadingList" class="muted">Yükleniyor...</div>
-        <div v-else>
+        <div v-if="loadingList" class="state">Yükleniyor...</div>
+        <div v-else class="pet-list">
           <button
             v-for="p in filteredPets"
             :key="p.id"
-            class="pet-row"
+            class="pet-row-card"
             :class="{ active: selectedPetId === p.id }"
             @click="openPet(p.id)"
-            type="button"
           >
-            <div class="pet-name">{{ p.name }}</div>
-            <div class="pet-meta">
-              <span>{{ p.species }}</span>
-              <span class="dot">•</span>
-              <span>{{ p.ownerName }}</span>
+            <div class="pet-avatar">{{ (p.name || '?')[0].toUpperCase() }}</div>
+            <div class="pet-info">
+              <span class="name">{{ p.name }}</span>
+              <span class="meta">{{ p.species }} • {{ p.ownerName }}</span>
             </div>
           </button>
         </div>
-      </section>
+      </aside>
 
       <!-- Sağ: Profil -->
-      <section class="card">
-        <div v-if="!profile && !loadingProfile" class="muted">
-          Soldan bir hasta seç.
+      <section class="profile-section">
+        <div v-if="!profile && !loadingProfile" class="empty-state-card">
+          <div class="empty-icon">🐾</div>
+          <h3>Hasta Seçilmedi</h3>
+          <p>Detayları görüntülemek için soldaki listeden bir hasta seçin.</p>
         </div>
 
-        <div v-if="loadingProfile" class="muted">Detay yükleniyor...</div>
+        <div v-if="loadingProfile" class="state">Profil yükleniyor...</div>
 
-        <div v-if="profile && !loadingProfile">
-        <div class="profile-head">
-  <div>
-    <h2 class="h2">{{ profile.name }}</h2>
-    <div class="muted">
-      {{ profile.species }}<span v-if="profile.breed"> – {{ profile.breed }}</span>
-    </div>
-    <div class="muted">
-      Sahibi: <strong>{{ profile.ownerName }}</strong>
-    </div>
-  </div>
-
-  <!-- SAĞ ÜST: PET EDIT AKSİYONLARI -->
-  <div class="profile-actions">
-    <button
-      v-if="!petEditOpen"
-      class="btn btn-sm"
-      type="button"
-      @click="openPetEdit"
-    >
-      Düzenle
-    </button>
-
-    <template v-else>
-      <button
-        class="btn btn-sm"
-        type="button"
-        @click="cancelPetEdit"
-        :disabled="petSaving"
-      >
-        İptal
-      </button>
-
-      <button
-        class="btn btn-sm"
-        type="button"
-        @click="savePetEdit"
-        :disabled="petSaving"
-      >
-        {{ petSaving ? 'Kaydediliyor...' : 'Kaydet' }}
-      </button>
-    </template>
-  </div>
-</div>
-
-<p v-if="petSaveError" class="state state-error">{{ petSaveError }}</p>
-
-<div v-if="petEditOpen && !petDraft" class="muted">
-  Düzenleme hazırlanıyor...
-</div>
-
-          <div class="grid2">
-            <div class="info-box">
-  <div class="label">Doğum</div>
-
-  <div v-if="!petEditOpen">
-    {{ profile.birthDate || '—' }}
-  </div>
-
-  <input
-    v-else-if="petDraft"
-    type="date"
-    class="input"
-    v-model="petDraft.birthDate"
-  />
-</div>
-
-            <div class="info-box">
-  <div class="label">Not</div>
-
-  <div v-if="!petEditOpen">
-    {{ profile.notes || '—' }}
-  </div>
-
-  <textarea
-    v-else-if="petDraft"
-    class="input"
-    rows="3"
-    v-model="petDraft.notes"
-    placeholder="Örn: idrar kesesinde taş..."
-  ></textarea>
-</div>
-
-            <div class="info-box">
-             <div class="label">Yaş</div>
-             <div>{{ formatAge(profile.ageYears, profile.ageMonths) }}</div>
+        <div v-if="profile && !loadingProfile" class="profile-container">
+          <div class="profile-header-card">
+            <div class="profile-title-area">
+              <h2 class="profile-name">{{ profile.name }}</h2>
+              <p class="profile-subtitle">
+                {{ profile.species }} <span v-if="profile.breed">• {{ profile.breed }}</span>
+              </p>
+              <p class="profile-owner">Sahibi: <strong>{{ profile.ownerName }}</strong></p>
             </div>
-
+            <div class="profile-actions">
+              <button v-if="!petEditOpen" class="btn btn-secondary" @click="openPetEdit">
+                Düzenle
+              </button>
+              <template v-else>
+                <button class="btn btn-ghost" @click="cancelPetEdit" :disabled="petSaving">İptal</button>
+                <button class="btn btn-primary" @click="savePetEdit" :disabled="petSaving">
+                  {{ petSaving ? 'Kaydediliyor...' : 'Kaydet' }}
+                </button>
+              </template>
+            </div>
           </div>
 
-          <h3 class="h3">Ziyaret Geçmişi</h3>
+          <div v-if="petSaveError" class="state state-error">{{ petSaveError }}</div>
 
-          <div v-if="!profile.visits?.length" class="muted">Ziyaret yok.</div>
+          <div class="info-grid">
+            <div class="info-card">
+              <span class="label">Doğum Tarihi</span>
+              <div v-if="!petEditOpen" class="value">{{ profile.birthDate || '—' }}</div>
+              <input v-else-if="petDraft" type="date" v-model="petDraft.birthDate" class="edit-input" />
+            </div>
+            <div class="info-card">
+              <span class="label">Yaş</span>
+              <div class="value">{{ formatAge(profile.ageYears, profile.ageMonths) }}</div>
+            </div>
+            <div class="info-card wide">
+              <span class="label">Notlar</span>
+              <div v-if="!petEditOpen" class="value">{{ profile.notes || 'Not eklenmemiş.' }}</div>
+              <textarea v-else-if="petDraft" v-model="petDraft.notes" rows="3" class="edit-input" placeholder="Not ekleyin..."></textarea>
+            </div>
+          </div>
 
-          <div v-for="v in profile.visits" :key="v.visitId" class="visit-card">
-            <div class="visit-top">
-              <div>
-<div class="visit-date">
-  <span v-if="visitEditId !== v.visitId">{{ formatDt(v.performedAt) }}</span>
+          <h3 class="section-title">Ziyaret Geçmişi</h3>
 
-  <input
-    v-else-if="visitDraft"
-    class="input"
-    type="datetime-local"
-    v-model="visitDraft.performedAt"
-  />
-</div>
-<div class="muted">
-  <span class="label">Amaç:</span>
-  <span v-if="visitEditId !== v.visitId">{{ v.purpose || '—' }}</span>
+          <div v-if="!profile.visits?.length" class="empty-visits">
+            <p>Bu hasta için henüz ziyaret kaydı bulunmuyor.</p>
+          </div>
 
-  <input
-    v-else-if="visitDraft"
-    class="input"
-    type="text"
-    v-model="visitDraft.purpose"
-    placeholder="Örn: kontrol, karma aşı..."
-  />
-</div>
-
-                <div class="muted" v-if="v.createdByName || v.createdByUsername">
-                  Kaydı ekleyen: {{ v.createdByName || v.createdByUsername }}
+          <div v-else class="visit-timeline">
+            <div v-for="v in profile.visits" :key="v.visitId" class="modern-visit-card">
+              <div class="visit-header">
+                <div class="visit-meta">
+                  <span class="visit-date" v-if="visitEditId !== v.visitId">{{ formatDt(v.performedAt) }}</span>
+                  <input v-else-if="visitDraft" type="datetime-local" v-model="visitDraft.performedAt" class="edit-input" />
+                  <span class="visit-purpose" v-if="visitEditId !== v.visitId">{{ v.purpose || '—' }}</span>
+                  <input v-else-if="visitDraft" type="text" v-model="visitDraft.purpose" class="edit-input" placeholder="Amaç..." />
+                </div>
+                <div class="visit-actions">
+                  <button v-if="visitEditId !== v.visitId" class="btn btn-sm btn-ghost" @click="openVisitEdit(v)">Düzenle</button>
+                  <template v-else>
+                    <button class="btn btn-sm btn-ghost" @click="cancelVisitEdit" :disabled="visitSaving">İptal</button>
+                    <button class="btn btn-sm btn-primary" @click="saveVisitEdit(v)" :disabled="visitSaving">Kaydet</button>
+                  </template>
                 </div>
               </div>
-<div class="visit-actions">
-  <button
-    v-if="visitEditId !== v.visitId"
-    class="btn btn-sm"
-    type="button"
-    @click="openVisitEdit(v)"
-  >
-    Düzenle
-  </button>
 
-  <template v-else>
-    <button
-      class="btn btn-sm"
-      type="button"
-      @click="cancelVisitEdit"
-      :disabled="visitSaving"
-    >
-      İptal
-    </button>
+              <div class="visit-content">
+                <div class="procedure-text" v-if="visitEditId !== v.visitId">
+                  {{ v.procedures || '—' }}
+                </div>
+                <textarea v-else-if="visitDraft" v-model="visitDraft.procedures" class="edit-input" rows="3"></textarea>
 
-    <button
-      class="btn btn-sm"
-      type="button"
-      @click="saveVisitEdit(v)"
-      :disabled="visitSaving"
-    >
-      {{ visitSaving ? 'Kaydediliyor...' : 'Kaydet' }}
-    </button>
-  </template>
-</div>
-<div class="money">
-  <div>
-    <span class="label">Tutar</span>
+                <div class="visit-finances">
+                  <div class="finance-item">
+                    <span class="label">Tutar</span>
+                    <span class="value" v-if="visitEditId !== v.visitId">{{ fmtMoney(v.amountTl) }}</span>
+                    <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.amountTl" class="edit-input tiny" />
+                  </div>
+                  <div class="finance-item">
+                    <span class="label">Veresiye</span>
+                    <span class="value danger" v-if="visitEditId !== v.visitId">{{ fmtMoney(v.creditAmountTl) }}</span>
+                    <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.creditAmountTl" class="edit-input tiny" />
+                  </div>
+                </div>
 
-    <span v-if="visitEditId !== v.visitId">{{ fmtMoney(v.amountTl) }}</span>
-
-    <input
-      v-else-if="visitDraft"
-      class="input"
-      type="number"
-      min="0"
-      step="0.01"
-      v-model.number="visitDraft.amountTl"
-      placeholder="0"
-    />
-  </div>
-<div>
-  <span class="label">Veresiye</span>
-
-  <span v-if="visitEditId !== v.visitId">
-    {{ fmtMoney(v.creditAmountTl) }}
-  </span>
-
-  <input
-    v-else-if="visitDraft"
-    class="input"
-    type="number"
-    min="0"
-    step="0.01"
-    v-model.number="visitDraft.creditAmountTl"
-    placeholder="0"
-  />
-</div>
-
-</div>
-
+                <div v-if="getVisitImages(v).length" class="visit-gallery">
+                  <a v-for="img in getVisitImages(v)" :key="img.id" :href="normalizeMediaUrl(getImageUrl(img))" target="_blank" class="gallery-item">
+                    <img :src="normalizeMediaUrl(getImageUrl(img))" loading="lazy" />
+                  </a>
+                </div>
+              </div>
             </div>
-<!-- Procedures -->
-<div class="muted pre">
-  <div v-if="visitEditId !== v.visitId">
-    {{ v.procedures || '—' }}
-  </div>
-
-  <textarea
-    v-else-if="visitDraft"
-    class="input"
-    rows="3"
-    v-model="visitDraft.procedures"
-    placeholder="Örn: Karma aşı, tırnak kesimi..."
-  ></textarea>
-</div>
-
-<!-- Notes -->
-<div class="muted">
-  <span class="label">Not:</span>
-
-  <span v-if="visitEditId !== v.visitId">{{ v.notes || '—' }}</span>
-
-  <textarea
-    v-else-if="visitDraft"
-    class="input"
-    rows="2"
-    v-model="visitDraft.notes"
-    placeholder="Örn: 1 hafta sonra kontrol..."
-  ></textarea>
-</div>
-
-           <div v-if="getVisitImages(v).length" class="img-grid">
-  <a
-    v-for="img in getVisitImages(v)"
-    :key="img.id || img.Id || getImageUrl(img)"
-    :href="normalizeMediaUrl(getImageUrl(img))"
-    target="_blank"
-    rel="noreferrer"
-    class="img-thumb"
-  >
-    <img
-      :src="normalizeMediaUrl(getImageUrl(img))"
-      :alt="`Visit ${v.visitId} - ${img.id || img.Id || ''}`"
-      loading="lazy"
-    />
-  </a>
-</div>
-<p v-if="visitSaveError && visitEditId === v.visitId" class="state state-error">
-  {{ visitSaveError }}
-</p>
-
-<div v-if="visitEditId === v.visitId && !visitDraft" class="muted">
-  Düzenleme hazırlanıyor...
-</div>
-
-
           </div>
         </div>
-
-        <p v-if="error" class="state state-error">{{ error }}</p>
       </section>
     </div>
-  </div>
+  </main>
 </template>
 
 <script setup>
@@ -309,14 +156,11 @@ import { fetchOwners } from '@/api/owners'
 
 const pets = ref([])
 const owners = ref([])
-const petSearch = ref('')
-const showPetResults = ref(false)
-const PET_MIN_CHARS = 2
 const loadingList = ref(false)
 const loadingProfile = ref(false)
 const error = ref('')
-const visitEditId = ref(null)     // şu an editlenen visitId
-const visitDraft = ref(null)      // tek draft (aktif visit için)
+const visitEditId = ref(null)
+const visitDraft = ref(null)
 const visitSaving = ref(false)
 const visitSaveError = ref('')
 const selectedPetId = ref(null)
@@ -345,160 +189,77 @@ const filteredPets = computed(() => {
 onMounted(async () => {
   await loadList()
 })
+
 function normalizeMediaUrl(rawUrl) {
   if (!rawUrl) return ''
   if (rawUrl.startsWith('http')) return rawUrl
-
   const base = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE
   const path = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`
   return `${base}${path}`
 }
+
 function toVisitDraft(v) {
   if (!v) return null
-
-  const performedAt = v.performedAt
-    ? new Date(v.performedAt).toISOString().slice(0, 16)
-    : ''
-
   return {
-    performedAt,
-    purpose: v.purpose ?? v.Purpose ?? '',
-    procedures: v.procedures ?? v.Procedures ?? '',
-    amountTl: v.amountTl ?? v.AmountTl ?? null,
-    notes: v.notes ?? v.Notes ?? '',
-    creditAmountTl: Number(v.creditAmountTl ?? v.CreditAmountTl ?? 0),
+    performedAt: v.performedAt ? new Date(v.performedAt).toISOString().slice(0, 16) : '',
+    purpose: v.purpose ?? '',
+    procedures: v.procedures ?? '',
+    amountTl: v.amountTl ?? null,
+    notes: v.notes ?? '',
+    creditAmountTl: Number(v.creditAmountTl ?? 0),
   }
 }
+
 function openVisitEdit(v) {
   visitSaveError.value = ''
   visitEditId.value = v.visitId
   visitDraft.value = toVisitDraft(v)
 }
-const selectedPet = computed(() => {
-  const id = selectedPetId.value
-  if (!id) return null
-  return (pets.value || []).find(p => String(p.id ?? p.petId ?? p.PetId) === String(id)) || null
-})
 
-const filteredPetsForVisit = computed(() => {
-  const term = petSearch.value.trim().toLowerCase()
-  if (!showPetResults.value) return []
-
-  if (term.length < PET_MIN_CHARS) return []
-
-  return (pets.value || [])
-    .filter(p => {
-      const name = (p.name || p.Name || '').toLowerCase()
-      const owner = (p.ownerName || p.OwnerName || '').toLowerCase()
-      const species = (p.species || p.Species || '').toLowerCase()
-      const breed = (p.breed || p.Breed || '').toLowerCase()
-      return (
-        name.includes(term) ||
-        owner.includes(term) ||
-        species.includes(term) ||
-        breed.includes(term)
-      )
-    })
-    .slice(0, 30)
-})
-
-function openPetSearch() {
-  showPetResults.value = true
-}
-
-function selectPetForVisit(p) {
-  const id = p.id ?? p.petId ?? p.PetId
-  selectedPetId.value = id
-  petSearch.value = ''
-  showPetResults.value = false
-}
-
-function clearSelectedPet() {
-  selectedPetId.value = null
-  petSearch.value = ''
-  showPetResults.value = true // tekrar aramaya devam etsin diye açık bırakıyorum
-}
 function cancelVisitEdit() {
   visitEditId.value = null
   visitDraft.value = null
   visitSaveError.value = ''
 }
+
 async function saveVisitEdit(v) {
   const visitId = v?.visitId
-  if (!visitId) {
-    visitSaveError.value = 'VisitId bulunamadı.'
-    return
-  }
-  if (!visitDraft.value) {
-    visitSaveError.value = 'Düzenleme verisi hazırlanamadı.'
-    return
-  }
-
-  if (!visitDraft.value.performedAt) {
-    visitSaveError.value = 'Yapılan işlem tarihi zorunludur.'
-    return
-  }
-
+  if (!visitId || !visitDraft.value) return
   visitSaving.value = true
-  visitSaveError.value = ''
-
   try {
-    const performedAtIso = new Date(visitDraft.value.performedAt).toISOString()
-
     const payload = {
-      performedAt: performedAtIso,
-      procedures: (visitDraft.value.procedures ?? '').trim() || null,
-      amountTl: (visitDraft.value.amountTl ?? null),
-      notes: (visitDraft.value.notes ?? '').trim() || null,
-      purpose: (visitDraft.value.purpose ?? '').trim() || null,
-
+      performedAt: new Date(visitDraft.value.performedAt).toISOString(),
+      procedures: visitDraft.value.procedures.trim() || null,
+      amountTl: visitDraft.value.amountTl,
+      notes: visitDraft.value.notes.trim() || null,
+      purpose: visitDraft.value.purpose.trim() || null,
     }
-
     await http.put(`/visits/${visitId}`, payload)
     const credit = Number(visitDraft.value.creditAmountTl ?? 0)
-    if (Number.isNaN(credit) || credit < 0) {
-  visitSaveError.value = 'Veresiye 0 veya daha büyük olmalıdır.'
-  return
-}
     await http.patch(`/visits/${visitId}/credit`, { creditAmountTl: credit })
-    const idx = profile.value?.visits?.findIndex(x => x.visitId === visitId)
+    
+    // Local update
+    const idx = profile.value.visits.findIndex(x => x.visitId === visitId)
     if (idx >= 0) {
-      const old = profile.value.visits[idx]
-      profile.value.visits[idx] = {
-        ...old,
-        performedAt: performedAtIso,
-        purpose: payload.purpose,
-        procedures: payload.procedures,
-        amountTl: payload.amountTl,
-        notes: payload.notes,
-        creditAmountTl: credit,
-      }
+      profile.value.visits[idx] = { ...profile.value.visits[idx], ...payload, creditAmountTl: credit }
     }
-
-
     cancelVisitEdit()
   } catch (e) {
-    console.error('[VISIT_EDIT] save error', e)
-    const msg = e?.response?.data
-    visitSaveError.value =
-      typeof msg === 'string'
-        ? msg
-        : (msg?.message || 'Ziyaret güncelleme başarısız.')
+    visitSaveError.value = 'Ziyaret güncellenemedi.'
   } finally {
     visitSaving.value = false
   }
 }
 
 function getVisitImages(v) {
-  return (v?.images || v?.Images || [])
+  return v?.images || v?.Images || []
 }
 
 function getImageUrl(img) {
-  return img?.url || img?.imageUrl || img?.ImageUrl || img?.Url || ''
+  return img?.url || img?.imageUrl || ''
 }
 
 async function loadList() {
-  error.value = ''
   loadingList.value = true
   try {
     const [ownersData, petsRes] = await Promise.all([
@@ -508,8 +269,7 @@ async function loadList() {
     owners.value = ownersData
     pets.value = petsRes.data || []
   } catch (e) {
-    console.error(e)
-    error.value = 'Pet listesi yüklenemedi.'
+    error.value = 'Hata oluştu.'
   } finally {
     loadingList.value = false
   }
@@ -518,203 +278,452 @@ async function loadList() {
 async function openPet(id) {
   selectedPetId.value = id
   petEditOpen.value = false
-petDraft.value = null
-petSaveError.value = ''
-  profile.value = null
-  error.value = ''
   loadingProfile.value = true
   try {
     const res = await http.get(`/pets/${id}/profile`)
     profile.value = res.data
   } catch (e) {
-    console.error(e)
-    error.value = 'Pet detayı yüklenirken hata oluştu.'
+    error.value = 'Profil yüklenemedi.'
   } finally {
     loadingProfile.value = false
   }
 }
 
 function formatDt(iso) {
-  try {
-    const d = new Date(iso)
-    return d.toLocaleString('tr-TR')
-  } catch {
-    return iso
-  }
+  return iso ? new Date(iso).toLocaleString('tr-TR') : '—'
 }
-function toPetDraft(p) {
-  if (!p) return null
 
-  const bd = p.birthDate ?? p.BirthDate ?? null
-  // Eğer bazen ISO gelirse input date bozulmasın:
-  const birthDate = typeof bd === 'string' ? bd.slice(0, 10) : bd
+function formatAge(y, m) {
+  if (y == null && m == null) return '—'
+  if (y > 0) return `${y} yıl ${m || 0} ay`
+  return `${m || 0} ay`
+}
 
-  return {
-    name: p.name ?? p.Name ?? '',
-    species: p.species ?? p.Species ?? '',
-    breed: p.breed ?? p.Breed ?? '',
-    birthDate: birthDate || null,
-    notes: p.notes ?? p.Notes ?? '',
-  }
+function fmtMoney(val) {
+  return `${Number(val || 0).toFixed(2)}₺`
 }
 
 function openPetEdit() {
   if (!profile.value) return
-  petSaveError.value = ''
-  petDraft.value = toPetDraft(profile.value)
+  petDraft.value = {
+    name: profile.value.name,
+    species: profile.value.species,
+    breed: profile.value.breed,
+    birthDate: profile.value.birthDate?.slice(0, 10) || null,
+    notes: profile.value.notes,
+  }
   petEditOpen.value = true
 }
 
 function cancelPetEdit() {
   petEditOpen.value = false
   petDraft.value = null
-  petSaveError.value = ''
 }
 
 async function savePetEdit() {
-  if (!profile.value) return
-
-  const petId = profile.value.id ?? profile.value.petId ?? selectedPetId.value
-  if (!petId) {
-    petSaveError.value = 'PetId bulunamadı.'
-    return
-  }
-  if (!petDraft.value) {
-    petSaveError.value = 'Düzenleme verisi hazırlanamadı.'
-    return
-  }
-
+  if (!profile.value || !petDraft.value) return
   petSaving.value = true
-  petSaveError.value = ''
-
   try {
-    const payload = {
-  name: (petDraft.value.name ?? profile.value.name ?? '').trim(), // zorunlu
-  species: (petDraft.value.species ?? '').trim() || null,
-  breed: (petDraft.value.breed ?? '').trim() || null,
-  birthDate: petDraft.value.birthDate || null,
-  notes: (petDraft.value.notes ?? '').trim() || null,
-}
-    await http.put(`/pets/${petId}`, payload)
-
-    // Güncel profili tekrar çek (ekranın anında güncellensin)
-    const res = await http.get(`/pets/${petId}/profile`)
+    await http.put(`/pets/${selectedPetId.value}`, petDraft.value)
+    const res = await http.get(`/pets/${selectedPetId.value}/profile`)
     profile.value = res.data
-
     petEditOpen.value = false
-    petDraft.value = null
   } catch (e) {
-    console.error('[PET_EDIT] save error', e)
-    const msg = e?.response?.data
-    petSaveError.value =
-      typeof msg === 'string'
-        ? msg
-        : (msg?.message || 'Hasta güncelleme başarısız.')
+    petSaveError.value = 'Güncellenemedi.'
   } finally {
     petSaving.value = false
   }
 }
-
-function fmtMoney(val) {
-  const n = Number(val ?? 0)
-  return `${n.toFixed(2)}₺`
-}
-function formatAge(y, m) {
-  if (y == null && m == null) return '—'
-  const yy = Number(y ?? 0)
-  const mm = Number(m ?? 0)
-  if (yy <= 0 && mm <= 0) return '0 ay'
-  if (yy > 0 && mm > 0) return `${yy} yıl ${mm} ay`
-  if (yy > 0) return `${yy} yıl`
-  return `${mm} ay`
-}
-
 </script>
 
 <style scoped>
-.page { width: 100%; max-width: 1200px; margin: 0 auto; padding: 1rem; }
-.page-header { margin-bottom: 1rem; }
-.subtitle { margin: 0.25rem 0 0; font-size: 0.85rem; color: #6b7280; }
+.page-pets {
+  animation: fadeIn 0.4s ease-out;
+}
 
-.layout { display: grid; grid-template-columns: 360px 1fr; gap: 1rem; }
-@media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-.card { background: #fff; border-radius: 0.75rem; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06); padding: 1rem; }
-.toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
-.input { border-radius: 0.5rem; border: 1px solid #d1d5db; padding: 0.45rem 0.6rem; font-size: 0.85rem; width: 100%; }
-.profile-actions, .visit-actions { display:flex; gap:.5rem; align-items:center; justify-content:flex-end; }
-.visit-actions { margin-left: auto; }
+.layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
 
-.visit-top { align-items:flex-start; }
-.money .input { width: 140px; margin-left: .5rem; }
+/* SIDEBAR */
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
 
-.pet-row { width: 100%; text-align: left; border: 1px solid #e5e7eb; background: #fff; padding: 0.65rem 0.7rem; border-radius: 0.65rem; margin-bottom: 0.5rem; cursor: pointer; }
-.pet-row.active { border-color: #a7f3d0; box-shadow: 0 0 0 2px rgba(34,197,94,0.15); }
-.pet-name { font-weight: 700; }
-.pet-meta { font-size: 0.8rem; color: #6b7280; display: flex; align-items: center; gap: 0.4rem; }
-.dot { opacity: 0.6; }
+.search-card {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #f1f5f9;
+}
 
-.muted { color: #6b7280; font-size: 0.85rem; }
-.h2 { margin: 0; font-size: 1.2rem; }
-.h3 { margin: 1rem 0 0.5rem; font-size: 1rem; }
+.search-input-wrapper {
+  position: relative;
+  margin-bottom: 1rem;
+}
 
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem; }
-@media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+.search-input-wrapper .icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
 
-.info-box { border: 1px solid #e5e7eb; border-radius: 0.65rem; padding: 0.75rem; }
-.label { font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem; }
+.search-input {
+  width: 100%;
+  padding: 0.8rem 1rem 0.8rem 2.5rem;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  background: #f8fafc;
+  font-size: 0.95rem;
+  transition: var(--transition);
+}
 
-.visit-card { border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 0.8rem; margin-top: 0.75rem; }
-.visit-top { display: flex; justify-content: space-between; gap: 1rem; }
-@media (max-width: 640px) { .visit-top { flex-direction: column; } }
-.visit-date { font-weight: 700; }
+.owner-select {
+  width: 100%;
+  padding: 0.8rem;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  background: #f8fafc;
+  font-size: 0.9rem;
+}
 
-.money { text-align: right; font-size: 0.85rem; }
-@media (max-width: 640px) { .money { text-align: left; } }
+.pet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
 
-.pre { white-space: pre-wrap; margin-top: 0.5rem; }
+.pet-row-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: left;
+  width: 100%;
+}
 
-.img-grid { margin-top: 0.6rem; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-@media (max-width: 900px) { .img-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 640px) { .img-grid { grid-template-columns: repeat(2, 1fr); } }
+.pet-row-card:hover {
+  transform: translateX(5px);
+  background: #f8fafc;
+}
 
-.img-thumb { display: block; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; }
-.img-thumb img { width: 100%; height: 110px; object-fit: cover; display: block; }
+.pet-row-card.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: var(--shadow-sm);
+}
 
-.state-error { color: #b91c1c; margin-top: 0.75rem; }
-.profile-head {
+.pet-avatar {
+  width: 44px;
+  height: 44px;
+  background: var(--primary);
+  color: white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+
+.pet-info .name {
+  display: block;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.pet-info .meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* PROFILE SECTION */
+.profile-section {
+  min-height: 500px;
+}
+
+.profile-header-card {
+  background: #ffffff;
+  padding: 2.5rem;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #f1f5f9;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.profile-actions {
-  display: flex;
-  gap: 8px;
   align-items: center;
-  justify-content: flex-end;
+  margin-bottom: 2rem;
+}
+
+.profile-name {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 0.25rem;
+}
+
+.profile-subtitle {
+  font-size: 1.1rem;
+  color: var(--primary);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.profile-owner {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.info-card {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid #f1f5f9;
+}
+
+.info-card.wide { grid-column: span 2; }
+
+.info-card .label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.info-card .value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* VISIT TIMELINE */
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+}
+
+.visit-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.modern-visit-card {
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid #f1f5f9;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.modern-visit-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1.5rem;
+  bottom: 1.5rem;
+  width: 5px;
+  background: var(--primary);
+  border-radius: 0 10px 10px 0;
+}
+
+.visit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.visit-date {
+  display: block;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+.visit-purpose {
+  font-size: 0.9rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.procedure-text {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.visit-finances {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.finance-item .label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.finance-item .value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--success);
+}
+
+.finance-item .value.danger { color: var(--danger); }
+
+.visit-gallery {
+  display: flex;
   flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
+.gallery-item img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+}
+
+/* BUTTONS & INPUTS */
 .btn {
-  border: 1px solid #d1d5db;
-  background: #fff;
-  border-radius: 0.55rem;
-  padding: 0.45rem 0.7rem;
-  font-size: 0.85rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 700;
   cursor: pointer;
+  transition: var(--transition);
+  border: none;
 }
 
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.btn-primary { background: var(--primary); color: white; }
+.btn-secondary { background: var(--primary-light); color: var(--primary); }
+.btn-ghost { background: transparent; color: var(--text-muted); }
+
+.edit-input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--primary-light);
+  background: #f8fafc;
+  font-family: inherit;
 }
 
-.btn.btn-sm {
-  padding: 0.4rem 0.65rem;
-  font-size: 0.85rem;
+.edit-input.tiny { width: 120px; }
+
+.empty-state-card {
+  background: #ffffff;
+  padding: 4rem;
+  border-radius: var(--radius-xl);
+  text-align: center;
+  border: 1px dashed #e2e8f0;
 }
 
+.empty-icon { font-size: 3rem; margin-bottom: 1rem; }
 
+@media (max-width: 1024px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+
+  .pet-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .pet-avatar {
+    width: 80px;
+    height: 80px;
+    font-size: 1.75rem;
+  }
+
+  .pet-title h1 {
+    font-size: 2rem;
+  }
+
+  .quick-stats {
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .stat-pill {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .visit-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .visit-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .btn {
+    flex: 1;
+    text-align: center;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .finance-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .empty-state-card {
+    padding: 2rem 1rem;
+  }
+}
 </style>

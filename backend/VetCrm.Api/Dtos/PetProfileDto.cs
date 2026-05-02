@@ -5,6 +5,7 @@ public class PetProfileDto
     public int Id { get; set; }
     public int OwnerId { get; set; }
     public string OwnerName { get; set; } = null!;
+    public string? OwnerPhoneE164 { get; set; }
     public int? AgeMonths { get; set; }
     public string Name { get; set; } = null!;
     public string Species { get; set; } = null!;
@@ -23,6 +24,7 @@ public class PetVisitDto
     public string? Procedures { get; set; }
     public decimal? AmountTl { get; set; }
     public decimal? CreditAmountTl { get; set; }
+    public string? Notes { get; set; }
 
     public string? CreatedByUsername { get; set; }
     public string? CreatedByName { get; set; }
@@ -34,4 +36,5 @@ public class PetVisitImageDto
 {
     public int Id { get; set; }
     public string Url { get; set; } = null!;
+    public string ImageUrl { get; set; } = null!;
 }

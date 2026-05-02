@@ -19,6 +19,58 @@ public class DashboardController : ControllerBase
         _db = db;
     }
 
+    [HttpGet("stats")]
+    public async Task<ActionResult<DashboardStatsDto>> GetStats()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var firstDayOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        var todayDt = DateTime.Today;
+
+        // 1. Aktif Hasta Sayısı
+        var activePets = await _db.Pets.CountAsync(p => p.IsActive);
+
+        // 2. Aylık Tahsilat
+        var monthlyRevenue = await _db.Visits
+            .Where(v => v.PerformedAt >= firstDayOfMonth)
+            .SumAsync(v => v.AmountTl ?? 0);
+
+        // 3. Bugünkü Randevular
+        var todayStart = todayDt;
+        var todayEnd = todayDt.AddDays(1);
+        var todayAppointments = await _db.Appointments
+            .CountAsync(a => a.ScheduledAt >= todayStart && a.ScheduledAt < todayEnd);
+
+        // 4. Hatırlatıcılar
+        var pendingReminders = await _db.Reminders
+            .CountAsync(r => !r.IsCompleted && r.DueDate <= today);
+
+        // 5. Haftalık Aktivite (Son 7 gün)
+        var last7Days = Enumerable.Range(0, 7)
+            .Select(i => todayDt.AddDays(-i))
+            .OrderBy(d => d)
+            .ToList();
+
+        var startDate = last7Days.First();
+        var visits = await _db.Visits
+            .Where(v => v.PerformedAt >= startDate)
+            .ToListAsync();
+
+        var weeklyActivity = last7Days.Select(d => new WeeklyActivityDto
+        {
+            Date = d.ToString("yyyy-MM-dd"),
+            VisitCount = visits.Count(v => v.PerformedAt.Date == d.Date)
+        }).ToList();
+
+        return Ok(new DashboardStatsDto
+        {
+            ActivePetsCount = activePets,
+            MonthlyRevenue = monthlyRevenue,
+            TodayAppointmentsCount = todayAppointments,
+            PendingRemindersCount = pendingReminders,
+            WeeklyActivity = weeklyActivity
+        });
+    }
+
     private static ReminderDashboardDto MapToDashboardDto(Reminder r)
     {
         return new ReminderDashboardDto
