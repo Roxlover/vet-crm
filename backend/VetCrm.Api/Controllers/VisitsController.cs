@@ -498,6 +498,26 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
             await _db.Entry(visit.Pet).Reference(p => p.Owner).LoadAsync();
 
             SyncRemindersForVisit(visit, (dto.Plans != null && dto.Plans.Count > 0) ? dto.Plans : null);
+
+            // Otomatik LedgerEntry: tutar > 0 ise direkt bilançoya yaz
+            var amount = visit.AmountTl ?? 0m;
+            var credit = visit.CreditAmountTl ?? 0m;
+            var collected = Math.Max(0m, amount - credit);
+            if (collected > 0m && userId.HasValue)
+            {
+                _db.LedgerEntries.Add(new LedgerEntry
+                {
+                    UserId    = userId.Value,
+                    VisitId   = visit.Id,
+                    Date      = DateOnly.FromDateTime(visit.PerformedAt.Date),
+                    Amount    = collected,
+                    IsIncome  = true,
+                    Category  = "Visit",
+                    Note      = $"Ziyaret kaydı (VisitId={visit.Id}, Pet={pet.Name})",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
             await _db.SaveChangesAsync();
 
             var result = new VisitDto

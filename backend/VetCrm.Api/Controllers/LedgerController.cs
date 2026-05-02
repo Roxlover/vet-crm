@@ -43,11 +43,21 @@ private IQueryable<Visit> ApplyLedgerInclusionRule(IQueryable<Visit> q)
 {
     return q.Where(v =>
         (v.AmountTl ?? 0m) > 0m
-        || _db.Reminders.Any(r => r.VisitId == v.Id && r.IsCompleted)
         || v.Procedures != null && v.Procedures != ""
         || v.Purpose != null && v.Purpose != ""
         || v.Notes != null && v.Notes != ""
     );
+}
+
+// Türkiye UTC+3 offset'ini hesaba katarak gün sınırlarını UTC'ye çevirir
+private static (DateTime fromDt, DateTime toDt) ToUtcRange(DateOnly from, DateOnly to)
+{
+    // UTC+3: gün başlangıcı = 00:00 yerel = önceki gün 21:00 UTC
+    //        gün sonu       = 23:59 yerel = aynı gün 20:59 UTC
+    // Güvenli taraf: ±1 gün buffer ile tüm gün aralığını yakala
+    var fromDt = from.ToDateTime(TimeOnly.MinValue).AddHours(-3); // UTC'de güvenli başlangıç
+    var toDt   = to.ToDateTime(TimeOnly.MaxValue).AddHours(0);     // UTC'de güvenli bitiş (23:59 yerel = 20:59 UTC, MaxValue zaten kapsar)
+    return (fromDt, toDt);
 }
 
     public class LedgerUserGroupDto
@@ -185,10 +195,10 @@ public async Task<ActionResult<LedgerSummaryDto>> GetVisitSummary(
         to = tmp;
     }
 
+    var (fromDt, toDt) = ToUtcRange(from, to);
+
     var query = _db.Visits
-        .Where(v =>
-            DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
-            DateOnly.FromDateTime(v.PerformedAt.Date) <= to);
+        .Where(v => v.PerformedAt >= fromDt && v.PerformedAt <= toDt);
 
       query = ApplyLedgerInclusionRule(query);
     var visits = await query
@@ -234,12 +244,12 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
         to = tmp;
     }
 
+    var (fromDt, toDt) = ToUtcRange(from, to);
+
     var baseQuery = _db.Visits
         .Include(v => v.Pet)
             .ThenInclude(p => p.Owner)
-        .Where(v =>
-            DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
-            DateOnly.FromDateTime(v.PerformedAt.Date) <= to);
+        .Where(v => v.PerformedAt >= fromDt && v.PerformedAt <= toDt);
     baseQuery = ApplyLedgerInclusionRule(baseQuery);
 
     var data = await baseQuery
@@ -303,10 +313,10 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
             to = tmp;
         }
 
+        var (fromDt, toDt) = ToUtcRange(from, to);
+
         var baseQuery = _db.Visits
-            .Where(v =>
-                DateOnly.FromDateTime(v.PerformedAt.Date) >= from &&
-                DateOnly.FromDateTime(v.PerformedAt.Date) <= to);
+            .Where(v => v.PerformedAt >= fromDt && v.PerformedAt <= toDt);
 
         baseQuery = ApplyLedgerInclusionRule(baseQuery);
 
