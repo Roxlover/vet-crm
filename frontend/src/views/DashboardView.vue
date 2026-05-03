@@ -1436,8 +1436,6 @@ async function openVisitDetail(item) {
     collectedEditOpen.value = false
   } catch (e) {
     console.error('[openVisitDetail] error', e)
-    // toastError varsa:
-    // toastError('Kayıt bulunamadı.')
     collectedError.value = 'Kayıt bulunamadı.'
     showDetailModal.value = false
     selectedVisit.value = null
@@ -1445,6 +1443,33 @@ async function openVisitDetail(item) {
   } finally {
     detailLoading.value = false
   }
+}
+
+// TAKVİM FONKSİYONLARI - EKSİKLER GERİ GELDİ
+function openVisitFromCalendar(event) {
+  // Randevu tıklandığında ziyareti aç
+  if (event.visitId) {
+    openVisit(event)
+  } else {
+    // Visit yoksa sadece randevu bilgilerini göster veya yeni randevu formunu aç
+    selectedDayEvents.value = [event]
+    selectedDayDate.value = new Date(event.scheduledAt)
+    showDetail.value = true
+    selectedVisit.value = null
+  }
+}
+
+function openNewAppointmentFromCalendar(day) {
+  // Günü seç ve randevu formunu hazırla
+  selectedDayDate.value = day.date
+  selectedDayEvents.value = day.appointments || []
+  
+  appointmentDate.value = toIsoDate(day.date)
+  appointmentTime.value = "10:30" // Varsayılan saat
+  
+  showDetail.value = true
+  showNewAppointment.value = true
+  selectedVisit.value = null
 }
 
 function formatDateTime(dt) {

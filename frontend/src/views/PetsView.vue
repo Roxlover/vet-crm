@@ -118,27 +118,49 @@
 
               <div class="visit-content">
                 <div class="procedure-text" v-if="visitEditId !== (v.visitId || v.VisitId)">
+                  <strong>Uygulanan İşlemler:</strong><br/>
                   {{ v.procedures || v.Procedures || '—' }}
                 </div>
-                <textarea v-else-if="visitDraft" v-model="visitDraft.procedures" class="edit-input" rows="3"></textarea>
+                <textarea v-else-if="visitDraft" v-model="visitDraft.procedures" class="edit-input" rows="3" placeholder="Uygulanan tedaviler..."></textarea>
+
+                <div v-if="v.notes || visitEditId === (v.visitId || v.VisitId)" class="visit-notes-area">
+                   <strong>Hekim Notu:</strong><br/>
+                   <div v-if="visitEditId !== (v.visitId || v.VisitId)">{{ v.notes || '—' }}</div>
+                   <textarea v-else-if="visitDraft" v-model="visitDraft.notes" class="edit-input" rows="2" placeholder="Ziyaret notları..."></textarea>
+                </div>
 
                 <div class="visit-finances">
                   <div class="finance-item">
-                    <span class="label">Alınan Bütçe</span>
+                    <span class="label">💰 Alınan Bütçe</span>
                     <span class="value success" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.amountTl || v.AmountTl) }}</span>
-                    <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.amountTl" class="edit-input tiny" />
+                    <div v-else-if="visitDraft" class="edit-group">
+                       <input type="number" v-model.number="visitDraft.amountTl" class="edit-input tiny" />
+                       <span class="currency">₺</span>
+                    </div>
                   </div>
                   <div class="finance-item">
-                    <span class="label">Veresiye (Borç)</span>
+                    <span class="label">⏳ Veresiye</span>
                     <span class="value danger" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.creditAmountTl || v.CreditAmountTl) }}</span>
-                    <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.creditAmountTl" class="edit-input tiny" />
+                    <div v-else-if="visitDraft" class="edit-group">
+                       <input type="number" v-model.number="visitDraft.creditAmountTl" class="edit-input tiny" />
+                       <span class="currency">₺</span>
+                    </div>
                   </div>
                 </div>
 
+                <!-- GÖRSEL GALERİSİ -->
                 <div v-if="getVisitImages(v).length" class="visit-gallery">
-                  <a v-for="img in getVisitImages(v)" :key="img.id || img.Id" :href="normalizeMediaUrl(getImageUrl(img))" target="_blank" class="gallery-item">
-                    <img :src="normalizeMediaUrl(getImageUrl(img))" loading="lazy" />
-                  </a>
+                  <div class="gallery-grid">
+                    <a 
+                      v-for="img in getVisitImages(v)" 
+                      :key="img.id || img.Id" 
+                      :href="normalizeMediaUrl(getImageUrl(img))" 
+                      target="_blank" 
+                      class="gallery-item"
+                    >
+                      <img :src="normalizeMediaUrl(getImageUrl(img))" loading="lazy" alt="Ziyaret Görseli" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -746,4 +768,147 @@ async function savePetEdit() {
     padding: 2rem 1rem;
   }
 }
+.modern-visit-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.visit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.visit-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.visit-date {
+  font-weight: 800;
+  color: var(--text-main);
+  font-size: 1.1rem;
+}
+
+.visit-purpose {
+  font-size: 0.9rem;
+  color: var(--primary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.visit-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.procedure-text {
+  color: var(--text-main);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.visit-notes-area {
+  background: #fffbeb;
+  padding: 1rem;
+  border-radius: 12px;
+  border-left: 4px solid #fbbf24;
+  font-size: 0.95rem;
+}
+
+.visit-finances {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.finance-item {
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.finance-item .label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.finance-item .value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+}
+
+.value.success { color: #10b981; }
+.value.danger { color: #ef4444; }
+
+.edit-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.currency {
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.gallery-item {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+  cursor: zoom-in;
+  transition: var(--transition);
+}
+
+.gallery-item:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--primary);
+  background: #fff;
+}
+
+.tiny { padding: 0.4rem; font-size: 0.9rem; }
+
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .visit-finances { grid-template-columns: 1fr; }
+}
 </style>
+
