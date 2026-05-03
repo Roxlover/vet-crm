@@ -91,18 +91,20 @@ http.interceptors.request.use((config) => {
     data: config.data,
   })
 
+  // Authorization header — sadece token varsa
   if (token) {
-    config.headers = { ...config.headers }
     config.headers['Authorization'] = `Bearer ${token}`
+  }
 
-    // FormData değilse ve Content-Type belirtilmemişse JSON olarak işaretle
-    const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData
-    if (!isFormData && !config.headers['Content-Type']) {
+  // Content-Type — token olsun olmasın, body olan her istekte gerekli (login dahil)
+  const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData
+  if (isFormData) {
+    // FormData: Content-Type'ı SİL — Axios boundary'yi otomatik eklesin
+    delete config.headers['Content-Type']
+  } else if (config.data !== undefined && config.data !== null) {
+    // JSON body varsa Content-Type ekle (eğer zaten set edilmemişse)
+    if (!config.headers['Content-Type']) {
       config.headers['Content-Type'] = 'application/json'
-    }
-    // FormData ise Content-Type'ı SİL — Axios boundary'yi otomatik eklesin
-    if (isFormData) {
-      delete config.headers['Content-Type']
     }
   }
 
