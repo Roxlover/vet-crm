@@ -92,12 +92,23 @@ http.interceptors.request.use((config) => {
   })
 
   if (token) {
-    config.headers = config.headers || {}
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers = { ...config.headers }
+    config.headers['Authorization'] = `Bearer ${token}`
+
+    // FormData değilse ve Content-Type belirtilmemişse JSON olarak işaretle
+    const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData
+    if (!isFormData && !config.headers['Content-Type']) {
+      config.headers['Content-Type'] = 'application/json'
+    }
+    // FormData ise Content-Type'ı SİL — Axios boundary'yi otomatik eklesin
+    if (isFormData) {
+      delete config.headers['Content-Type']
+    }
   }
 
   return config
 })
+
 
 // RESPONSE INTERCEPTOR (aynen kalabilir)
 http.interceptors.response.use(
