@@ -36,12 +36,10 @@
           </RouterLink>
 
           <RouterLink to="/pets" class="nav-item" :class="{ active: route.name === 'pets' }">
-            <span class="nav-icon">🐶</span>
             <span>Hastalar</span>
           </RouterLink>
           
           <RouterLink v-if="canSeeBilanco" to="/bilanco" class="nav-item" :class="{ active: route.name === 'Bilanco' }">
-            <span class="nav-icon">📈</span>
             <span>Bilanço</span>
           </RouterLink>
         </nav>
@@ -68,9 +66,8 @@
       <main class="main">
         <header class="topbar">
           <div class="topbar-left">
-            <button v-if="isMobile" class="topbar-menu-btn" @click="toggleSidebar">☰</button>
+            <button v-if="isMobile" class="topbar-menu-btn" @click="toggleSidebar">Menü</button>
             <div class="search-pill">
-              <span class="search-icon">🔍</span>
               <input type="text" placeholder="Hızlı hasta veya sahip ara..." />
             </div>
           </div>
@@ -78,7 +75,7 @@
           <div class="topbar-right">
             <div class="notif-wrapper">
               <button class="notif-btn" @click="togglePanel">
-                <span class="btn-icon">🔔</span>
+                <span class="btn-icon">Bildirimler</span>
                 <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
               </button>
               
