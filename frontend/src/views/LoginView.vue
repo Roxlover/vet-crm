@@ -22,7 +22,7 @@ async function handleLogin() {
   errorMessage.value = ''
 
   try {
-    await login(form.username, form.password)
+    await login(form)
     router.push('/')
   } catch (err) {
     console.error(err)
