@@ -76,7 +76,7 @@ const starStyle = (n) => {
           <div class="form-group">
             <label>Kullanıcı Adı</label>
             <div class="input-wrapper">
-              <span class="input-icon">👤</span>
+              <span class="input-icon"></span>
               <input
                 v-model="form.username"
                 type="text"
@@ -90,7 +90,7 @@ const starStyle = (n) => {
           <div class="form-group">
             <label>Şifre</label>
             <div class="input-wrapper">
-              <span class="input-icon">🔒</span>
+              <span class="input-icon"></span>
               <input
                 v-model="form.password"
                 type="password"

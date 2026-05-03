@@ -12,7 +12,6 @@
       <div class="list-container">
         <div class="search-section">
           <div class="search-input-wrapper">
-            <span class="search-icon">🔍</span>
             <input 
               v-model="searchQuery" 
               type="text" 
@@ -111,7 +110,7 @@
     <!-- Owner Detail Modal -->
     <div v-if="showDetailModal" class="modal-backdrop" @click.self="closeOwnerDetail">
       <div class="modal modern-owner-modal">
-        <button class="modal-close-btn" @click="closeOwnerDetail">×</button>
+        <button class="modal-close-btn" @click="closeOwnerDetail">Kapat</button>
         
         <div v-if="detailLoading" class="state">Yükleniyor...</div>
         
@@ -120,7 +119,7 @@
             <div class="owner-main-info" style="text-align: center; width: 100%;">
               <h2>{{ ownerDetail.fullName }}</h2>
               <div class="contact-pill">
-                <span>📞 {{ ownerDetail.phoneE164 }}</span>
+                <span>Telefon: {{ ownerDetail.phoneE164 }}</span>
               </div>
             </div>
           </header>
@@ -197,10 +196,10 @@
                       <span>{{ p.species }} <template v-if="p.breed">({{ p.breed }})</template></span>
                     </div>
                     <div class="p-budget">
-                      <span class="total-badge" title="Toplam Bütçe">💰 {{ p.totalAmount?.toFixed(2) }} ₺</span>
-                      <span v-if="p.totalCredit > 0" class="credit-badge" title="Veresiye">⏳ {{ p.totalCredit?.toFixed(2) }} ₺</span>
+                      <span class="total-badge" title="Toplam Bütçe">Tutar: {{ p.totalAmount?.toFixed(2) }} ₺</span>
+                      <span v-if="p.totalCredit > 0" class="credit-badge" title="Veresiye">Veresiye: {{ p.totalCredit?.toFixed(2) }} ₺</span>
                     </div>
-                    <button class="delete-icon-btn" @click.stop="removePet(p.id)">🗑️</button>
+                    <button class="delete-icon-btn" @click.stop="removePet(p.id)">Sil</button>
                   </div>
                   <div v-if="!ownerDetail.pets?.length" class="empty-pets-hint">
                     Henüz hayvan kaydı yok.

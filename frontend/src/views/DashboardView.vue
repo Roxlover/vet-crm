@@ -29,55 +29,59 @@
     </section>
 
     <!-- STATS GRID - PREMIUM MOBILE CRM STYLE -->
+    <!-- STATS GRID - PREMIUM MINIMALIST STYLE -->
     <section class="stats-grid">
-      <div class="stat-card purple">
-        <div class="stat-icon">📅</div>
+      <div class="stat-card">
         <div class="stat-info">
-          <span class="stat-label">Bugünkü Randevu</span>
+          <span class="stat-label">Bugünkü Randevular</span>
           <div class="stat-value">{{ stats.todayAppointmentsCount }}</div>
+          <span class="stat-sub">Aktif Bekleyen</span>
         </div>
       </div>
 
-      <div class="stat-card green">
-        <div class="stat-icon">🐾</div>
+      <div class="stat-card">
         <div class="stat-info">
           <span class="stat-label">Aktif Hasta</span>
           <div class="stat-value">{{ stats.activePetsCount }}</div>
+          <span class="stat-sub">Sistemdeki Toplam</span>
         </div>
       </div>
 
-      <div class="stat-card blue">
-        <div class="stat-icon">💰</div>
+      <div class="stat-card">
         <div class="stat-info">
           <span class="stat-label">Aylık Tahsilat</span>
           <div class="stat-value">₺{{ formatCurrency(stats.monthlyRevenue) }}</div>
+          <span class="stat-sub">Toplam Gelir</span>
         </div>
       </div>
 
-      <div class="stat-card orange">
-        <div class="stat-icon">🔔</div>
+      <div class="stat-card">
         <div class="stat-info">
           <span class="stat-label">Hatırlatıcılar</span>
           <div class="stat-value">{{ stats.pendingRemindersCount }}</div>
+          <span class="stat-sub">İşlem Bekleyen</span>
         </div>
       </div>
     </section>
 
     <!-- TAKVİM GÖRÜNÜMÜ -->
     <section class="calendar-section">
-      <div class="section-title">
-        <h2>Randevu Takvimi</h2>
-        <button class="btn-text">Tümünü Gör</button>
+      <div class="section-header">
+        <h2 class="section-title">Randevu Takvimi</h2>
+        <div class="header-actions">
+           <button class="btn btn-ghost btn-sm">Tüm Randevular</button>
+        </div>
       </div>
+      
       <section class="card calendar-card">
         <div class="calendar-header">
           <div class="month-info">
             <h3>{{ formatMonthYear(currentMonth) }}</h3>
           </div>
           <div class="calendar-nav">
-            <button class="nav-btn" @click="goToPrevMonth">‹</button>
+            <button class="nav-btn" @click="goToPrevMonth">Geri</button>
             <button class="nav-btn today-btn" @click="goToToday">Bugün</button>
-            <button class="nav-btn" @click="goToNextMonth">›</button>
+            <button class="nav-btn" @click="goToNextMonth">İleri</button>
           </div>
         </div>
 
@@ -120,7 +124,7 @@
   <!-- MODAL -->
   <div v-if="showDetail" class="modal-backdrop" @click.self="closeDetail">
    <div class="modal" @click.stop>
-     <button class="close" @click.stop="closeDetail">×</button>
+     <button class="close" @click.stop="closeDetail">Kapat</button>
     <div v-if="detailLoading" class="state">Yükleniyor...</div>
 
     <!-- SADECE seçili ziyaret yok *ve* yeni randevu modu kapalıysa "kayıt yok" de -->
@@ -360,7 +364,7 @@
   <div class="image-modal-content">
     <img :src="visitImageSrc" class="visit-img-preview" alt="Ziyaret görseli" />
     <button class="image-modal-close" @click="closeImageModal">
-      ✕
+      Kapat
     </button>
   </div>
 </div> 
@@ -1560,92 +1564,115 @@ async function submitAppointment() {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* HIGHLIGHTS GRID - CRM STYLE */
-.highlights-grid {
+/* STATS GRID - CLEAN SAAS STYLE */
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
 }
 
-.highlight-card {
+.stat-card {
   background: #ffffff;
-  border-radius: var(--radius-xl);
-  padding: 1.75rem;
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 16px;
   border: 1px solid #f1f5f9;
-  box-shadow: var(--shadow-sm);
-  transition: var(--transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.highlight-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
+.stat-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--primary);
+  opacity: 0.1;
 }
 
-.highlight-info h3 {
-  font-size: 1.25rem;
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -10px rgba(0,0,0,0.05);
+  border-color: var(--primary-light);
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.85rem;
   font-weight: 800;
-  color: var(--text-main);
+  color: #0f172a;
+  line-height: 1;
   margin-bottom: 0.25rem;
 }
 
-.highlight-info p {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
-}
-
-.badge-glow {
-  padding: 0.4rem 0.8rem;
-  background: #f5f3ff;
-  color: #7c3aed;
-  border-radius: 10px;
+.stat-sub {
   font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* SECTION HEADERS */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
   font-weight: 800;
-  box-shadow: 0 0 15px rgba(124, 58, 237, 0.1);
+  color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
-/* DONUT CHART */
-.progress-container {
-  width: 90px;
-  height: 90px;
+/* CALENDAR REFINEMENTS */
+.calendar-card {
+  border: 1px solid #f1f5f9;
+  border-radius: 20px;
+  overflow: hidden;
 }
 
-.circular-chart {
-  display: block;
-  margin: 0 auto;
-  max-width: 100%;
-  max-height: 100%;
+.calendar-header {
+  padding: 1.5rem;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.circle-bg {
-  fill: none;
-  stroke: #f1f5f9;
-  stroke-width: 3.8;
+.nav-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.circle {
-  fill: none;
-  stroke-width: 3.8;
-  stroke-linecap: round;
-  animation: progress 1s ease-out forwards;
+.nav-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
-@keyframes progress {
-  0% { stroke-dasharray: 0 100; }
-}
-
-.circular-chart.purple .circle { stroke: #7c3aed; }
-
-.percentage {
-  fill: var(--text-main);
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.5rem;
-  font-weight: 800;
-  text-anchor: middle;
+.today-btn {
+  background: #ffffff;
+  color: var(--primary);
+  border-color: var(--primary-light);
 }
 
 /* ACTIVITY CHART */

@@ -24,17 +24,14 @@
 
         <nav class="nav-links">
           <RouterLink to="/" class="nav-item" :class="{ active: route.name === 'dashboard' }">
-            <span class="nav-icon">📊</span>
             <span>Dashboard</span>
           </RouterLink>
 
           <RouterLink to="/owners" class="nav-item" :class="{ active: route.name === 'owners' }">
-            <span class="nav-icon">👥</span>
             <span>Sahipler</span>
           </RouterLink>
 
           <RouterLink to="/visits" class="nav-item" :class="{ active: route.name === 'visits' }">
-            <span class="nav-icon">📝</span>
             <span>Ziyaretler</span>
           </RouterLink>
 

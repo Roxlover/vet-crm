@@ -12,7 +12,6 @@
       <aside class="sidebar-section">
         <div class="search-card">
           <div class="search-input-wrapper">
-            <span class="icon">🔍</span>
             <input v-model="q" class="search-input" placeholder="İsim, tür veya sahip ara..." />
           </div>
           <select v-model="ownerId" class="owner-select">
@@ -44,7 +43,7 @@
       <!-- Sağ: Profil -->
       <section class="profile-section">
         <div v-if="!profile && !loadingProfile" class="empty-state-card">
-          <div class="empty-icon">🐾</div>
+          <div class="empty-icon"></div>
           <h3>Hasta Seçilmedi</h3>
           <p>Detayları görüntülemek için soldaki listeden bir hasta seçin.</p>
         </div>
@@ -65,6 +64,7 @@
                 Düzenle
               </button>
               <template v-else>
+                <button class="close" @click.stop="closeDetail">Kapat</button>
                 <button class="btn btn-ghost" @click="cancelPetEdit" :disabled="petSaving">İptal</button>
                 <button class="btn btn-primary" @click="savePetEdit" :disabled="petSaving">
                   {{ petSaving ? 'Kaydediliyor...' : 'Kaydet' }}
@@ -131,7 +131,7 @@
 
                 <div class="visit-finances">
                   <div class="finance-item">
-                    <span class="label">💰 Alınan Bütçe</span>
+                    <span class="label">Toplam Tutar</span>
                     <span class="value success" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.amountTl || v.AmountTl) }}</span>
                     <div v-else-if="visitDraft" class="edit-group">
                        <input type="number" v-model.number="visitDraft.amountTl" class="edit-input tiny" />
@@ -139,7 +139,7 @@
                     </div>
                   </div>
                   <div class="finance-item">
-                    <span class="label">⏳ Veresiye</span>
+                    <span class="label">Veresiye</span>
                     <span class="value danger" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.creditAmountTl || v.CreditAmountTl) }}</span>
                     <div v-else-if="visitDraft" class="edit-group">
                        <input type="number" v-model.number="visitDraft.creditAmountTl" class="edit-input tiny" />
