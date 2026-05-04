@@ -99,67 +99,40 @@
           </div>
 
           <div v-else class="visit-timeline">
-            <div v-for="v in (profile.visits || profile.Visits)" :key="v.visitId || v.VisitId" class="modern-visit-card">
+            <div v-for="v in (profile.visits || profile.Visits)" :key="v.id || v.visitId || v.VisitId" class="modern-visit-card">
               <div class="visit-header">
                 <div class="visit-meta">
-                  <span class="visit-date" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ formatDt(v.performedAt || v.PerformedAt) }}</span>
-                  <input v-else-if="visitDraft" type="datetime-local" v-model="visitDraft.performedAt" class="edit-input" />
-                  <span class="visit-purpose" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ v.purpose || v.Purpose || '—' }}</span>
-                  <input v-else-if="visitDraft" type="text" v-model="visitDraft.purpose" class="edit-input" placeholder="Amaç..." />
+                  <span class="visit-date">{{ formatDt(v.performedAt || v.PerformedAt) }}</span>
+                  <span class="visit-tag">{{ v.purpose || v.Purpose || 'Genel Muayene' }}</span>
                 </div>
-                <div class="visit-actions">
-                  <button v-if="visitEditId !== (v.visitId || v.VisitId)" class="btn btn-sm btn-ghost" @click="openVisitEdit(v)">Düzenle</button>
-                  <template v-else>
-                    <button class="btn btn-sm btn-ghost" @click="cancelVisitEdit" :disabled="visitSaving">İptal</button>
-                    <button class="btn btn-sm btn-primary" @click="saveVisitEdit(v)" :disabled="visitSaving">Kaydet</button>
-                  </template>
+                <div class="visit-finances-summary">
+                  <div class="fin-pill amount">
+                    <span class="label">Alınan:</span>
+                    <span class="value">{{ fmtMoney(v.amountTl || v.AmountTl) }}</span>
+                  </div>
+                  <div class="fin-pill credit" v-if="(v.creditAmountTl || v.CreditAmountTl) > 0">
+                    <span class="label">Veresiye:</span>
+                    <span class="value">{{ fmtMoney(v.creditAmountTl || v.CreditAmountTl) }}</span>
+                  </div>
                 </div>
               </div>
 
               <div class="visit-content">
-                <div class="procedure-text" v-if="visitEditId !== (v.visitId || v.VisitId)">
-                  <strong>Uygulanan İşlemler:</strong><br/>
-                  {{ v.procedures || v.Procedures || '—' }}
+                <div class="procedure-block">
+                  <label>Uygulanan İşlemler</label>
+                  <p>{{ v.procedures || v.Procedures || 'İşlem kaydı girilmemiş.' }}</p>
                 </div>
-                <textarea v-else-if="visitDraft" v-model="visitDraft.procedures" class="edit-input" rows="3" placeholder="Uygulanan tedaviler..."></textarea>
-
-                <div v-if="v.notes || visitEditId === (v.visitId || v.VisitId)" class="visit-notes-area">
-                   <strong>Hekim Notu:</strong><br/>
-                   <div v-if="visitEditId !== (v.visitId || v.VisitId)">{{ v.notes || '—' }}</div>
-                   <textarea v-else-if="visitDraft" v-model="visitDraft.notes" class="edit-input" rows="2" placeholder="Ziyaret notları..."></textarea>
+                
+                <div v-if="v.notes || v.Notes" class="notes-block">
+                  <label>Hekim Notu</label>
+                  <p>{{ v.notes || v.Notes }}</p>
                 </div>
 
-                <div class="visit-finances">
-                  <div class="finance-item">
-                    <span class="label">Toplam Tutar</span>
-                    <span class="value success" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.amountTl || v.AmountTl) }}</span>
-                    <div v-else-if="visitDraft" class="edit-group">
-                       <input type="number" v-model.number="visitDraft.amountTl" class="edit-input tiny" />
-                       <span class="currency">₺</span>
-                    </div>
-                  </div>
-                  <div class="finance-item">
-                    <span class="label">Veresiye</span>
-                    <span class="value danger" v-if="visitEditId !== (v.visitId || v.VisitId)">{{ fmtMoney(v.creditAmountTl || v.CreditAmountTl) }}</span>
-                    <div v-else-if="visitDraft" class="edit-group">
-                       <input type="number" v-model.number="visitDraft.creditAmountTl" class="edit-input tiny" />
-                       <span class="currency">₺</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- GÖRSEL GALERİSİ -->
                 <div v-if="getVisitImages(v).length" class="visit-gallery">
                   <div class="gallery-grid">
-                    <a 
-                      v-for="img in getVisitImages(v)" 
-                      :key="img.id || img.Id" 
-                      :href="normalizeMediaUrl(getImageUrl(img))" 
-                      target="_blank" 
-                      class="gallery-item"
-                    >
-                      <img :src="normalizeMediaUrl(getImageUrl(img))" loading="lazy" alt="Ziyaret Görseli" />
-                    </a>
+                    <div v-for="(img, idx) in getVisitImages(v)" :key="idx" class="gallery-item">
+                      <img :src="normalizeMediaUrl(getImageUrl(img))" alt="Visit Image" />
+                    </div>
                   </div>
                 </div>
               </div>

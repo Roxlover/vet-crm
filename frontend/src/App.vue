@@ -66,7 +66,13 @@
       <main class="main">
         <header class="topbar">
           <div class="topbar-left">
-            <button v-if="isMobile" class="topbar-menu-btn" @click="toggleSidebar">Menü</button>
+            <button v-if="isMobile" class="topbar-menu-btn" @click="toggleSidebar">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
             <div class="search-pill">
               <input type="text" placeholder="Hızlı hasta veya sahip ara..." />
             </div>
@@ -75,7 +81,12 @@
           <div class="topbar-right">
             <div class="notif-wrapper">
               <button class="notif-btn" @click="togglePanel">
-                <span class="btn-icon">Bildirimler</span>
+                <span class="btn-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                  </svg>
+                </span>
                 <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
               </button>
               
@@ -502,17 +513,22 @@ onBeforeUnmount(() => {
   }
 
   .topbar-menu-btn {
-    background: #f8fafc;
-    border: 1px solid #f1f5f9;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    font-size: 1.1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+  background: none;
+  border: none;
+  padding: 8px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.topbar-menu-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
 
   .topbar-left {
     display: flex;

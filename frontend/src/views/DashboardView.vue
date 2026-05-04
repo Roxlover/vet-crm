@@ -6,8 +6,8 @@
       <div class="card highlight-card activity-chart">
         <div class="chart-header">
           <h3>Haftalık Aktivite</h3>
-          <span class="trend-up" v-if="trendValue >= 0">+{{ trendValue }}% ↑</span>
-          <span class="trend-down" v-else>{{ trendValue }}% ↓</span>
+          <span class="trend-up" v-if="trendValue >= 0">+{{ trendValue }}%</span>
+          <span class="trend-down" v-else>{{ trendValue }}%</span>
         </div>
         <div class="svg-wrapper">
           <svg viewBox="0 0 100 30" class="line-chart">
@@ -119,7 +119,6 @@
         </div>
       </section>
     </section>
-  </main>
 
   <!-- MODAL -->
   <div v-if="showDetail" class="modal-backdrop" @click.self="closeDetail">
@@ -591,6 +590,7 @@
       </div>
     </div>
   </div>
+</main>
 </template>
 
 <script setup>
