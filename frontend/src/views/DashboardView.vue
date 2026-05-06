@@ -142,6 +142,9 @@
               <span class="ev-purpose">{{ ev.purpose || '—' }}</span>
             </div>
           </div>
+          <div v-if="selectedDayEvents.length === 0" class="state state-info" style="margin-bottom: 1rem;">
+            Bu güne ait kayıtlı randevu bulunamadı.
+          </div>
           <hr class="divider" />
         </template>
 
@@ -809,6 +812,10 @@ async function saveCollected() {
     selectedVisit.value = fresh
     visitDetail.value = fresh
 
+    // Dashboard ve Takvimi tazele
+    await loadStats()
+    await loadCalendarForMonth(currentMonth.value)
+
     collectedEditOpen.value = false
   } catch (e) {
     console.error('[COLLECTED] save error', e)
@@ -917,6 +924,10 @@ const performedAt = `${performedAtLocal}:00`
     selectedVisit.value = fresh
     visitDetail.value = fresh
 
+    // Dashboard ve Takvimi tazele
+    await loadStats()
+    await loadCalendarForMonth(currentMonth.value)
+
     visitEditOpen.value = false
     visitDraft.value = null
   } catch (e) {
@@ -990,6 +1001,10 @@ async function markSelectedVisitCompleted() {
     // detail refresh
     const detail = await fetchVisitDetail(selectedVisit.value.id)
     selectedVisit.value = detail?.data ?? detail
+
+    // Dashboard ve Takvimi tazele
+    await loadStats()
+    await loadCalendarForMonth(currentMonth.value)
   } catch (e) {
     console.error(e)
     statusError.value = 'Durum güncellenemedi.'
@@ -1010,6 +1025,10 @@ async function markSelectedVisitMissed() {
     // detail refresh
     const detail = await fetchVisitDetail(selectedVisit.value.id)
     selectedVisit.value = detail?.data ?? detail
+
+    // Dashboard ve Takvimi tazele
+    await loadStats()
+    await loadCalendarForMonth(currentMonth.value)
   } catch (e) {
     console.error(e)
     statusError.value = 'Durum güncellenemedi.'
@@ -1330,10 +1349,11 @@ async function saveCredit() {
       selectedVisit.value = { ...selectedVisit.value, creditAmountTl: val }
     }
 
-    // 6) Takvim açıksa takvimi tazele
+    // 5) Dashboard ve Takvimi tazele
+    await loadStats()
     await loadCalendarForMonth(currentMonth.value)
 
-    // 7) İstersen backend’den taze veri çek (modal kesin doğru kalsın)
+    // 6) Backend’den taze veri çek (modal kesin doğru kalsın)
     try {
       const fresh = await fetchVisitDetail(visitId)
       selectedVisit.value = fresh
@@ -1392,6 +1412,10 @@ async function markReminder(completed) {
       collectedInput.value = total > 0 ? collected : null
       collectedEditOpen.value = false
     }
+
+    // Dashboard ve Takvimi tazele
+    await loadStats()
+    await loadCalendarForMonth(currentMonth.value)
   } catch (e) {
     console.error('markReminder error >>>', e)
     statusError.value = 'Durum güncellenemedi.'
@@ -1495,10 +1519,9 @@ async function submitAppointment() {
   if (appointmentSaving.value) return
   appointmentSaving.value = true
   const currentUser = getUser()
-  if (!selectedVisit.value || !selectedVisit.value.id) {
-    alert('Randevu oluşturmak için önce bir ziyaret kaydı (Visit) açmalısınız.')
-    return
-  }
+  
+  // 🔹 DÜZELTME: Artık bir ziyarete (Visit) bağlı olma zorunluluğu yok
+  // if (!selectedVisit.value || !selectedVisit.value.id) { ... }
 
   if (!currentUser) {
     alert('Oturumunuz sona erdi, lütfen tekrar giriş yapın.')
@@ -1508,19 +1531,23 @@ async function submitAppointment() {
 
   if (!selectedOwnerId.value) {
     alert('Lütfen hasta sahibini seçin.')
+    appointmentSaving.value = false
     return
   }
   if (!selectedPetIds.value || selectedPetIds.value.length === 0) {
     alert('En az bir hayvan seçmelisiniz.')
+    appointmentSaving.value = false
     return
   }
   if (!appointmentDate.value || !appointmentTime.value) {
     alert('Tarih ve saat seçin.')
+    appointmentSaving.value = false
     return
   }
 
   if (!isTimeWithinWorkingHours(appointmentTime.value)) {
     alert('Randevu saati 10:30 - 19:30 arasında olmalıdır.')
+    appointmentSaving.value = false
     return
   }
 
@@ -1541,6 +1568,7 @@ async function submitAppointment() {
 
   try {
     await createAppointment(payload)
+    await loadStats()
     await loadCalendarForMonth(currentMonth.value)
     showNewAppointment.value = false
   }finally {

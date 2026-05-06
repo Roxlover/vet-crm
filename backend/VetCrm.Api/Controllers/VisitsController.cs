@@ -169,6 +169,10 @@ public async Task<IActionResult> UpdateVisitCollected([FromRoute] int id, [FromB
     }
 
     await _db.SaveChangesAsync();
+    
+    // 5) Sync Ledger
+    await SyncLedgerForVisit(visit);
+
     return NoContent();
 }
 
@@ -206,75 +210,16 @@ public async Task<IActionResult> UpdateVisitStatus(int id, [FromBody] VisitStatu
     // idempotent
     if (visit.Status == newStatus)
         return NoContent();
-   visit.Status = newStatus;
+    visit.StatusUpdatedAt = DateTime.UtcNow;
+    if (newStatus == Visit.VisitStatus.Completed && visit.PerformedAt == default)
+        visit.PerformedAt = DateTime.UtcNow;
 
+    await _db.SaveChangesAsync();
 
-  // --- LEDGER HOOK (user bazlı) ---
-if (visit.CreatedByUserId.HasValue)
-{
-    var userId = visit.CreatedByUserId.Value;
+    // ✅ Sync Ledger after status change
+    await SyncLedgerForVisit(visit);
 
-    // Gelir miktarı: Burada kuralı AmountTl üzerinden yazıyorum.
-    // (Eğer sizde gelir = tahsil edilen vs ise sonra değiştiririz.)
-    var total = visit.AmountTl ?? 0m;
-var credit = visit.CreditAmountTl ?? 0m;
-var collected = total - credit;
-if (collected < 0m) collected = 0m;
-
-var amount = collected;
-
-
-    if (newStatus == Visit.VisitStatus.Completed)
-    {
-        if (amount > 0)
-        {
-            // idempotent: var mı?
-            var exists = await _db.LedgerEntries.AnyAsync(x =>
-                x.UserId == userId &&
-                x.VisitId == visit.Id &&
-                x.IsIncome == true
-            );
-
-            if (!exists)
-            {
-                _db.LedgerEntries.Add(new LedgerEntry
-                {
-                    UserId = userId,
-                    VisitId = visit.Id,
-                    Date = DateOnly.FromDateTime(DateTime.UtcNow),
-                    Amount = amount,
-                    IsIncome = true,
-                    Category = "Visit",
-                    Note = $"Visit Completed (VisitId={visit.Id})",
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-        }
-    }
-    else
-    {
-        // Completed dışına çekildiyse (Pending/Missed): daha önce yazılmış geliri geri al
-        var incomes = await _db.LedgerEntries
-            .Where(x =>
-                x.UserId == userId &&
-                x.VisitId == visit.Id &&
-                x.IsIncome == true
-            )
-            .ToListAsync();
-
-        if (incomes.Count > 0)
-            _db.LedgerEntries.RemoveRange(incomes);
-    }
-}
- 
-visit.StatusUpdatedAt = DateTime.UtcNow;
-
-if (newStatus == Visit.VisitStatus.Completed && visit.PerformedAt == default)
-    visit.PerformedAt = DateTime.UtcNow;
-
-await _db.SaveChangesAsync();
-return NoContent();
-
+    return NoContent();
 }
 
 
@@ -292,6 +237,9 @@ public async Task<IActionResult> UpdateVisitCredit([FromRoute] int id, [FromBody
 
     visit.CreditAmountTl = dto.CreditAmountTl;
     await _db.SaveChangesAsync();
+
+    // ✅ Sync Ledger after credit change
+    await SyncLedgerForVisit(visit);
 
     return NoContent();
 }
@@ -499,24 +447,8 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
 
             SyncRemindersForVisit(visit, (dto.Plans != null && dto.Plans.Count > 0) ? dto.Plans : null);
 
-            // Otomatik LedgerEntry: tutar > 0 ise direkt bilançoya yaz
-            var amount = visit.AmountTl ?? 0m;
-            var credit = visit.CreditAmountTl ?? 0m;
-            var collected = Math.Max(0m, amount - credit);
-            if (collected > 0m && userId.HasValue)
-            {
-                _db.LedgerEntries.Add(new LedgerEntry
-                {
-                    UserId    = userId.Value,
-                    VisitId   = visit.Id,
-                    Date      = DateOnly.FromDateTime(visit.PerformedAt.Date),
-                    Amount    = collected,
-                    IsIncome  = true,
-                    Category  = "Visit",
-                    Note      = $"Ziyaret kaydı (VisitId={visit.Id}, Pet={pet.Name})",
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
+            // ✅ Sync Ledger (Ziyaret tamamlandıysa veya tahsilat varsa)
+            await SyncLedgerForVisit(visit);
 
             await _db.SaveChangesAsync();
 
@@ -585,6 +517,9 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
 
         SyncRemindersForVisit(visit, (dto.Plans != null && dto.Plans.Count > 0) ? dto.Plans : null);
         await _db.SaveChangesAsync();
+
+        // ✅ Sync Ledger
+        await SyncLedgerForVisit(visit);
 
         return NoContent();
     }
@@ -697,6 +632,75 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
 
     return Ok(results);
 }
+private async Task SyncLedgerForVisit(Visit visit)
+{
+    Console.WriteLine($"[SyncLedger] VisitId={visit.Id}, Status={visit.Status}, Amount={visit.AmountTl}, Credit={visit.CreditAmountTl}");
+
+    var userId = _currentUser.UserId ?? visit.CreatedByUserId;
+    if (!userId.HasValue) 
+    {
+        Console.WriteLine("[SyncLedger] SKIPPED: No UserId found.");
+        return;
+    }
+
+    // Mevcut "Visit" kategorili ledger kayıtlarını bul
+    var existing = await _db.LedgerEntries
+        .Where(x => x.VisitId == visit.Id && x.Category == "Visit")
+        .ToListAsync();
+
+    // Kural: Sadece "Completed" ise veya manuel tahsilat (CollectedAmountTl) girildiyse bilanço olur
+    // Şimdilik ana bütçe kuralı: AmountTl - CreditAmountTl = Gelir
+    var total = visit.AmountTl ?? 0m;
+    var credit = visit.CreditAmountTl ?? 0m;
+    var income = Math.Max(0m, total - credit);
+
+    // Eğer durum "Completed" değilse geliri siliyoruz (veya hiç eklemiyoruz)
+    if (visit.Status != Visit.VisitStatus.Completed || income <= 0m)
+    {
+        if (existing.Any())
+        {
+            Console.WriteLine($"[SyncLedger] REMOVING {existing.Count} entries because status is {visit.Status} or income is 0.");
+            _db.LedgerEntries.RemoveRange(existing);
+            await _db.SaveChangesAsync();
+        }
+        return;
+    }
+
+    // "Completed" ise ve income > 0 ise ledger olmalı
+    if (!existing.Any())
+    {
+        Console.WriteLine($"[SyncLedger] ADDING new ledger entry: {income} TL");
+        _db.LedgerEntries.Add(new LedgerEntry
+        {
+            UserId = userId.Value,
+            VisitId = visit.Id,
+            Date = DateOnly.FromDateTime(visit.PerformedAt.Date),
+            Amount = income,
+            IsIncome = true,
+            Category = "Visit",
+            Note = $"Ziyaret Geliri (VisitId={visit.Id})",
+            CreatedAt = DateTime.UtcNow
+        });
+    }
+    else
+    {
+        var first = existing.First();
+        if (first.Amount != income)
+        {
+            Console.WriteLine($"[SyncLedger] UPDATING ledger entry: {first.Amount} -> {income} TL");
+            first.Amount = income;
+            first.Date = DateOnly.FromDateTime(visit.PerformedAt.Date);
+        }
+        
+        if (existing.Count > 1)
+        {
+             _db.LedgerEntries.RemoveRange(existing.Skip(1));
+        }
+    }
+
+    await _db.SaveChangesAsync();
+}
+
 private static TimeZoneInfo GetIstanbulTimeZone()
 {
     try

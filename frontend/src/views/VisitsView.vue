@@ -106,6 +106,23 @@
           <input type="datetime-local" v-model="form.performedAt" />
         </div>
 
+        <!-- Görsel Ekleme (Cloudflare R2) -->
+        <div class="form-group">
+          <label>Görsel(ler) Ekle</label>
+          <div class="image-upload-wrapper">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              @change="onFilesSelected"
+              class="file-input"
+            />
+            <div v-if="form.imageFiles.length > 0" class="file-count">
+              {{ form.imageFiles.length }} dosya seçildi.
+            </div>
+          </div>
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
           <div class="form-group">
             <label>Tutar (TL)</label>
@@ -131,8 +148,9 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch, nextTick  } from 'vue'
 import { fetchOwners } from '../api/owners'
-import { fetchPetsByOwner } from '../api/pets'
+import { fetchPets, fetchPetsByOwner } from '../api/pets'
 import { http } from '@/api/http'
+import { uploadVisitImages } from '../api/visits'
 
 const visits = ref([])
 const owners = ref([])
@@ -195,15 +213,21 @@ async function loadVisits() {
 
 async function loadOwnersAndPets() {
   try {
+    // 🔹 DÜZELTME: fetchPets() parametresiz çağrıldığında tüm petleri getirir
     const [ownersData, petsData] = await Promise.all([
       fetchOwners(),
-      fetchPetsByOwner(),
+      fetchPets(), 
     ])
     owners.value = ownersData
     pets.value = petsData
   } catch (e) {
+    console.error('loadOwnersAndPets ERROR:', e)
     error.value = 'Bilgiler yüklenirken hata oluştu.'
   }
+}
+
+function onFilesSelected(e) {
+  form.imageFiles = Array.from(e.target.files || [])
 }
 
 function openOwnerDropdown() {
@@ -239,11 +263,31 @@ async function handleSave() {
       creditAmountTl: form.creditAmountTl ? Number(form.creditAmountTl) : null,
       notes: form.notes,
     }
-    await http.post('/visits', payload)
+    
+    // 1. Ziyareti oluştur
+    const res = await http.post('/visits', payload)
+    const newVisit = res.data
+    const visitId = newVisit.id || newVisit.Id
+
+    // 2. Eğer görsel varsa Cloudflare'e (R2) yükle
+    if (form.imageFiles && form.imageFiles.length > 0) {
+      await uploadVisitImages(visitId, form.imageFiles)
+    }
+
     success.value = 'Ziyaret başarıyla kaydedildi.'
+    
+    // Formu sıfırla
+    form.procedures = ''
+    form.amountTl = null
+    form.creditAmountTl = ''
+    form.notes = ''
+    form.imageFiles = []
+    selectedPetId.value = ''
+    selectedOwnerId.value = ''
+    
     loadVisits()
-    // Reset form...
   } catch (e) {
+    console.error('handleSave ERROR:', e)
     error.value = 'Kaydedilirken bir hata oluştu.'
   } finally {
     saving.value = false
