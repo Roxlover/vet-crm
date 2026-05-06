@@ -154,7 +154,7 @@
               </button>
             </form>
 
-            <div class="ledger-table-wrapper">
+            <div class="ledger-table-wrapper desktop-only">
               <table class="premium-table">
                 <thead>
                   <tr>
@@ -176,6 +176,19 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- MOBİL İÇİN KART GÖRÜNÜMÜ -->
+            <div class="ledger-mobile-list mobile-only">
+              <div v-for="e in entries" :key="e.id" class="mini-entry-card">
+                <div class="e-info">
+                  <span class="e-cat">{{ e.category || 'Diğer' }}</span>
+                  <span class="e-date">{{ e.date }}</span>
+                </div>
+                <div class="e-amount" :class="e.isIncome ? 'text-success' : 'text-danger'">
+                  {{ e.isIncome ? '+' : '-' }}{{ fmtMoney(e.amount) }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -466,6 +479,26 @@ onMounted(() => {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
   margin-bottom: 3rem;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
 }
 
 .stat-card {
@@ -770,6 +803,35 @@ onMounted(() => {
 
   .stat-value {
     font-size: 1.25rem;
+  }
+
+  .mini-entry-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .mini-entry-card .e-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mini-entry-card .e-cat {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-main);
+  }
+
+  .mini-entry-card .e-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .mini-entry-card .e-amount {
+    font-weight: 800;
+    font-size: 1rem;
   }
 
   .form-grid {

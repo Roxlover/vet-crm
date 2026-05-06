@@ -693,26 +693,36 @@ onBeforeUnmount(() => {
   .page-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.5rem;
     margin-bottom: 1.5rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.75rem;
   }
 
   .visit-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.75rem;
+  }
+  
+  .visit-time {
+    width: auto;
+    font-size: 0.75rem;
   }
 
-  .visit-time {
-    width: 100%;
-    text-align: center;
+  .visit-footer {
+    flex-direction: row;
+    justify-content: space-between;
+    font-size: 0.9rem;
   }
+}
 
   .form-card {
     padding: 1.5rem;
   }
 
-  .modal {
     padding: 2rem 1.5rem;
   }
 }
@@ -723,6 +733,12 @@ onBeforeUnmount(() => {
   margin-top: 1rem;
   overflow-x: auto;
   padding-bottom: 0.5rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Hide scrollbar */
+}
+
+.quick-filters::-webkit-scrollbar {
+  display: none;
 }
 
 .q-btn {
