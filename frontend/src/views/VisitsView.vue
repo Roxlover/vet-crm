@@ -723,9 +723,10 @@ onBeforeUnmount(() => {
     padding: 1.5rem;
   }
 
+  .modal {
     padding: 2rem 1.5rem;
   }
-}
+
 
 .quick-filters {
   display: flex;
