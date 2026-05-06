@@ -75,6 +75,8 @@
               v-model="ownerQuery"
               placeholder="Sahip ara..."
               @focus="openOwnerDropdown"
+              @input="openOwnerDropdown"
+              @click="openOwnerDropdown"
             />
             <div v-if="ownerDropdownOpen" class="combo-popover">
               <div v-for="(owner, idx) in filteredOwners" :key="owner.id" class="combo-item" @mousedown="selectOwner(owner)">
@@ -213,13 +215,13 @@ async function loadVisits() {
 
 async function loadOwnersAndPets() {
   try {
-    // 🔹 DÜZELTME: fetchPets() parametresiz çağrıldığında tüm petleri getirir
     const [ownersData, petsData] = await Promise.all([
       fetchOwners(),
       fetchPets(), 
     ])
-    owners.value = ownersData
-    pets.value = petsData
+    // 🔹 GÜVENLİ VERİ EŞLEME: res.data veya doğrudan liste olabilir
+    owners.value = Array.isArray(ownersData) ? ownersData : (ownersData?.data ?? [])
+    pets.value = Array.isArray(petsData) ? petsData : (petsData?.data ?? [])
   } catch (e) {
     console.error('loadOwnersAndPets ERROR:', e)
     error.value = 'Bilgiler yüklenirken hata oluştu.'
@@ -350,6 +352,18 @@ onBeforeUnmount(() => {
   align-items: start;
 }
 
+@media (max-width: 1024px) {
+  .visits-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .form-card {
+    position: static;
+    order: -1; /* Mobilde formu en üste alalım */
+  }
+}
+
 /* FILTERS & LIST */
 .list-section {
   display: flex;
@@ -365,6 +379,14 @@ onBeforeUnmount(() => {
   border-radius: 20px;
   box-shadow: var(--shadow-sm);
   border: 1px solid #f1f5f9;
+}
+
+@media (max-width: 768px) {
+  .filters-bar {
+    flex-direction: column;
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
 }
 
 .filter-item {
@@ -413,6 +435,16 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
   position: relative;
+}
+
+@media (max-width: 768px) {
+  .visit-card {
+    padding: 1.25rem;
+  }
+  
+  .pet-name {
+    font-size: 1.1rem;
+  }
 }
 
 .visit-card:hover {
@@ -541,16 +573,16 @@ onBeforeUnmount(() => {
 /* COMBOBOX REFINEMENT */
 .combo-popover {
   position: absolute;
-  z-index: 100;
+  z-index: 1000; /* Çok yüksek tutalım */
   top: 100%;
   left: 0;
   right: 0;
   background: #ffffff;
   border-radius: 16px;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid #f1f5f9;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
   margin-top: 8px;
-  overflow: hidden;
+  overflow-y: auto;
+  max-height: 250px;
 }
 
 .combo-item {

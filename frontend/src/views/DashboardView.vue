@@ -1592,12 +1592,33 @@ async function submitAppointment() {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@media (max-width: 768px) {
+  .highlights-grid {
+    display: none; /* Mobilde grafik çok yer kaplar, gizleyelim */
+  }
+}
+
 /* STATS GRID - CLEAN SAAS STYLE */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.25rem;
   margin-bottom: 2.5rem;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr; /* Mobilde 2'li yan yana */
+    gap: 0.75rem;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-value {
+    font-size: 1.4rem;
+  }
 }
 
 .stat-card {
@@ -1907,6 +1928,22 @@ async function submitAppointment() {
   border-right: 1px solid #f1f5f9;
   cursor: pointer;
   transition: background 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .calendar-day {
+    min-height: 60px;
+    padding: 0.4rem;
+  }
+
+  .day-number {
+    font-size: 0.8rem;
+  }
+
+  .event-pill {
+    padding: 2px 4px;
+    font-size: 0.6rem;
+  }
 }
 
 .calendar-day:last-child {

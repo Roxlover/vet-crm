@@ -497,6 +497,18 @@ onMounted(loadOwners)
   align-items: start;
 }
 
+@media (max-width: 1024px) {
+  .owners-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .form-card {
+    position: static;
+    order: -1; /* Mobilde formu en üste alalım veya gizleyelim */
+  }
+}
+
 /* LIST CARD */
 .list-container {
   display: flex;
@@ -545,6 +557,12 @@ onMounted(loadOwners)
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .owners-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .owner-card {
@@ -747,6 +765,24 @@ onMounted(loadOwners)
   position: relative;
   box-shadow: 0 30px 60px -12px rgba(15, 23, 42, 0.25);
   animation: modalScale 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 768px) {
+  .modern-owner-modal {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    border-radius: 0;
+    overflow-y: auto;
+  }
+  
+  .modal-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-header-section {
+    padding: 2rem 1.5rem;
+  }
 }
 
 @keyframes modalScale {

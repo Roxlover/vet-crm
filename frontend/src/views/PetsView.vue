@@ -368,6 +368,13 @@ async function savePetEdit() {
   align-items: start;
 }
 
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
 /* SIDEBAR */
 .sidebar-section {
   display: flex;
@@ -413,6 +420,32 @@ async function savePetEdit() {
   border: 1px solid #f1f5f9;
   background: #f8fafc;
   font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .search-card {
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .pet-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .pet-row-card {
+    min-width: 160px;
+    padding: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .pet-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
 }
 
 .pet-list {
@@ -511,6 +544,24 @@ async function savePetEdit() {
   grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
   margin-bottom: 2.5rem;
+}
+
+@media (max-width: 768px) {
+  .profile-header-card {
+    padding: 1.5rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 1.5rem;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .info-card.wide {
+    grid-column: span 1;
+  }
 }
 
 .info-card {

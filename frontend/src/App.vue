@@ -67,11 +67,11 @@
         <header class="topbar">
           <div class="topbar-left">
             <button v-if="isMobile" class="topbar-menu-btn" @click="toggleSidebar">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-              </svg>
+              <div class="hamburger" :class="{ 'is-active': sidebarOpen }">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
             </button>
             <div class="search-pill">
               <input type="text" placeholder="Hızlı hasta veya sahip ara..." />
@@ -111,6 +111,57 @@
           <RouterView />
         </section>
       </main>
+
+      <!-- MOBİL ALT NAVİGASYON (Sadece Mobilde Görünür) -->
+      <nav v-if="isMobile && !isAuthRoute" class="bottom-nav">
+        <RouterLink to="/" class="bottom-nav-item" :class="{ active: route.name === 'dashboard' }">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+          </span>
+          <span class="nav-label">Özet</span>
+        </RouterLink>
+        <RouterLink to="/owners" class="bottom-nav-item" :class="{ active: route.name === 'owners' }">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </span>
+          <span class="nav-label">Sahipler</span>
+        </RouterLink>
+        <RouterLink to="/visits" class="bottom-nav-item" :class="{ active: route.name === 'visits' }">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-10.6 8.38 8.38 0 0 1 3.9.9"></path>
+              <polyline points="16 2 16 6 20 6"></polyline>
+            </svg>
+          </span>
+          <span class="nav-label">Ziyaretler</span>
+        </RouterLink>
+        <RouterLink to="/pets" class="bottom-nav-item" :class="{ active: route.name === 'pets' }">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 5.172a4 4 0 0 1 5.656 5.656L10 16.485l-5.656-5.656a4 4 0 0 1 5.656-5.656z"></path>
+            </svg>
+          </span>
+          <span class="nav-label">Hastalar</span>
+        </RouterLink>
+        <RouterLink v-if="canSeeBilanco" to="/bilanco" class="bottom-nav-item" :class="{ active: route.name === 'Bilanco' }">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </span>
+          <span class="nav-label">Kasa</span>
+        </RouterLink>
+      </nav>
     </div>
   </div>
 </template>
@@ -539,5 +590,79 @@ onBeforeUnmount(() => {
   h1 { font-size: 1.75rem !important; }
   h2 { font-size: 1.5rem !important; }
   h3 { font-size: 1.25rem !important; }
+
+  /* BOTTOM NAV STYLES */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: #ffffff;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    border-top: 1px solid #f1f5f9;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+    z-index: 1000;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+    text-decoration: none;
+    flex: 1;
+    transition: var(--transition);
+  }
+
+  .bottom-nav-item .nav-icon {
+    font-size: 1.4rem;
+  }
+
+  .bottom-nav-item .nav-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--primary);
+  }
+
+  .main {
+    padding-bottom: 75px; /* Alt menü için boşluk */
+  }
+
+  /* HAMBURGER ANIMATION */
+  .hamburger {
+    width: 24px;
+    height: 18px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .hamburger span {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+    transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  }
+
+  .hamburger.is-active span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+  }
+  .hamburger.is-active span:nth-child(2) {
+    opacity: 0;
+  }
+  .hamburger.is-active span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+  }
 }
 </style>
