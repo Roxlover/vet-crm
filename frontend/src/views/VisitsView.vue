@@ -13,12 +13,20 @@
         <div class="filters-bar">
           <div class="filter-item">
             <span class="filter-icon">📅</span>
-            <input type="date" v-model="filterDate" @change="loadVisits" />
+            <input type="date" v-model="filterDate" @change="onDateChange" />
           </div>
           <div class="filter-item">
             <span class="filter-icon">🔍</span>
             <input type="text" v-model="searchQuery" placeholder="Pet veya sahip ismi..." @input="handleSearch" />
           </div>
+        </div>
+
+        <div class="quick-filters">
+          <button class="q-btn" :class="{ active: activeFilter === 'today' }" @click="setQuickFilter('today')">Bugün</button>
+          <button class="q-btn" :class="{ active: activeFilter === 'yesterday' }" @click="setQuickFilter('yesterday')">Dün</button>
+          <button class="q-btn" :class="{ active: activeFilter === 'lastWeek' }" @click="setQuickFilter('lastWeek')">Geçen Hafta</button>
+          <button class="q-btn" :class="{ active: activeFilter === 'lastMonth' }" @click="setQuickFilter('lastMonth')">Geçen Ay</button>
+          <button class="q-btn" @click="setQuickFilter('all')">Tümü</button>
         </div>
 
         <div v-if="loading" class="state">Yükleniyor...</div>
@@ -158,8 +166,11 @@ const visits = ref([])
 const owners = ref([])
 const pets = ref([])
 const loading = ref(false)
-const filterDate = ref(new Date().toISOString().substr(0, 10))
+const filterDate = ref('') 
 const searchQuery = ref('')
+const activeFilter = ref('all')
+const startDate = ref(null)
+const endDate = ref(null)
 
 const selectedOwnerId = ref('')
 const selectedPetId = ref('')
@@ -204,13 +215,61 @@ const petsForSelectedOwner = computed(() =>
 async function loadVisits() {
   loading.value = true
   try {
-    const res = await http.get(`/visits?date=${filterDate.value}`)
+    let params = new URLSearchParams()
+    if (filterDate.value) params.append('date', filterDate.value)
+    if (startDate.value) params.append('startDate', startDate.value)
+    if (endDate.value) params.append('endDate', endDate.value)
+    if (searchQuery.value) params.append('query', searchQuery.value)
+
+    const res = await http.get(`/visits?${params.toString()}`)
     visits.value = res.data
   } catch (err) {
     error.value = 'Ziyaretler yüklenemedi.'
   } finally {
     loading.value = false
   }
+}
+
+function onDateChange() {
+  activeFilter.value = 'custom'
+  startDate.value = null
+  endDate.value = null
+  loadVisits()
+}
+
+function setQuickFilter(type) {
+  activeFilter.value = type
+  filterDate.value = ''
+  
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  if (type === 'today') {
+    startDate.value = today.toISOString()
+    endDate.value = null
+  } else if (type === 'yesterday') {
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayEnd = new Date(yesterday)
+    yesterdayEnd.setHours(23, 59, 59, 999)
+    startDate.value = yesterday.toISOString()
+    endDate.value = yesterdayEnd.toISOString()
+  } else if (type === 'lastWeek') {
+    const lastWeek = new Date(today)
+    lastWeek.setDate(lastWeek.getDate() - 7)
+    startDate.value = lastWeek.toISOString()
+    endDate.value = null
+  } else if (type === 'lastMonth') {
+    const lastMonth = new Date(today)
+    lastMonth.setMonth(lastMonth.getMonth() - 1)
+    startDate.value = lastMonth.toISOString()
+    endDate.value = null
+  } else {
+    startDate.value = null
+    endDate.value = null
+  }
+  
+  loadVisits()
 }
 
 async function loadOwnersAndPets() {
@@ -656,5 +715,38 @@ onBeforeUnmount(() => {
   .modal {
     padding: 2rem 1.5rem;
   }
+}
+
+.quick-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.q-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  border: 1px solid #f1f5f9;
+  background: #ffffff;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+
+.q-btn:hover {
+  background: #f8fafc;
+  border-color: var(--primary-light);
+}
+
+.q-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
 }
 </style>

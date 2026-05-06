@@ -247,7 +247,10 @@ public async Task<IActionResult> UpdateVisitCredit([FromRoute] int id, [FromBody
     [HttpGet]
     public async Task<ActionResult<IEnumerable<VisitDto>>> GetVisits(
         [FromQuery] int? ownerId,
-        [FromQuery] int? petId)
+        [FromQuery] int? petId,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
+        [FromQuery] DateTime? date)
     {
         var query = _db.Visits
             .Include(v => v.Pet)
@@ -264,6 +267,19 @@ public async Task<IActionResult> UpdateVisitCredit([FromRoute] int id, [FromBody
 
         if (petId.HasValue)
             query = query.Where(v => v.PetId == petId.Value);
+
+        if (startDate.HasValue)
+            query = query.Where(v => v.PerformedAt >= startDate.Value);
+
+        if (endDate.HasValue)
+            query = query.Where(v => v.PerformedAt <= endDate.Value);
+
+        if (date.HasValue)
+        {
+            var dayStart = date.Value.Date;
+            var dayEnd = dayStart.AddDays(1).AddTicks(-1);
+            query = query.Where(v => v.PerformedAt >= dayStart && v.PerformedAt <= dayEnd);
+        }
 
         var visits = await query
             .OrderByDescending(v => v.PerformedAt)
