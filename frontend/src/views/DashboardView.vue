@@ -120,477 +120,231 @@
       </section>
     </section>
 
-  <!-- MODAL -->
-  <div v-if="showDetail" class="modal-backdrop" @click.self="closeDetail">
-   <div class="modal" @click.stop>
-     <button class="close" @click.stop="closeDetail">Kapat</button>
-    <div v-if="detailLoading" class="state">Yükleniyor...</div>
-
-    <!-- SADECE seçili ziyaret yok *ve* yeni randevu modu kapalıysa "kayıt yok" de -->
-      <div v-else class="detail-body">
-        <template v-if="selectedDayEvents.length > 0">
-          <h3>{{ formatMonthDay(selectedDayDate) }} - Günün Randevuları</h3>
-          <div class="day-events-list">
-            <div 
-              v-for="ev in selectedDayEvents" 
-              :key="ev.id" 
-              class="day-event-row"
-              @click="openVisitFromCalendar(ev)"
-            >
-              <span class="ev-time">{{ formatTime(ev.scheduledAt) }}</span>
-              <span class="ev-info"><strong>{{ ev.petName }}</strong> ({{ ev.ownerName }})</span>
-              <span class="ev-purpose">{{ ev.purpose || '—' }}</span>
-            </div>
-          </div>
-          <div v-if="selectedDayEvents.length === 0" class="state state-info" style="margin-bottom: 1rem;">
-            Bu güne ait kayıtlı randevu bulunamadı.
-          </div>
-          <hr class="divider" />
-        </template>
-
-        <h3 v-if="!showNewAppointment">{{ selectedVisit?.petName }} – {{ selectedVisit?.ownerName }}</h3>
-        <div
-  class="row"
-  style="display:flex; gap:.5rem; justify-content:flex-end; align-items:center; margin:.25rem 0 .75rem;"
->
-  <button
-    v-if="!visitEditOpen"
-    class="btn btn-sm"
-    type="button"
-    @click="openVisitEdit"
-  >
-    Düzenle
-  </button>
-
-  <template v-else>
-    <button
-      class="btn btn-sm"
-      type="button"
-      @click="cancelVisitEdit"
-      :disabled="visitSaving"
-    >
-      İptal
-    </button>
-
-    <button
-      class="btn btn-sm"
-      type="button"
-      @click="saveVisitEdit"
-      :disabled="visitSaving"
-    >
-      {{ visitSaving ? 'Kaydediliyor...' : 'Kaydet' }}
-    </button>
-  </template>
-</div>
-
-<p v-if="visitSaveError" class="state state-error">{{ visitSaveError }}</p>
-
-<div v-if="visitEditOpen && !visitDraft" class="state">
-  Düzenleme hazırlanıyor...
-</div>
-        <p>
-  <strong>Yapılan işlem tarihi:</strong>
-  <span v-if="!visitEditOpen && selectedVisit">{{ selectedVisit.performedAt }}</span>
-
-  <input
-    v-else-if="visitDraft"
-    type="datetime-local"
-    v-model="visitDraft.performedAt"
-    class="input"
-  />
-</p>
-
-  <!-- Ne zaman / ne için gelecek? -->
-<div
-  v-if="(
-    (selectedVisit?.nextVisits?.length || selectedVisit?.NextVisits?.length) ||
-    (selectedVisit?.plans?.length || selectedVisit?.Plans?.length) ||
-    (selectedVisit?.nextDate || selectedVisit?.NextDate) ||
-    (selectedVisit?.purpose || selectedVisit?.Purpose)
-  )"
->
-  <p><strong>Ne zaman / ne için gelecek?</strong></p>
-
-  <ul class="next-visits-list">
-    <li
-      v-for="n in (
-        selectedVisit?.nextVisits ||
-        selectedVisit?.NextVisits ||
-        selectedVisit?.plans ||
-        selectedVisit?.Plans ||
-        [{ nextDate: (selectedVisit.nextDate || selectedVisit.NextDate), purpose: (selectedVisit.purpose || selectedVisit.Purpose) }]
-      )"
-      :key="n.id || n.Id || n.nextDate || n.date || n.Date || 'single'"
-    >
-      <span>{{ formatDateTime(n.nextDate || n.date || n.Date) }}</span>
-      <span>
-        –
-        {{
-          n.purpose ??
-          n.Purpose ??
-          selectedVisit?.purpose ??
-          selectedVisit?.Purpose ??
-          '—'
-        }}
-      </span>
-    </li>
-  </ul>
-</div>
- 
-
-       <div class="image-upload-row">
-  <label class="btn">
-    Görsel Ekle
-    <input
-      type="file"
-      accept="image/*"
-      multiple
-      @change="onVisitImagesSelected"
-      style="display:none;"
-    />
-  </label>
-
-  <span v-if="imageUploading" class="hint">Yükleniyor...</span>
-  <span v-if="imageUploadError" class="state state-error">{{ imageUploadError }}</span>
-</div>
-        <p>
-  <strong>Mikroçip numarası:</strong>
-  <span v-if="!visitEditOpen && selectedVisit">{{ selectedVisit.microchipNumber || '—' }}</span>
-
-  <input
-    v-else-if="visitDraft"
-    type="text"
-    v-model="visitDraft.microchipNumber"
-    class="input"
-    placeholder="Örn: 900xxxx..."
-  />
-</p>
- 
-        <p>
-  <strong>İşlem(ler):</strong>
-  <span v-if="!visitEditOpen && selectedVisit">{{ selectedVisit.procedures || '—' }}</span>
-
-  <textarea
-    v-else-if="visitDraft"
-    v-model="visitDraft.procedures"
-    class="input"
-    rows="2"
-    placeholder="Örn: Karma aşı, tırnak kesimi..."
-  ></textarea>
-</p>
-        <p>
-  <strong>Tutar:</strong>
-  <span v-if="!visitEditOpen && selectedVisit">{{ selectedVisit.amountTl ?? '—' }} TL</span>
-
-  <input
-    v-else-if="visitDraft"
-    type="number"
-    min="0"
-    step="0.01"
-    v-model.number="visitDraft.amountTl"
-    class="input"
-    placeholder="Örn: 1500"
-  />
-</p>
- 
-        <p>
-  <strong>Hasta sahibine not:</strong>
-  <span v-if="!visitEditOpen && selectedVisit">{{ selectedVisit.notes || '—' }}</span>
-
-  <textarea
-    v-else-if="visitDraft"
-    v-model="visitDraft.notes"
-    class="input"
-    rows="2"
-    placeholder="Örn: 1 hafta sonra kontrol..."
-  ></textarea>
-</p>
-
-        <p v-if="selectedVisit?.createdByUsername || selectedVisit?.createdByName">
-  <strong>Kaydı ekleyen:</strong>
-  {{ selectedVisit?.createdByUsername || selectedVisit?.createdByName }}
-</p>
-
-        <hr class="divider" />
-
-<!-- Görsel alanı (çoklu) -->
-<div v-if="selectedVisit">
-  <div v-if="visitImages.length" class="visit-image-block">
-    <button
-      type="button"
-      class="btn-secondary"
-      @click="showImagePreview = !showImagePreview"
-    >
-      {{ showImagePreview ? 'Görselleri gizle' : 'Görselleri göster' }}
-    </button>
-
-    <div v-if="showImagePreview" class="visit-image-preview">
-      <!-- Büyük ana görsel -->
-      <div v-if="visitImageSrc" class="visit-image-main">
-        <img
-          :src="visitImageSrc"
-          alt="Ziyaret görseli"
-          @click="openImageModal"
-        />
-      </div>
-
-      <!-- Thumbnail listesi -->
-      <div v-if="visitImages.length > 1" class="visit-image-thumbs">
-        <button
-          v-for="(img, idx) in visitImages"
-          :key="img.id || idx"
-          type="button"
-          class="thumb"
-          :class="{ active: idx === activeImageIndex }"
-          @click="activeImageIndex = idx"
-        >
-          <img
-            :src="img.imageUrl.startsWith('http') ? img.imageUrl : API_BASE + img.imageUrl"
-            :alt="`Görsel ${idx + 1}`"
-          />
+  <!-- MODERN PREMIUM MODAL -->
+  <div v-if="showDetail" class="modal-overlay" @click.self="closeDetail">
+    <div class="modern-modal" @click.stop>
+      <!-- Modal Header -->
+      <header class="modal-header">
+        <div class="header-info">
+          <h2 v-if="!showNewAppointment">
+            <span class="pet-name">{{ selectedVisit?.petName || 'Ziyaret Detayı' }}</span>
+            <span class="owner-name">{{ selectedVisit?.ownerName }}</span>
+          </h2>
+          <h2 v-else>Yeni Randevu Kaydı</h2>
+        </div>
+        <button class="modal-close-btn" @click="closeDetail">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
-      </div>
-    </div>
-  </div>
-  <div v-else class="visit-image-empty">
-    Bu ziyarete ait kayıtlı görsel bulunmuyor.
-  </div>
-</div>
+      </header>
 
-<!-- TAM EKRAN GÖRSEL MODALI (aynen kalabilir, sadece visitImageSrc kullanıyor) -->
-<div
-  v-if="showImageModal"
-  class="image-modal-backdrop"
-  @click.self="closeImageModal"
->
-  <div class="image-modal-content">
-    <img :src="visitImageSrc" class="visit-img-preview" alt="Ziyaret görseli" />
-    <button class="image-modal-close" @click="closeImageModal">
-      Kapat
-    </button>
-  </div>
-</div> 
-
-
-        <!-- TAM EKRAN GÖRSEL MODALI -->
-        <!-- <div
-          v-if="showImageModal"
-          class="image-modal-backdrop"
-          @click.self="closeImageModal"
-        >
-          <div class="image-modal-content">
-            <img :src="visitImageSrc" alt="Ziyaret görseli" />
-            <button class="image-modal-close" @click="closeImageModal">
-              ✕
-            </button>
-          </div>
-        </div> -->
-
-        <!-- VERESİYE GÖRÜNÜMÜ + EDİT -->
-        <div class="credit-row">
-          <div class="credit-text">
-            <strong>Veresiye:</strong>
-            <span v-if="selectedVisit && selectedVisit.creditAmountTl != null">
-              {{ selectedVisit.creditAmountTl }} TL
-            </span>
-            <span v-else>Yok</span>
-          </div>
-          <div class="credit-actions">
-            <button
-              class="btn-credit"
-              type="button"
-              @click="creditEditOpen = !creditEditOpen"
-            >
-              {{ creditEditOpen ? 'İptal' : 'Veresiye Yaz / Güncelle' }}
-            </button>
-          </div>
+      <div class="modal-content-wrapper">
+        <div v-if="detailLoading" class="loading-state">
+          <div class="spinner"></div>
+          <p>Veriler yükleniyor...</p>
         </div>
 
-        <div v-if="creditEditOpen" class="field-row">
-          <label>Veresiye (TL)</label>
-          <input
-            v-model="creditAmount"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="Örn: 750"
-          />
-          <button
-            class="btn-success"
-            type="button"
-            @click="saveCredit"
-            :disabled="savingCredit"
-          >
-            {{ savingCredit ? 'Kaydediliyor...' : 'Veresiyeyi Kaydet' }}
-          </button>
-        </div>
-<div class="row">
-  <strong>Ne kadar alındı:</strong>
-  <span>{{ collectedShown }} TL</span>
-
-  <button class="btn btn-sm" type="button" @click="collectedEditOpen = !collectedEditOpen">
-    {{ collectedEditOpen ? 'İptal' : 'Tahsilat Gir / Güncelle' }}
-  </button>
-</div>
-
-<div v-if="collectedEditOpen" class="edit-box">
-  <label>Ne kadar alındı (TL)</label>
-  <input type="text" inputmode="decimal" placeholder="Örn: 1450,50" v-model="collectedInput" />
-<button class="btn btn-sm" type="button" @click="saveCollected" :disabled="collectedSaving">
-  {{ collectedSaving ? 'Kaydediliyor...' : 'Tahsilatı Kaydet' }}
-</button>
-
-</div>
-
-        <!-- YENİ RANDEVU FORMU -->
-        <hr class="divider" />
-
-        <div class="new-appointment-header">
-          <h4>Yeni Randevu Oluştur</h4>
-          <button class="btn-toggle" @click="showNewAppointment = !showNewAppointment">
-            {{ showNewAppointment ? 'Gizle' : 'Oluştur' }}
-          </button>
-        </div>
-
-        <div v-if="showNewAppointment" class="new-appointment">
-          <!-- Tarih & Saat -->
-          <div class="field-row">
-            <label>Tarih</label>
-            <input type="date" v-model="appointmentDate" />
-          </div>
-          <div class="field-row">
-            <label>Saat</label>
-            <input
-              type="time"
-              v-model="appointmentTime"
-              min="10:30"
-              max="19:30"
-              step="900"
-            />
-          </div>
-
-          <!-- Açıklama -->
-          <div class="field-row">
-            <label>Ne için gelecek?</label>
-            <textarea
-              v-model="appointmentPurpose"
-              rows="2"
-              placeholder="Örn: Karma aşı, kontrol, tırnak kesimi..."
-            ></textarea>
-          </div>
-
-          <div class="field">
-            <label>Mikroçip numarası</label>
-            <input
-              type="text"
-              v-model="form.microchipNumber"
-
-            />
-          </div>
-
-          <!-- Doktor -->
-          <div class="field-row">
-            <label>İşlemi yapacak doktor</label>
-            <select v-model="selectedDoctorId">
-              <option :value="null">Doktor seç (opsiyonel)</option>
-              <option
-                v-for="doc in doctors"
-                :key="doc.id"
-                :value="doc.id"
+        <div v-else class="modal-body">
+          <!-- 1. GÜNÜN RANDEVULARI (Eğer varsa) -->
+          <section v-if="selectedDayEvents.length > 0" class="modal-section appointments-section">
+            <h3 class="section-subtitle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              {{ formatMonthDay(selectedDayDate) }} Randevuları
+            </h3>
+            <div class="mini-event-list">
+              <div 
+                v-for="ev in selectedDayEvents" 
+                :key="ev.id" 
+                class="mini-event-card"
+                @click="openVisitFromCalendar(ev)"
               >
-                {{ doc.fullName }}
-              </option>
-            </select>
-          </div>
+                <span class="ev-time">{{ formatTime(ev.scheduledAt) }}</span>
+                <div class="ev-main">
+                  <span class="ev-pet">{{ ev.petName }}</span>
+                  <span class="ev-purpose">{{ ev.purpose || 'Genel Muayene' }}</span>
+                </div>
+                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
+              </div>
+            </div>
+          </section>
 
-          <!-- Hasta sahibi arama -->
-          <div class="field-row owner-search" @click.stop>
-            <label>Hasta Sahibi</label>
-            <div class="owner-input-wrapper">
-              <input
-                type="text"
-                v-model="ownerQuery"
-                placeholder="İsim veya telefon ile ara..."
-                @input="onOwnerQueryInput"
-                @focus="ownerSearchOpen = true"
-              />
-              <div
-                v-if="ownerSearchOpen && ownerResults.length > 0"
-                class="owner-results"
-              >
-                <div
-                  v-for="o in ownerResults"
-                  :key="o.id"
-                  class="owner-result-item"
-                  @click="selectOwner(o)"
-                >
-                  <div class="owner-name">{{ o.fullName }}</div>
-                  <div class="owner-phone">{{ o.phone }}</div>
+          <!-- 2. ZİYARET DETAYI (Eğer bir ziyaret seçiliyse) -->
+          <section v-if="selectedVisit" class="modal-section visit-detail-section">
+            <div class="section-header-row">
+              <h3 class="section-subtitle">Ziyaret Bilgileri</h3>
+              <div class="header-actions">
+                <button v-if="!visitEditOpen" class="btn-action" @click="openVisitEdit">Düzenle</button>
+                <div v-else class="edit-actions">
+                  <button class="btn-text" @click="cancelVisitEdit" :disabled="visitSaving">İptal</button>
+                  <button class="btn-primary-sm" @click="saveVisitEdit" :disabled="visitSaving">
+                    {{ visitSaving ? '...' : 'Kaydet' }}
+                  </button>
                 </div>
               </div>
             </div>
-            <p class="hint" v-if="!selectedOwnerId">
-              Önce hasta sahibini seçin, ardından hayvan(lar)ı işaretleyin.
-            </p>
-          </div>
 
-          <!-- Hayvan seçimi -->
-          <div class="field-row">
-            <label>Hayvan(lar)</label>
+            <div class="detail-grid">
+              <div class="detail-item full">
+                <label>İşlem Tarihi</label>
+                <div v-if="!visitEditOpen && selectedVisit" class="val">{{ selectedVisit.performedAt }}</div>
+                <input v-else-if="visitDraft" type="datetime-local" v-model="visitDraft.performedAt" class="modern-input" />
+              </div>
 
-            <div class="mode-row">
-              <label>
-                <input
-                  type="radio"
-                  value="single"
-                  v-model="appointmentMode"
-                />
-                Tek hayvan seç
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  value="multiple"
-                  v-model="appointmentMode"
-                />
-                Birden fazla hayvan
-              </label>
+              <div class="detail-item">
+                <label>Mikroçip</label>
+                <div v-if="!visitEditOpen" class="val">{{ selectedVisit?.microchipNumber || '—' }}</div>
+                <input v-else-if="visitDraft" type="text" v-model="visitDraft.microchipNumber" class="modern-input" />
+              </div>
+
+              <div class="detail-item full">
+                <label>Yapılan İşlemler</label>
+                <div v-if="!visitEditOpen" class="val highlight">{{ selectedVisit?.procedures || '—' }}</div>
+                <textarea v-else-if="visitDraft" v-model="visitDraft.procedures" class="modern-input" rows="2"></textarea>
+              </div>
+
+              <div class="detail-item">
+                <label>Tutar</label>
+                <div v-if="!visitEditOpen" class="val currency">{{ selectedVisit?.amountTl ?? '0' }} TL</div>
+                <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.amountTl" class="modern-input" />
+              </div>
+
+              <div class="detail-item full">
+                <label>Notlar</label>
+                <div v-if="!visitEditOpen" class="val">{{ selectedVisit?.notes || '—' }}</div>
+                <textarea v-else-if="visitDraft" v-model="visitDraft.notes" class="modern-input" rows="2"></textarea>
+              </div>
             </div>
 
-            <div class="pets-list">
-              <p v-if="!ownerPets || ownerPets.length === 0" class="hint">
-                Bu hasta sahibine tanımlı başka hayvan bulunamadı.
-              </p>
-              <label
-                v-for="pet in ownerPets"
-                :key="pet.id"
-                class="pet-option"
-              >
-                <input
-                  type="checkbox"
-                  :value="pet.id"
-                  v-model="selectedPetIds"
-                  :disabled="
-                    appointmentMode === 'single' &&
-                    selectedPetIds.length >= 1 &&
-                    !selectedPetIds.includes(pet.id)
-                  "
-                />
-                {{ pet.name }}
-              </label>
+            <!-- FİNANSAL ÖZET KARTI -->
+            <div class="finance-card">
+              <div class="fin-row">
+                <div class="fin-item">
+                  <span class="fin-label">Veresiye</span>
+                  <span class="fin-val" :class="{ 'has-debt': (selectedVisit.creditAmountTl || 0) > 0 }">
+                    ₺{{ selectedVisit?.creditAmountTl || 0 }}
+                  </span>
+                </div>
+                <div class="fin-item">
+                  <span class="fin-label">Tahsilat</span>
+                  <span class="fin-val success">₺{{ collectedShown }}</span>
+                </div>
+              </div>
+              <div class="fin-actions">
+                <button class="btn-outline-sm" @click="creditEditOpen = !creditEditOpen">Veresiye</button>
+                <button class="btn-outline-sm" @click="collectedEditOpen = !collectedEditOpen">Tahsilat</button>
+              </div>
+              
+              <!-- Hızlı Tahsilat/Veresiye Editörleri -->
+              <div v-if="creditEditOpen || collectedEditOpen" class="quick-edit-box">
+                <div v-if="creditEditOpen" class="edit-field">
+                  <input v-model="creditAmount" type="number" placeholder="Veresiye tutarı..." class="modern-input" />
+                  <button class="btn-primary-sm" @click="saveCredit" :disabled="savingCredit">Kaydet</button>
+                </div>
+                <div v-if="collectedEditOpen" class="edit-field">
+                  <input v-model="collectedInput" type="text" placeholder="Tahsilat tutarı..." class="modern-input" />
+                  <button class="btn-primary-sm" @click="saveCollected" :disabled="collectedSaving">Kaydet</button>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div class="actions-row">
-            <button class="btn-fail" @click="showNewAppointment = false">
-              Vazgeç
+            <!-- GÖRSEL GALERİSİ -->
+            <div class="gallery-section">
+              <div class="section-header-row">
+                <label>Görseller ({{ visitImages.length }})</label>
+                <label class="upload-link">
+                  Ekle +
+                  <input type="file" multiple accept="image/*" @change="onVisitImagesSelected" style="display:none" />
+                </label>
+              </div>
+              <div v-if="visitImages.length" class="thumb-grid">
+                <div v-for="(img, idx) in visitImages" :key="img.id || idx" class="thumb-wrapper" @click="activeImageIndex = idx; openImageModal()">
+                  <img :src="img.imageUrl.startsWith('http') ? img.imageUrl : API_BASE + img.imageUrl" />
+                </div>
+              </div>
+              <p v-else class="empty-hint">Bu ziyarete ait görsel yok.</p>
+            </div>
+          </section>
+
+          <!-- 3. YENİ RANDEVU FORMU -->
+          <section class="modal-section appointment-form-section" :class="{ 'is-collapsed': !showNewAppointment && selectedVisit }">
+            <button class="section-toggle-btn" @click="showNewAppointment = !showNewAppointment">
+              <span>{{ showNewAppointment ? 'Randevu Formunu Kapat' : 'Yeni Randevu Oluştur' }}</span>
+              <svg :class="{ 'rotated': showNewAppointment }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
             </button>
-            <button class="btn-success" @click="submitAppointment">
-              Randevuyu Kaydet
-            </button>
-          </div>
+
+            <div v-if="showNewAppointment" class="form-grid modern-form">
+              <div class="form-row split">
+                <div class="field">
+                  <label>Tarih</label>
+                  <input type="date" v-model="appointmentDate" class="modern-input" />
+                </div>
+                <div class="field">
+                  <label>Saat</label>
+                  <input type="time" v-model="appointmentTime" class="modern-input" />
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Hasta Sahibi</label>
+                <div class="search-wrapper">
+                  <input 
+                    type="text" 
+                    v-model="ownerQuery" 
+                    placeholder="İsim veya telefon..." 
+                    class="modern-input search-input"
+                    @input="onOwnerQueryInput"
+                    @focus="ownerSearchOpen = true"
+                  />
+                  <div v-if="ownerSearchOpen && ownerResults.length" class="search-dropdown">
+                    <div v-for="o in ownerResults" :key="o.id" class="dropdown-item" @click="selectOwner(o)">
+                      <span class="d-name">{{ o.fullName }}</span>
+                      <span class="d-sub">{{ o.phone }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Hayvan(lar)</label>
+                <div class="pet-selection">
+                  <div v-for="pet in ownerPets" :key="pet.id" class="pet-chip" :class="{ 'active': selectedPetIds.includes(pet.id) }">
+                    <input type="checkbox" :id="'pet-'+pet.id" :value="pet.id" v-model="selectedPetIds" />
+                    <label :for="'pet-'+pet.id">{{ pet.name }}</label>
+                  </div>
+                  <p v-if="!ownerPets.length" class="empty-hint">Önce sahibi seçin.</p>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Randevu Nedeni</label>
+                <textarea v-model="appointmentPurpose" class="modern-input" rows="2" placeholder="Örn: Kontrol, Aşı..."></textarea>
+              </div>
+
+              <div class="field">
+                <label>Doktor</label>
+                <select v-model="selectedDoctorId" class="modern-input">
+                  <option :value="null">Doktor Seçin</option>
+                  <option v-for="doc in doctors" :key="doc.id" :value="doc.id">{{ doc.fullName }}</option>
+                </select>
+              </div>
+
+              <div class="form-actions">
+                <button class="btn-cancel" @click="showNewAppointment = false">Vazgeç</button>
+                <button class="btn-submit" @click="submitAppointment" :disabled="appointmentSaving">
+                  {{ appointmentSaving ? 'Kaydediliyor...' : 'Randevuyu Onayla' }}
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- TAM EKRAN GÖRSEL MODAL -->
+  <div v-if="showImageModal" class="image-modal-overlay" @click.self="closeImageModal">
+    <div class="image-viewer">
+      <img :src="visitImageSrc" />
+      <button class="viewer-close" @click="closeImageModal">✕</button>
     </div>
   </div>
 </main>
@@ -1588,191 +1342,166 @@ async function submitAppointment() {
 </script>
 
 <style scoped>
-.page-dashboard {
-  animation: fadeIn 0.4s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@media (max-width: 768px) {
-  .highlights-grid {
-    display: none; /* Mobilde grafik çok yer kaplar, gizleyelim */
-  }
-}
-
-/* STATS GRID - CLEAN SAAS STYLE */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 2.5rem;
-}
-
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr 1fr; /* Mobilde 2'li yan yana */
-    gap: 0.75rem;
-  }
-  
-  .stat-card {
-    padding: 1rem;
-  }
-
-  .stat-value {
-    font-size: 1.4rem;
-  }
-}
-
-.stat-card {
-  background: #ffffff;
-  padding: 1.5rem;
-  border-radius: 16px;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::after {
-  content: "";
-  position: absolute;
+/* MODAL OVERLAY & CONTAINER */
+.modal-overlay {
+  position: fixed;
   top: 0;
   left: 0;
-  width: 4px;
+  width: 100%;
   height: 100%;
-  background: var(--primary);
-  opacity: 0.1;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px -10px rgba(0,0,0,0.05);
-  border-color: var(--primary-light);
+.modern-modal {
+  background: #ffffff;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.stat-label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-  margin-bottom: 0.5rem;
+@keyframes modalScaleUp {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-.stat-value {
-  font-size: 1.85rem;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1;
-  margin-bottom: 0.25rem;
-}
-
-.stat-sub {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  font-weight: 500;
-}
-
-/* SECTION HEADERS */
-.section-header {
+/* HEADER */
+.modal-header {
+  padding: 1.5rem 2rem;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.section-title {
-  font-size: 1.5rem;
+.header-info h2 {
+  font-size: 1.25rem;
   font-weight: 800;
   color: #0f172a;
-  letter-spacing: -0.02em;
+  display: flex;
+  flex-direction: column;
 }
 
-/* CALENDAR REFINEMENTS */
-.calendar-card {
-  border: 1px solid #f1f5f9;
-  border-radius: 20px;
-  overflow: hidden;
-}
+.pet-name { color: var(--primary); }
+.owner-name { font-size: 0.85rem; color: #64748b; font-weight: 500; }
 
-.calendar-header {
-  padding: 1.5rem;
-  background: #ffffff;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.nav-btn {
-  padding: 0.5rem 1rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #475569;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+.modal-close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s;
 }
 
-.nav-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+.modal-close-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  transform: rotate(90deg);
 }
 
-.today-btn {
-  background: #ffffff;
-  color: var(--primary);
-  border-color: var(--primary-light);
+.modal-close-btn svg { width: 20px; height: 20px; }
+
+/* CONTENT WRAPPER */
+.modal-content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
 }
 
-/* ACTIVITY CHART */
-.activity-chart {
-  flex-direction: column;
-  align-items: stretch;
+.modal-section {
+  margin-bottom: 2rem;
 }
 
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.section-subtitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #334155;
   margin-bottom: 1rem;
-}
-
-.trend-up {
-  color: #10b981;
-  font-weight: 800;
-  font-size: 0.85rem;
-  background: #ecfdf5;
-  padding: 0.25rem 0.6rem;
-  border-radius: 8px;
-}
-
-.svg-wrapper {
-  height: 60px;
-  margin: 1rem 0;
-}
-
-.line-chart {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.chart-labels {
   display: flex;
-  justify-content: space-between;
-  color: var(--text-muted);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-subtitle svg { width: 18px; height: 18px; color: var(--primary); }
+
+/* APPOINTMENTS LIST */
+.mini-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mini-event-card {
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.mini-event-card:hover {
+  background: #ffffff;
+  border-color: var(--primary-light);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.ev-time {
+  font-weight: 800;
+  color: var(--primary);
+  background: #eef2ff;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.ev-main { flex: 1; display: flex; flex-direction: column; }
+.ev-pet { font-weight: 700; color: #1e293b; font-size: 0.95rem; }
+.ev-purpose { font-size: 0.8rem; color: #64748b; }
+.chevron { width: 16px; height: 16px; color: #cbd5e1; }
+
+/* VISIT DETAIL GRID */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  background: #ffffff;
+  border-radius: 20px;
+}
+
+.detail-item { display: flex; flex-direction: column; gap: 0.4rem; }
+.detail-item.full { grid-column: span 2; }
+
+.detail-item label {
   font-size: 0.75rem;
   font-weight: 700;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
+  color: #94a3b8;
   align-items: center;
   margin-bottom: 2.5rem;
 }
