@@ -1577,6 +1577,26 @@ async function submitAppointment() {
 
 }
 
+function openNewAppointmentFromCalendar(day) {
+  if (!day || !day.iso) return
+  
+  // Tıklanan günü seç
+  appointmentDate.value = day.iso
+  // Varsayılan bir saat ata
+  appointmentTime.value = '11:00'
+  
+  // Modalı aç
+  showNewAppointment.value = true
+  
+  // Diğer alanları temizle
+  selectedOwnerId.value = null
+  selectedPetIds.value = []
+  appointmentPurpose.value = ''
+  ownerQuery.value = ''
+  ownerResults.value = []
+  ownerPets.value = []
+}
+
 // loadList removed
 
 // titleForFilter removed
