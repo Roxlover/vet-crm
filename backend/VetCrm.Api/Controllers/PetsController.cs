@@ -220,8 +220,23 @@ public class PetsController : ControllerBase
         pet.Name = dto.Name;
         pet.Species = dto.Species;
         pet.Breed = dto.Breed;
-        pet.BirthDate = dto.BirthDate;
         pet.Notes = dto.Notes;
+
+        // BirthDate öncelikli; yoksa AgeYears/AgeMonths'tan hesapla
+        if (dto.BirthDate.HasValue)
+        {
+            pet.BirthDate = dto.BirthDate;
+        }
+        else if (dto.AgeYears.HasValue || dto.AgeMonths.HasValue)
+        {
+            var y = dto.AgeYears ?? 0;
+            var m = dto.AgeMonths ?? 0;
+            if (y < 0) y = 0;
+            if (m < 0) m = 0;
+            if (m > 11) m = 11;
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            pet.BirthDate = today.AddYears(-y).AddMonths(-m);
+        }
 
         await _db.SaveChangesAsync();
 

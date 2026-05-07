@@ -245,10 +245,18 @@
                           <input v-model="petDraft.breed" placeholder="Cins" class="mini-input" />
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                          <input v-model.number="petDraft.ageYears" type="number" placeholder="Yıl" class="mini-input" />
-                          <input v-model.number="petDraft.ageMonths" type="number" placeholder="Ay" class="mini-input" />
+                          <input v-model.number="petDraft.ageYears" type="number" placeholder="Yaş (Yıl)" class="mini-input" min="0" />
+                          <input v-model.number="petDraft.ageMonths" type="number" placeholder="Yaş (Ay)" class="mini-input" min="0" max="11" />
                         </div>
                         <textarea v-model="petDraft.notes" placeholder="Notlar" class="mini-input" style="min-height: 50px;"></textarea>
+                        <div style="border-top: 1px dashed #e2e8f0; padding-top: 0.5rem; margin-top: 0.25rem;">
+                          <p style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem;">Hızlı Ücret Girişi</p>
+                          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <input v-model.number="petDraft.amountTl" type="number" placeholder="Tutar (₺)" class="mini-input" min="0" step="0.01" />
+                            <input v-model.number="petDraft.creditAmountTl" type="number" placeholder="Veresiye (₺)" class="mini-input" min="0" step="0.01" />
+                          </div>
+                          <p style="font-size: 0.65rem; color: #94a3b8; margin-top: 0.3rem;">Tutar girilirse yeni bir ziyaret kaydı oluşturulur ve bilanço güncellenir.</p>
+                        </div>
                         <div style="display: flex; gap: 0.5rem;">
                           <button class="btn btn-text btn-xs" @click="editingPetId = null">İptal</button>
                           <button class="btn btn-primary-sm btn-xs" @click="savePetEdit">Kaydet</button>
@@ -302,7 +310,7 @@ const ownerSaving = ref(false)
 const ownerDraft = reactive({ fullName: '', phoneE164: '' })
 
 const editingPetId = ref(null)
-const petDraft = reactive({ name: '', species: '', breed: '', ageYears: null, ageMonths: null, notes: '' })
+const petDraft = reactive({ name: '', species: '', breed: '', ageYears: null, ageMonths: null, notes: '', amountTl: null, creditAmountTl: null })
 
 function openOwnerEdit() {
   if (!ownerDetail.value) return
@@ -344,30 +352,46 @@ async function saveOwnerEdit() {
 
 function startEditPet(pet) {
   editingPetId.value = pet.id
-  petDraft.name = pet.name
-  petDraft.species = pet.species
-  petDraft.breed = pet.breed
-  petDraft.ageYears = pet.ageYears
-  petDraft.ageMonths = pet.ageMonths
-  petDraft.notes = pet.notes
+  petDraft.name = pet.name || ''
+  petDraft.species = pet.species || ''
+  petDraft.breed = pet.breed || ''
+  petDraft.ageYears = pet.ageYears ?? null
+  petDraft.ageMonths = pet.ageMonths ?? null
+  petDraft.notes = pet.notes || ''
+  petDraft.amountTl = null
+  petDraft.creditAmountTl = null
 }
 
 async function savePetEdit() {
   if (!editingPetId.value) return
   try {
-    const payload = {
-      name: petDraft.name,
-      species: petDraft.species,
-      breed: petDraft.breed,
-      birthDate: ownerDetail.value.pets.find(p => p.id === editingPetId.value)?.birthDate,
-      notes: petDraft.notes,
-      ageYears: petDraft.ageYears,
-      ageMonths: petDraft.ageMonths
-    }
     const { http } = await import('@/api/http')
+    
+    // 1. Pet bilgilerini güncelle
+    const payload = {
+      name: (petDraft.name || '').trim(),
+      species: (petDraft.species || '').trim() || null,
+      breed: (petDraft.breed || '').trim() || null,
+      notes: (petDraft.notes || '').trim() || null,
+      ageYears: petDraft.ageYears ?? null,
+      ageMonths: petDraft.ageMonths ?? null,
+    }
     await http.put(`/pets/${editingPetId.value}`, payload)
     
-    // Refresh
+    // 2. Ücret girildiyse hızlı ziyaret kaydı oluştur (bilanço otomatik senkronize olur)
+    if (petDraft.amountTl && Number(petDraft.amountTl) > 0) {
+      const visitPayload = {
+        petId: editingPetId.value,
+        performedAt: new Date().toISOString(),
+        procedures: 'Hızlı ücret girişi',
+        amountTl: Number(petDraft.amountTl),
+        creditAmountTl: petDraft.creditAmountTl ? Number(petDraft.creditAmountTl) : null,
+        notes: null,
+      }
+      await http.post('/visits', visitPayload)
+    }
+    
+    // 3. Sahip detayını yenile
     const res = await fetchOwner(selectedOwner.value)
     ownerDetail.value = res?.data ?? res
     editingPetId.value = null

@@ -6,6 +6,7 @@ public class PetUpdateDto
     public string? Species { get; set; }
     public string? Breed { get; set; }
     public DateOnly? BirthDate { get; set; }
-
     public string? Notes { get; set; }
+    public int? AgeYears { get; set; }
+    public int? AgeMonths { get; set; }
 }
