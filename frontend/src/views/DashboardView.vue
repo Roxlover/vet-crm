@@ -574,6 +574,8 @@ const collectedShown = computed(() =>
 const ownerPets = ref([])
 const showNewAppointment = ref(false)
 const appointmentDate = ref('')
+const appointmentTime = ref('')
+const appointmentPurpose = ref('')
 const selectedPetIds = ref([])
 const appointmentMode = ref('multiple')
 const appointmentAmount = ref(null)
