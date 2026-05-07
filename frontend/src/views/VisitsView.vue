@@ -277,7 +277,14 @@ const selectedPetId = ref('')
 const error = ref('')
 const success = ref('')
 const saving = ref(false)
-
+const form = reactive({
+  procedures: '',
+  vaccines: '',
+  performedAt: new Date().toISOString().substr(0, 16),
+  creditAmountTl: '',
+  amountTl: null,
+  notes: '',
+  imageFiles: [],
   microchipNumber: '',
 })
 
