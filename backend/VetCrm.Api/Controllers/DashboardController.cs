@@ -22,53 +22,62 @@ public class DashboardController : ControllerBase
     [HttpGet("stats")]
     public async Task<ActionResult<DashboardStatsDto>> GetStats()
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var firstDayOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-        var todayDt = DateTime.Today;
-
-        // 1. Aktif Hasta Sayısı
-        var activePets = await _db.Pets.CountAsync(p => p.IsActive);
-
-        // 2. Aylık Tahsilat
-        var monthlyRevenue = await _db.Visits
-            .Where(v => v.PerformedAt >= firstDayOfMonth)
-            .SumAsync(v => v.AmountTl ?? 0);
-
-        // 3. Bugünkü Randevular
-        var todayStart = todayDt;
-        var todayEnd = todayDt.AddDays(1);
-        var todayAppointments = await _db.Appointments
-            .CountAsync(a => a.ScheduledAt >= todayStart && a.ScheduledAt < todayEnd);
-
-        // 4. Hatırlatıcılar
-        var pendingReminders = await _db.Reminders
-            .CountAsync(r => !r.IsCompleted && r.DueDate <= today);
-
-        // 5. Haftalık Aktivite (Son 7 gün)
-        var last7Days = Enumerable.Range(0, 7)
-            .Select(i => todayDt.AddDays(-i))
-            .OrderBy(d => d)
-            .ToList();
-
-        var startDate = last7Days.First();
-        var visits = await _db.Visits
-            .Where(v => v.PerformedAt >= startDate)
-            .ToListAsync();
-
-        var weeklyActivity = last7Days.Select(d => new WeeklyActivityDto
+        try 
         {
-            Date = d.ToString("yyyy-MM-dd"),
-            VisitCount = visits.Count(v => v.PerformedAt.Date == d.Date)
-        }).ToList();
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var firstDayOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var todayDt = DateTime.Today;
 
-        return Ok(new DashboardStatsDto
+            // 1. Aktif Hasta Sayısı
+            var activePets = await _db.Pets.CountAsync(p => p.IsActive);
+
+            // 2. Aylık Tahsilat
+            var monthlyRevenue = await _db.Visits
+                .Where(v => v.PerformedAt >= firstDayOfMonth)
+                .SumAsync(v => (decimal?)(v.AmountTl ?? 0)) ?? 0;
+
+            // 3. Bugünkü Randevular
+            var todayStart = todayDt.Date;
+            var todayEnd = todayDt.Date.AddDays(1);
+            var todayAppointments = await _db.Appointments
+                .CountAsync(a => a.ScheduledAt >= todayStart && a.ScheduledAt < todayEnd);
+
+            // 4. Hatırlatıcılar
+            var pendingReminders = await _db.Reminders
+                .CountAsync(r => !r.IsCompleted && r.DueDate <= today);
+
+            // 5. Haftalık Aktivite (Son 7 gün)
+            var last7Days = Enumerable.Range(0, 7)
+                .Select(i => todayDt.Date.AddDays(-i))
+                .OrderBy(d => d)
+                .ToList();
+
+            var startDate = last7Days.First();
+            var visits = await _db.Visits
+                .Where(v => v.PerformedAt >= startDate)
+                .Select(v => new { v.PerformedAt })
+                .ToListAsync();
+
+            var weeklyActivity = last7Days.Select(d => new WeeklyActivityDto
+            {
+                Date = d.ToString("yyyy-MM-dd"),
+                VisitCount = visits.Count(v => v.PerformedAt.Date == d.Date)
+            }).ToList();
+
+            return Ok(new DashboardStatsDto
+            {
+                ActivePetsCount = activePets,
+                MonthlyRevenue = monthlyRevenue,
+                TodayAppointmentsCount = todayAppointments,
+                PendingRemindersCount = pendingReminders,
+                WeeklyActivity = weeklyActivity
+            });
+        }
+        catch (Exception ex)
         {
-            ActivePetsCount = activePets,
-            MonthlyRevenue = monthlyRevenue,
-            TodayAppointmentsCount = todayAppointments,
-            PendingRemindersCount = pendingReminders,
-            WeeklyActivity = weeklyActivity
-        });
+            // Log the error (conceptual, since I don't have a logger here, but making it safe)
+            return StatusCode(500, new { message = "İstatistikler hesaplanırken bir hata oluştu.", detail = ex.Message });
+        }
     }
 
     private static ReminderDashboardDto MapToDashboardDto(Reminder r)
@@ -76,15 +85,14 @@ public class DashboardController : ControllerBase
         return new ReminderDashboardDto
         {
             Id = r.Id,
-            OwnerName = r.Visit!.Pet!.Owner!.FullName,
-            OwnerPhone = r.Visit!.Pet!.Owner!.PhoneE164,
-            PetName = r.Visit!.Pet!.Name,
+            OwnerName = r.Visit?.Pet?.Owner?.FullName ?? "Bilinmeyen Sahip",
+            OwnerPhone = r.Visit?.Pet?.Owner?.PhoneE164 ?? string.Empty,
+            PetName = r.Visit?.Pet?.Name ?? "Bilinmeyen Hayvan",
             DueDate = r.DueDate,
-            Procedures = r.Visit!.Procedures ?? string.Empty,
-            IsCompleted = r.Visit!.Status == Visit.VisitStatus.Completed,
-            VisitImageUrl = r.Visit!.ImageUrl,
-            VisitStatus = r.Visit!.Status.ToString()
-
+            Procedures = r.Visit?.Procedures ?? string.Empty,
+            IsCompleted = r.Visit?.Status == Visit.VisitStatus.Completed,
+            VisitImageUrl = r.Visit?.ImageUrl,
+            VisitStatus = r.Visit?.Status.ToString() ?? "Unknown"
         };
     }
 

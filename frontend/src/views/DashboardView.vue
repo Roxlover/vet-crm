@@ -190,7 +190,7 @@
 </div>
         <p>
   <strong>Yapılan işlem tarihi:</strong>
-  <span v-if="!visitEditOpen">{{ selectedVisit.performedAt }}</span>
+  <span v-if="!visitEditOpen && selectedVisit">{{ selectedVisit.performedAt }}</span>
 
   <input
     v-else-if="visitDraft"
@@ -255,7 +255,7 @@
 </div>
         <p>
   <strong>Mikroçip numarası:</strong>
-  <span v-if="!visitEditOpen">{{ selectedVisit.microchipNumber || '—' }}</span>
+  <span v-if="!visitEditOpen && selectedVisit">{{ selectedVisit.microchipNumber || '—' }}</span>
 
   <input
     v-else-if="visitDraft"
@@ -268,7 +268,7 @@
  
         <p>
   <strong>İşlem(ler):</strong>
-  <span v-if="!visitEditOpen">{{ selectedVisit.procedures || '—' }}</span>
+  <span v-if="!visitEditOpen && selectedVisit">{{ selectedVisit.procedures || '—' }}</span>
 
   <textarea
     v-else-if="visitDraft"
@@ -280,7 +280,7 @@
 </p>
         <p>
   <strong>Tutar:</strong>
-  <span v-if="!visitEditOpen">{{ selectedVisit.amountTl ?? '—' }} TL</span>
+  <span v-if="!visitEditOpen && selectedVisit">{{ selectedVisit.amountTl ?? '—' }} TL</span>
 
   <input
     v-else-if="visitDraft"
@@ -295,7 +295,7 @@
  
         <p>
   <strong>Hasta sahibine not:</strong>
-  <span v-if="!visitEditOpen">{{ selectedVisit.notes || '—' }}</span>
+  <span v-if="!visitEditOpen && selectedVisit">{{ selectedVisit.notes || '—' }}</span>
 
   <textarea
     v-else-if="visitDraft"
@@ -306,10 +306,10 @@
   ></textarea>
 </p>
 
-        <p v-if="selectedVisit.createdByUsername || selectedVisit.createdByName">
-          <strong>Kaydı ekleyen:</strong>
-          {{ selectedVisit.createdByUsername || selectedVisit.createdByName }}
-        </p>
+        <p v-if="selectedVisit?.createdByUsername || selectedVisit?.createdByName">
+  <strong>Kaydı ekleyen:</strong>
+  {{ selectedVisit?.createdByUsername || selectedVisit?.createdByName }}
+</p>
 
         <hr class="divider" />
 
