@@ -265,75 +265,98 @@
           </section>
 
           <!-- 3. YENİ RANDEVU FORMU -->
-          <section class="modal-section appointment-form-section" :class="{ 'is-collapsed': !showNewAppointment && selectedVisit }">
-            <button class="section-toggle-btn" @click="showNewAppointment = !showNewAppointment">
-              <span>{{ showNewAppointment ? 'Randevu Formunu Kapat' : 'Yeni Randevu Oluştur' }}</span>
-              <svg :class="{ 'rotated': showNewAppointment }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
-            </button>
-
-            <div v-if="showNewAppointment" class="form-grid modern-form">
-              <div class="form-row split">
-                <div class="field">
-                  <label>Tarih</label>
-                  <input type="date" v-model="appointmentDate" class="modern-input" />
+          <section class="modal-section appointment-form-wrapper">
+            <div class="form-header-premium" @click="showNewAppointment = !showNewAppointment">
+              <div class="header-left">
+                <div class="icon-box">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4"/></svg>
                 </div>
-                <div class="field">
-                  <label>Saat</label>
-                  <input type="time" v-model="appointmentTime" class="modern-input" />
-                </div>
+                <h3>Yeni Randevu Oluştur</h3>
               </div>
+              <svg :class="{ 'rotated': showNewAppointment }" class="toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
+            </div>
 
-              <div class="field">
-                <label>Hasta Sahibi</label>
-                <div class="search-wrapper">
-                  <input 
-                    type="text" 
-                    v-model="ownerQuery" 
-                    placeholder="İsim veya telefon..." 
-                    class="modern-input search-input"
-                    @input="onOwnerQueryInput"
-                    @focus="ownerSearchOpen = true"
-                  />
-                  <div v-if="ownerSearchOpen && ownerResults.length" class="search-dropdown">
-                    <div v-for="o in ownerResults" :key="o.id" class="dropdown-item" @click="selectOwner(o)">
-                      <span class="d-name">{{ o.fullName }}</span>
-                      <span class="d-sub">{{ o.phone }}</span>
+            <transition name="expand">
+              <div v-if="showNewAppointment" class="form-body-premium">
+                <div class="form-grid-modern">
+                  <!-- Tarih & Saat -->
+                  <div class="form-group split">
+                    <div class="field-item">
+                      <label>Randevu Tarihi</label>
+                      <input type="date" v-model="appointmentDate" class="premium-input" />
+                    </div>
+                    <div class="field-item">
+                      <label>Saat</label>
+                      <input type="time" v-model="appointmentTime" class="premium-input" />
+                    </div>
+                  </div>
+
+                  <!-- Hasta Sahibi Arama -->
+                  <div class="form-group">
+                    <label>Hasta Sahibi</label>
+                    <div class="search-container">
+                      <div class="search-input-wrapper">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                        <input 
+                          type="text" 
+                          v-model="ownerQuery" 
+                          placeholder="İsim veya telefon ile ara..." 
+                          class="premium-input has-icon"
+                          @input="onOwnerQueryInput"
+                          @focus="ownerSearchOpen = true"
+                        />
+                      </div>
+                      <div v-if="ownerSearchOpen && ownerResults.length" class="premium-dropdown">
+                        <div v-for="o in ownerResults" :key="o.id" class="dropdown-option" @click="selectOwner(o)">
+                          <div class="option-main">{{ o.fullName }}</div>
+                          <div class="option-sub">{{ o.phone }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Hayvan Seçimi -->
+                  <div class="form-group">
+                    <label>Hayvan(lar)</label>
+                    <div class="pet-selection-grid">
+                      <div v-for="pet in ownerPets" :key="pet.id" class="pet-toggle-card" :class="{ 'is-selected': selectedPetIds.includes(pet.id) }">
+                        <input type="checkbox" :id="'pet-cb-'+pet.id" :value="pet.id" v-model="selectedPetIds" />
+                        <label :for="'pet-cb-'+pet.id">
+                          <span class="pet-icon">🐾</span>
+                          <span class="pet-name-label">{{ pet.name }}</span>
+                        </label>
+                      </div>
+                      <div v-if="!ownerPets.length && selectedOwnerId" class="empty-state-inline">Bu sahibe ait hayvan bulunamadı.</div>
+                      <div v-if="!selectedOwnerId" class="empty-state-inline">Önce hasta sahibi seçin.</div>
+                    </div>
+                  </div>
+
+                  <!-- Neden & Doktor -->
+                  <div class="form-group">
+                    <label>Randevu Nedeni</label>
+                    <textarea v-model="appointmentPurpose" class="premium-input" rows="2" placeholder="Örn: Karma aşı, genel kontrol..."></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Görevli Doktor</label>
+                    <div class="select-wrapper">
+                      <select v-model="selectedDoctorId" class="premium-input">
+                        <option :value="null">Doktor Seçilmedi</option>
+                        <option v-for="doc in doctors" :key="doc.id" :value="doc.id">{{ doc.fullName }}</option>
+                      </select>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="field">
-                <label>Hayvan(lar)</label>
-                <div class="pet-selection">
-                  <div v-for="pet in ownerPets" :key="pet.id" class="pet-chip" :class="{ 'active': selectedPetIds.includes(pet.id) }">
-                    <input type="checkbox" :id="'pet-'+pet.id" :value="pet.id" v-model="selectedPetIds" />
-                    <label :for="'pet-'+pet.id">{{ pet.name }}</label>
-                  </div>
-                  <p v-if="!ownerPets.length" class="empty-hint">Önce sahibi seçin.</p>
+                <div class="form-footer-actions">
+                  <button class="btn-secondary-modern" @click="showNewAppointment = false">Vazgeç</button>
+                  <button class="btn-primary-modern" @click="submitAppointment" :disabled="appointmentSaving">
+                    <span v-if="!appointmentSaving">Randevuyu Onayla</span>
+                    <span v-else>Kaydediliyor...</span>
+                  </button>
                 </div>
               </div>
-
-              <div class="field">
-                <label>Randevu Nedeni</label>
-                <textarea v-model="appointmentPurpose" class="modern-input" rows="2" placeholder="Örn: Kontrol, Aşı..."></textarea>
-              </div>
-
-              <div class="field">
-                <label>Doktor</label>
-                <select v-model="selectedDoctorId" class="modern-input">
-                  <option :value="null">Doktor Seçin</option>
-                  <option v-for="doc in doctors" :key="doc.id" :value="doc.id">{{ doc.fullName }}</option>
-                </select>
-              </div>
-
-              <div class="form-actions">
-                <button class="btn-cancel" @click="showNewAppointment = false">Vazgeç</button>
-                <button class="btn-submit" @click="submitAppointment" :disabled="appointmentSaving">
-                  {{ appointmentSaving ? 'Kaydediliyor...' : 'Randevuyu Onayla' }}
-                </button>
-              </div>
-            </div>
+            </transition>
           </section>
         </div>
       </div>
