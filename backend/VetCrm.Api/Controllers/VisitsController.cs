@@ -448,7 +448,8 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
                 CreatedByUsername = _currentUser.Username,
                 CreatedByName     = _currentUser.FullName,
                 CreditAmountTl = dto.CreditAmountTl,
-                MicrochipNumber   = dto.MicrochipNumber
+                MicrochipNumber   = dto.MicrochipNumber,
+                Status = dto.Status.HasValue ? (Visit.VisitStatus)dto.Status.Value : Visit.VisitStatus.Pending
             };
 
             var userId = _currentUser.UserId;

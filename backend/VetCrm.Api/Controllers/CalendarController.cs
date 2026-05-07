@@ -67,8 +67,6 @@ public async Task<ActionResult<List<CalendarAppointmentDto>>> GetAppointments(
         from v in vJoin.DefaultIfEmpty()
         join doc in _db.Users on a.DoctorId equals doc.Id into docJoin
         from doc in docJoin.DefaultIfEmpty()
-        join creator in _db.Users on v.CreatedByUserId equals creator.Id into creatorJoin
-        from creator in creatorJoin.DefaultIfEmpty()
         where a.ScheduledAt >= fromUtc && a.ScheduledAt <= toUtc
         select new CalendarAppointmentDto
         {
@@ -80,21 +78,25 @@ public async Task<ActionResult<List<CalendarAppointmentDto>>> GetAppointments(
             OwnerName = owner.FullName,
             Purpose = a.Purpose,
             DoctorName = doc != null ? doc.FullName : null,
-            CreatedByUsername = creator != null ? creator.Username : null,
-            CreatedByName = creator != null ? creator.FullName : null,
+            CreatedByUsername = v != null ? v.CreatedByUsername : null,
+            CreatedByName = v != null ? v.CreatedByName : null,
             CreditAmountTl = v != null ? v.CreditAmountTl : null
         }
     ).ToListAsync();
 
-    // 2) Gerçekleşen Ziyaretleri Çek (Visits) - Randevusu olmayan veya bizzat geçmiş kayıtlar için
+    // Aynı randevu ID'si birden fazla row üretebilir — deduplikasyon
+    var apptById = appointments
+        .GroupBy(x => x.Id)
+        .Select(g => g.First())
+        .ToList();
+
+    // 2) Gerçekleşen Ziyaretleri Çek (Visits)
     var visits = await (
         from v in _db.Visits
         join pet in _db.Pets on v.PetId equals pet.Id
         join owner in _db.Owners on pet.OwnerId equals owner.Id
         join doc in _db.Users on v.DoctorId equals doc.Id into docJoin
         from doc in docJoin.DefaultIfEmpty()
-        join creator in _db.Users on v.CreatedByUserId equals creator.Id into creatorJoin
-        from creator in creatorJoin.DefaultIfEmpty()
         where v.PerformedAt >= fromUtc && v.PerformedAt <= toUtc
         select new CalendarAppointmentDto
         {
@@ -106,16 +108,22 @@ public async Task<ActionResult<List<CalendarAppointmentDto>>> GetAppointments(
             OwnerName = owner.FullName,
             Purpose = v.Purpose,
             DoctorName = doc != null ? doc.FullName : null,
-            CreatedByUsername = creator != null ? creator.Username : null,
-            CreatedByName = creator != null ? creator.FullName : null,
+            CreatedByUsername = v.CreatedByUsername,
+            CreatedByName = v.CreatedByName,
             CreditAmountTl = v.CreditAmountTl
         }
     ).ToListAsync();
 
-    // 3) Birleştir ve Mükerrerleri (Aynı ziyarete bağlı randevu varsa ziyareti tercih et) Ayıkla
-    var combined = appointments
-        .Where(a => a.VisitId == null || !visits.Any(v => v.Id == a.VisitId))
-        .Concat(visits)
+    // Aynı visit ID'si birden fazla row üretebilir — deduplikasyon
+    var visitById = visits
+        .GroupBy(x => x.Id)
+        .Select(g => g.First())
+        .ToList();
+
+    // 3) Birleştir: Aynı ziyarete bağlı randevu varsa ziyareti tercih et
+    var combined = apptById
+        .Where(a => a.VisitId == null || !visitById.Any(v => v.Id == a.VisitId))
+        .Concat(visitById)
         .OrderBy(x => x.ScheduledAt)
         .ToList();
 

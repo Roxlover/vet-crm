@@ -30,4 +30,5 @@ public class VisitCreateDto
         get => Plans;
         set => Plans = value;
     }
+    public int? Status { get; set; }
 }

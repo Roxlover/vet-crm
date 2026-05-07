@@ -386,6 +386,7 @@ async function savePetEdit() {
         procedures: 'Hızlı ücret girişi',
         amountTl: Number(petDraft.amountTl),
         creditAmountTl: petDraft.creditAmountTl ? Number(petDraft.creditAmountTl) : null,
+        status: 1, // 1 = Completed (Yapıldı)
         notes: null,
       }
       await http.post('/visits', visitPayload)
