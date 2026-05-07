@@ -1,9 +1,5 @@
 using System.Text;
 using Hangfire;
-
-// ✅ Fix for Npgsql 6.0+ DateTime issue (prevents 500 error when comparing local/UTC dates)
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
@@ -22,6 +18,9 @@ using Microsoft.AspNetCore.Builder;
 var builder = WebApplication.CreateBuilder(args);
 
 const string FrontendCorsPolicy = "FrontendCors";
+
+// ✅ Fix for Npgsql 6.0+ DateTime issue (prevents 500 error when comparing local/UTC dates)
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 // DB
 builder.Services.AddDbContext<VetCrmDbContext>(options =>
