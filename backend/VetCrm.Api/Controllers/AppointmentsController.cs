@@ -32,9 +32,6 @@ namespace VetCrm.Api.Controllers
             if (request.OwnerId <= 0)
                 return BadRequest("Hasta sahibi (OwnerId) zorunludur.");
 
-            if (request.PetIds == null || request.PetIds.Count == 0)
-                return BadRequest("En az bir hayvan seçilmelidir.");
-
             var currentUserId = _currentUser.UserId;
             if (currentUserId == null)
                 return Unauthorized("Oturum geçersiz. Lütfen tekrar giriş yapın.");
@@ -83,7 +80,7 @@ namespace VetCrm.Api.Controllers
 
             foreach (var petId in validPetIds)
             {
-                // Visit yoksa (Takvimden gelindiyse) her pet için yeni bir "Pending" visit oluştur
+                // Visit yoksa her pet için yeni bir "Pending" visit oluştur
                 var targetVisit = visit;
                 if (targetVisit == null)
                 {
@@ -99,27 +96,16 @@ namespace VetCrm.Api.Controllers
                         NextDate = scheduledDateOnly
                     };
                     _db.Visits.Add(targetVisit);
-                    await _db.SaveChangesAsync(); // Id almak için
                 }
-
-                // 4) Duplicate engeli: aynı Visit + aynı Pet + aynı ScheduledAt (UTC)
-                var exists = await _db.Appointments.AnyAsync(a =>
-                    a.VisitId == targetVisit.Id &&
-                    a.PetId == petId &&
-                    a.ScheduledAt == utc
-                );
-
-                if (exists)
-                    continue; // Hata vermek yerine atla (döngü bozulmasın)
 
                 var appointment = new Appointment
                 {
                     OwnerId = request.OwnerId,
                     PetId = petId,
-                    ScheduledAt = utc,               // DB’de UTC sakla
+                    ScheduledAt = utc,
                     Purpose = request.Purpose,
                     DoctorId = request.DoctorId,
-                    VisitId = targetVisit.Id
+                    Visit = targetVisit // Link via navigation property
                 };
 
                 createdAppointments.Add(appointment);
@@ -127,13 +113,11 @@ namespace VetCrm.Api.Controllers
 
                 var reminder = new Reminder
                 {
-                    VisitId = targetVisit.Id,
+                    Visit = targetVisit, // Link via navigation property
                     DueDate = scheduledDateOnly,
                     CreatedAt = now,
                     Status = 0,
-                    IsCompleted = false,
-                    SentAt = null,
-                    CompletedAt = null
+                    IsCompleted = false
                 };
                 _db.Reminders.Add(reminder);
             }
@@ -151,6 +135,8 @@ namespace VetCrm.Api.Controllers
                 $"{ownerName} - {petsText} için " +
                 $"{localIstanbul:dd.MM.yyyy HH:mm} tarihine randevu oluşturuldu. " +
                 $"İşlem: {request.Purpose ?? "Belirtilmedi"}";
+
+            await _db.SaveChangesAsync();
 
             var allUsers = await _db.Users.ToListAsync();
             foreach (var user in allUsers)
