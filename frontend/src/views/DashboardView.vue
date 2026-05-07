@@ -1941,4 +1941,127 @@ async function submitAppointment() {
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+
+/* --- NEW PREMIUM APPOINTMENT FORM STYLES --- */
+.appointment-form-wrapper {
+  background: #f8fafc;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.form-header-premium {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  background: #ffffff;
+  border-bottom: 1px solid transparent;
+}
+
+.form-header-premium:hover { background: #f1f5f9; }
+
+.header-left { display: flex; align-items: center; gap: 0.75rem; }
+.icon-box {
+  width: 32px;
+  height: 32px;
+  background: #eef2ff;
+  color: #4f46e5;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-box svg { width: 18px; height: 18px; }
+
+.header-left h3 { font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; }
+
+.toggle-chevron {
+  width: 20px !important;
+  height: 20px !important;
+  color: #94a3b8;
+  transition: transform 0.3s;
+}
+.toggle-chevron.rotated { transform: rotate(180deg); }
+
+.form-body-premium { padding: 1.5rem; background: #ffffff; border-top: 1px solid #f1f5f9; }
+
+.form-grid-modern { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.form-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.premium-input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.premium-input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+}
+
+.pet-selection-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+
+.pet-toggle-card { position: relative; }
+.pet-toggle-card input { position: absolute; opacity: 0; }
+.pet-toggle-card label {
+  display: block;
+  padding: 0.5rem 1rem;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.pet-toggle-card.is-selected label {
+  background: #eef2ff;
+  border-color: #4f46e5;
+  color: #4f46e5;
+}
+
+.form-footer-actions { display: flex; gap: 1rem; margin-top: 2rem; }
+
+.btn-primary-modern {
+  flex: 2;
+  padding: 0.85rem;
+  background: #4f46e5;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+}
+
+.btn-secondary-modern {
+  flex: 1;
+  padding: 0.85rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.expand-enter-active, .expand-leave-active { transition: all 0.3s; max-height: 800px; }
+.expand-enter-from, .expand-leave-to { max-height: 0; opacity: 0; overflow: hidden; }
 </style>
