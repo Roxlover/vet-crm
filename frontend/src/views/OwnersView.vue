@@ -557,23 +557,6 @@ function goToPetProfile(petId) {
   router.push({ name: 'Pets', query: { id: petId } })
 }
 
-async function removePet(petId) {
-  if (!selectedOwner.value) return
-
-  petDeleteError.value = ''
-
-  try {
-    await deletePet(petId) 
-    const res = await fetchOwner(selectedOwner.value)
-    ownerDetail.value = res?.data ?? res
-    await loadOwners()
-  } catch (err) {
-    const msg = err?.response?.data || 'Pet silinirken hata oluştu.'
-    petDeleteError.value = typeof msg === 'string' ? msg : (msg?.message || 'Pet silinirken hata oluştu.')
-    console.error(err)
-  }
-}
-
 function addPetRow() {
   form.pets.push({ name: '', species: '', ageYears: null, ageMonths: null, notes: '' })
 }
