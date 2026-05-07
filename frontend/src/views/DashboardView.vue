@@ -144,12 +144,21 @@
       </header>
 
       <div class="modal-content-wrapper">
-        <div v-if="detailLoading" class="loading-state">
+        <!-- SUCCESS STATE -->
+        <div v-if="showSuccess" class="success-state">
+           <div class="success-icon-wrapper">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+           </div>
+           <h3>Başarıyla Kaydedildi!</h3>
+           <p>Randevu ve ziyaret kaydı başarıyla oluşturuldu.</p>
+        </div>
+
+        <div v-else-if="detailLoading" class="loading-state">
           <div class="spinner"></div>
           <p>Veriler yükleniyor...</p>
         </div>
 
-        <div v-else class="modal-body">
+        <div v-else-if="!showSuccess" class="modal-body">
           <!-- 1. GÜNÜN RANDEVULARI (Eğer varsa) -->
           <section v-if="selectedDayEvents.length > 0" class="modal-section appointments-section">
             <h3 class="section-subtitle">
@@ -418,14 +427,35 @@
                       <input type="number" v-model.number="appointmentAmount" class="premium-input" placeholder="0" />
                     </div>
                     <div class="field-item">
-                      <label>Veresiye (TL)</label>
-                      <input type="number" v-model.number="appointmentCredit" class="premium-input" placeholder="0" />
+                      <label>Alınan Nakit/Kart (TL)</label>
+                      <input type="number" v-model.number="appointmentPaid" class="premium-input" placeholder="0" />
+                    </div>
+                  </div>
+
+                  <div class="form-group" v-if="appointmentCreditCalc > 0">
+                    <div class="debt-warning">
+                      <span>Kalan Borç (Veresiye):</span>
+                      <strong>₺{{ appointmentCreditCalc }}</strong>
                     </div>
                   </div>
 
                   <div class="form-group">
-                    <label>Notlar</label>
+                    <label>Ziyaret Notları</label>
                     <textarea v-model="appointmentNotes" class="premium-input" rows="2" placeholder="Özel notlar..."></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Görsel(ler) Ekle</label>
+                    <div class="image-upload-zone">
+                      <input type="file" multiple accept="image/*" @change="onAppointmentImagesSelected" id="app-img-input" style="display:none" />
+                      <label for="app-img-input" class="upload-trigger">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4"/></svg>
+                        <span>{{ appointmentFiles.length > 0 ? appointmentFiles.length + ' Görsel Seçildi' : 'Görsel Seç...' }}</span>
+                      </label>
+                      <div v-if="appointmentFiles.length" class="selected-files-list">
+                        <span v-for="(f, i) in appointmentFiles" :key="i" class="file-tag">{{ f.name }} <i @click.stop="removeAppFile(i)">✕</i></span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -579,9 +609,12 @@ const appointmentPurpose = ref('')
 const selectedPetIds = ref([])
 const appointmentMode = ref('multiple')
 const appointmentAmount = ref(null)
-const appointmentCredit = ref(null)
+const appointmentPaid = ref(null)
+const appointmentCreditCalc = computed(() => Math.max(0, (appointmentAmount.value || 0) - (appointmentPaid.value || 0)))
+const appointmentFiles = ref([])
 const appointmentProcedures = ref('')
 const appointmentNotes = ref('')
+const showSuccess = ref(false)
 
 const selectedDayEvents = ref([])
 const selectedDayDate = ref(null)
@@ -888,6 +921,84 @@ async function saveVisitEdit() {
 }
 
 
+async function onAppointmentImagesSelected(e) {
+  const files = e?.target?.files
+  if (!files) return
+  appointmentFiles.value = Array.from(files)
+}
+
+function removeAppFile(idx) {
+  appointmentFiles.value.splice(idx, 1)
+}
+
+async function submitAppointment() {
+  if (appointmentSaving.value) return
+  const currentUser = getUser()
+  if (!currentUser) {
+    alert('Oturumunuz sona erdi, lütfen tekrar giriş yapın.')
+    router.push('/login')
+    return
+  }
+
+  if (!selectedOwnerId.value) {
+    alert('Lütfen hasta sahibini seçin.')
+    return
+  }
+  if (!selectedPetIds.value || selectedPetIds.value.length === 0) {
+    alert('En az bir hayvan seçmelisiniz.')
+    return
+  }
+  if (!appointmentDate.value || !appointmentTime.value) {
+    alert('Tarih ve saat seçin.')
+    return
+  }
+  if (!isTimeWithinWorkingHours(appointmentTime.value)) {
+    alert('Randevu saati 10:30 - 19:30 arasında olmalıdır.')
+    return
+  }
+
+  appointmentSaving.value = true
+  const formData = new FormData()
+  formData.append('OwnerId', selectedOwnerId.value)
+  selectedPetIds.value.forEach(id => formData.append('PetIds', id))
+  formData.append('ScheduledAt', `${appointmentDate.value}T${appointmentTime.value}`)
+  formData.append('Purpose', appointmentPurpose.value)
+  formData.append('DoctorId', selectedDoctorId.value || '')
+  formData.append('Procedures', appointmentProcedures.value)
+  formData.append('AmountTl', appointmentAmount.value || 0)
+  formData.append('PaidAmountTl', appointmentPaid.value || 0)
+  formData.append('Notes', appointmentNotes.value)
+  appointmentFiles.value.forEach(f => formData.append('Images', f))
+
+  try {
+    await http.post('/appointments', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    
+    // Bilgilendirme ekranını göster
+    showSuccess.value = true
+    
+    // 2 saniye sonra her şeyi kapat
+    setTimeout(() => {
+      showSuccess.value = false
+      closeDetail() // Tüm modalı kapatır
+    }, 2000)
+
+    await loadStats()
+    await loadCalendarForMonth(currentMonth.value)
+    
+    // Temizlik
+    appointmentFiles.value = []
+    appointmentAmount.value = null
+    appointmentPaid.value = null
+    appointmentProcedures.value = ''
+    appointmentNotes.value = ''
+  } catch(e) {
+    console.error(e)
+    alert('Randevu kaydedilemedi.')
+  } finally {
+    appointmentSaving.value = false
+  }
+}
+
 async function onVisitImagesSelected(e) {
   const files = e?.target?.files
   if (!files || files.length === 0) return
@@ -1114,8 +1225,9 @@ function openNewAppointmentFromCalendar(day) {
   // Yeni alanları temizle
   appointmentProcedures.value = ''
   appointmentAmount.value = null
-  appointmentCredit.value = null
+  appointmentPaid.value = null
   appointmentNotes.value = ''
+  appointmentFiles.value = []
   
   selectedReminderId.value = null
   selectedVisit.value = null
@@ -1475,71 +1587,7 @@ function isTimeWithinWorkingHours(timeStr) {
   return total >= start && total <= end
 }
 
-async function submitAppointment() {
-  if (appointmentSaving.value) return
-  appointmentSaving.value = true
-  const currentUser = getUser()
-  
-  // 🔹 DÜZELTME: Artık bir ziyarete (Visit) bağlı olma zorunluluğu yok
-  // if (!selectedVisit.value || !selectedVisit.value.id) { ... }
 
-  if (!currentUser) {
-    alert('Oturumunuz sona erdi, lütfen tekrar giriş yapın.')
-    router.push('/login')
-    return
-  }
-
-  if (!selectedOwnerId.value) {
-    alert('Lütfen hasta sahibini seçin.')
-    appointmentSaving.value = false
-    return
-  }
-  if (!selectedPetIds.value || selectedPetIds.value.length === 0) {
-    alert('En az bir hayvan seçmelisiniz.')
-    appointmentSaving.value = false
-    return
-  }
-  if (!appointmentDate.value || !appointmentTime.value) {
-    alert('Tarih ve saat seçin.')
-    appointmentSaving.value = false
-    return
-  }
-
-  if (!isTimeWithinWorkingHours(appointmentTime.value)) {
-    alert('Randevu saati 10:30 - 19:30 arasında olmalıdır.')
-    appointmentSaving.value = false
-    return
-  }
-
-  const isoDateTime = new Date(
-    `${appointmentDate.value}T${appointmentTime.value}:00`
-  ).toISOString()
-
-  const payload = {
-    ownerId: selectedOwnerId.value,
-    petIds: selectedPetIds.value,
-    scheduledAt: isoDateTime,
-    purpose: appointmentPurpose.value,
-    doctorId: selectedDoctorId.value || null,
-    visitId: selectedVisit.value ? selectedVisit.value.id : null,
-    microchipNumber: form.microchipNumber || null,
-    procedures: appointmentProcedures.value || null,
-    amountTl: appointmentAmount.value || null,
-    creditAmountTl: appointmentCredit.value || null,
-    notes: appointmentNotes.value || null
-  }
-
-
-  try {
-    await createAppointment(payload)
-    await loadStats()
-    await loadCalendarForMonth(currentMonth.value)
-    showNewAppointment.value = false
-  }finally {
-  appointmentSaving.value = false
-  }
-
-}
 
 
 
@@ -2375,5 +2423,112 @@ async function submitAppointment() {
   flex: 1;
   height: 1px;
   background: #f1f5f9;
+}
+
+.debt-warning {
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.debt-warning span { font-size: 0.85rem; color: #9a3412; font-weight: 600; }
+.debt-warning strong { color: #c2410c; font-size: 1rem; }
+
+.image-upload-zone {
+  margin-top: 0.5rem;
+}
+
+.upload-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 2px dashed #e2e8f0;
+  padding: 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.upload-trigger:hover {
+  background: #f1f5f9;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.upload-trigger svg { width: 20px; height: 20px; }
+
+.selected-files-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.file-tag {
+  background: #eef2ff;
+  color: #4f46e5;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-tag i {
+  cursor: pointer;
+  font-style: normal;
+  opacity: 0.6;
+}
+
+.file-tag i:hover { opacity: 1; }
+
+/* SUCCESS STATE */
+.success-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.success-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  background: #ecfdf5;
+  color: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  animation: scaleBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.success-icon-wrapper svg { width: 40px; height: 40px; }
+
+.success-state h3 { font-size: 1.5rem; font-weight: 800; color: #064e3b; margin-bottom: 0.5rem; }
+.success-state p { color: #065f46; opacity: 0.8; }
+
+@keyframes scaleBounce {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>

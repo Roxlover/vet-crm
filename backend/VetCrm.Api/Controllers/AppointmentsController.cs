@@ -23,9 +23,9 @@ namespace VetCrm.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> Create([FromBody] CreateAppointmentRequest request)
+        public async Task<ActionResult> Create([FromForm] CreateAppointmentRequest request)
         {
-            Console.WriteLine("===== AppointmentsController.Create CALLED =====");
+            Console.WriteLine("===== AppointmentsController.Create CALLED (FromForm) =====");
             try
             {
                 if (request == null) return BadRequest("Request body is null.");
@@ -74,6 +74,11 @@ namespace VetCrm.Api.Controllers
                 Console.WriteLine($"Valid Pets Count: {validPetIds.Count}");
 
                 var createdAppointments = new List<Appointment>();
+                
+                // Borç hesabı: Toplam Tutar - Tahsilat
+                var totalAmount = request.AmountTl ?? 0m;
+                var paidAmount = request.PaidAmountTl ?? 0m;
+                var creditAmount = Math.Max(0, totalAmount - paidAmount);
 
                 foreach (var petId in validPetIds)
                 {
@@ -87,10 +92,10 @@ namespace VetCrm.Api.Controllers
                             PerformedAt = utc,
                             Purpose = request.Purpose,
                             Procedures = request.Procedures,
-                            AmountTl = request.AmountTl,
-                            CreditAmountTl = request.CreditAmountTl,
+                            AmountTl = totalAmount,
+                            CreditAmountTl = creditAmount,
                             Notes = request.Notes,
-                            Status = (request.AmountTl > 0) ? Visit.VisitStatus.Completed : Visit.VisitStatus.Pending,
+                            Status = (totalAmount > 0) ? Visit.VisitStatus.Completed : Visit.VisitStatus.Pending,
                             CreatedByUserId = currentUserId,
                             CreatedByUsername = _currentUser.Username,
                             CreatedByName = _currentUser.FullName,
@@ -100,9 +105,8 @@ namespace VetCrm.Api.Controllers
                     }
                     else
                     {
-                        // Mevcut visit varsa bilgileri güncelle (opsiyonel ama mantıklı)
-                        if (request.AmountTl.HasValue) targetVisit.AmountTl = request.AmountTl;
-                        if (request.CreditAmountTl.HasValue) targetVisit.CreditAmountTl = request.CreditAmountTl;
+                        if (request.AmountTl.HasValue) targetVisit.AmountTl = totalAmount;
+                        if (request.PaidAmountTl.HasValue) targetVisit.CreditAmountTl = creditAmount;
                         if (!string.IsNullOrWhiteSpace(request.Procedures)) targetVisit.Procedures = request.Procedures;
                         if (!string.IsNullOrWhiteSpace(request.Notes)) targetVisit.Notes = request.Notes;
                     }
@@ -133,6 +137,35 @@ namespace VetCrm.Api.Controllers
 
                 Console.WriteLine("Saving context...");
                 await _db.SaveChangesAsync();
+
+                // Görüntüleri işle (Eğer varsa)
+                if (request.Images != null && request.Images.Count > 0)
+                {
+                    var firstVisit = createdAppointments.FirstOrDefault()?.Visit;
+                    if (firstVisit != null)
+                    {
+                        var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                        if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
+
+                        foreach (var file in request.Images)
+                        {
+                            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+                            var filePath = Path.Combine(uploadsPath, fileName);
+                            using (var stream = new FileStream(filePath, FileMode.Create))
+                            {
+                                await file.CopyToAsync(stream);
+                            }
+
+                            _db.VisitImages.Add(new VisitImage
+                            {
+                                VisitId = firstVisit.Id,
+                                ImageUrl = $"/uploads/{fileName}"
+                            });
+                        }
+                        await _db.SaveChangesAsync();
+                    }
+                }
+
                 Console.WriteLine("Save successful.");
 
                 var petNames = await _db.Pets
