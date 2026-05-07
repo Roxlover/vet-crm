@@ -2062,6 +2062,65 @@ async function submitAppointment() {
   cursor: pointer;
 }
 
+/* HIGHLIGHTS & ACTIVITY CHART */
+.highlights-grid {
+  margin-bottom: 2.5rem;
+}
+
+.highlight-card.activity-chart {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  padding: 2rem;
+  border-radius: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.chart-header h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+.trend-up { color: #10b981; font-weight: 700; font-size: 0.9rem; background: #ecfdf5; padding: 0.25rem 0.75rem; border-radius: 20px; }
+.trend-down { color: #ef4444; font-weight: 700; font-size: 0.9rem; background: #fef2f2; padding: 0.25rem 0.75rem; border-radius: 20px; }
+
+.svg-wrapper {
+  height: 120px;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.line-chart {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.chart-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding: 0 0.5rem;
+}
+
+.chart-labels span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+/* SEARCH DROPDOWN & INPUT FIX */
 .search-container { position: relative; width: 100%; }
 .search-input-wrapper { position: relative; width: 100%; }
 .search-icon {
