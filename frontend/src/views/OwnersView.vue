@@ -87,6 +87,21 @@
                   <label>Tür</label>
                   <input v-model="pet.species" type="text" placeholder="Kedi" />
                 </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label>Yaş (Yıl)</label>
+                  <input v-model.number="pet.ageYears" type="number" placeholder="0" />
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label>Yaş (Ay)</label>
+                  <input v-model.number="pet.ageMonths" type="number" placeholder="0" />
+                </div>
+
+                <div class="form-group full-width" style="margin-bottom: 0; grid-column: span 2;">
+                  <label>Pet Hakkında Notlar</label>
+                  <textarea v-model="pet.notes" placeholder="Mizaç, alerji vb..." class="mini-textarea"></textarea>
+                </div>
               </div>
             </div>
 
@@ -175,8 +190,11 @@
                   <div class="inline-grid">
                     <input v-model="newPet.name" placeholder="Pet Adı" class="mini-input" />
                     <input v-model="newPet.species" placeholder="Tür (Kedi/Köpek)" class="mini-input" />
+                    <input v-model.number="newPet.ageYears" type="number" placeholder="Yaş (Yıl)" class="mini-input" />
+                    <input v-model.number="newPet.ageMonths" type="number" placeholder="Yaş (Ay)" class="mini-input" />
                     <input v-model="newPet.breed" placeholder="Cins" class="mini-input" />
                     <input v-model="newPet.birthDate" type="date" class="mini-input" />
+                    <textarea v-model="newPet.notes" placeholder="Notlar..." class="mini-input full-width" style="grid-column: span 2; min-height: 60px;"></textarea>
                   </div>
                   <button class="btn btn-primary btn-sm full-width" @click="addPet" :disabled="petAdding">
                     {{ petAdding ? 'Ekleniyor...' : 'Hayvanı Kaydet' }}
@@ -1029,10 +1047,19 @@ onMounted(loadOwners)
   color: var(--text-main);
 }
 
-.p-info span {
-  font-size: 0.85rem;
-  color: var(--text-muted);
+.mini-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+  background: #ffffff;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
 }
+
+.pet-mini-card .p-info span { font-size: 0.85rem; color: #64748b; font-weight: 500; }
 
 .delete-icon-btn {
   background: transparent;
