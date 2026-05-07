@@ -369,10 +369,10 @@ async function saveVisitEdit() {
     // 3. Visit update
     await http.put(`/visits/${v.id}`, {
       performedAt: new Date(visitDraft.value.performedAt).toISOString(),
-      procedures: visitDraft.value.procedures,
+      procedures: (visitDraft.value.procedures || '').trim(),
       amountTl: visitDraft.value.amountTl,
       creditAmountTl: visitDraft.value.creditAmountTl,
-      notes: visitDraft.value.notes,
+      notes: (visitDraft.value.notes || '').trim(),
       nextDate: v.nextDate,
       purpose: v.purpose
     })

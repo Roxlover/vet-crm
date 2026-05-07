@@ -828,13 +828,13 @@ async function saveVisitEdit() {
 
     const payload = {
       performedAt,
-      microchipNumber: visitDraft.value.microchipNumber || null,
-      procedures: visitDraft.value.procedures || null,
-      notes: visitDraft.value.notes || null,
+      microchipNumber: (visitDraft.value.microchipNumber || '').trim() || null,
+      procedures: (visitDraft.value.procedures || '').trim() || null,
+      notes: (visitDraft.value.notes || '').trim() || null,
       amountTl: amount,
       nextDate: visitDraft.value.nextDate ?? (selectedVisit.value?.nextDate ?? selectedVisit.value?.NextDate ?? null),
-      purpose: visitDraft.value.purpose ?? (selectedVisit.value?.purpose ?? selectedVisit.value?.Purpose ?? null),
-      plans: visitDraft.value.plans ?? selectedVisit.value?.plans ?? selectedVisit.value?.Plans ?? null,
+      purpose: (visitDraft.value.purpose || '').trim() || null,
+      plans: (visitDraft.value.plans || '').trim() || null,
     }
 
     await http.put(`/visits/${visitId}`, payload)

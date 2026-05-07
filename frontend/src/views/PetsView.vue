@@ -333,10 +333,10 @@ async function saveVisitEdit(v) {
     // 3) Update Visit
     const payload = {
       performedAt: new Date(visitDraft.value.performedAt).toISOString(),
-      procedures: visitDraft.value.procedures.trim() || null,
+      procedures: (visitDraft.value.procedures || '').trim() || null,
       amountTl: visitDraft.value.amountTl,
-      notes: visitDraft.value.notes.trim() || null,
-      purpose: visitDraft.value.purpose.trim() || null,
+      notes: (visitDraft.value.notes || '').trim() || null,
+      purpose: (visitDraft.value.purpose || '').trim() || null,
       nextDate: v.nextDate || v.NextDate || null,
     }
     await http.put(`/visits/${visitId}`, payload)

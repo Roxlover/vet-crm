@@ -382,7 +382,7 @@ async function handleDeleteOwner() {
   try {
     const { http } = await import('@/api/http')
     await http.delete(`/owners/${selectedOwner.value}`)
-    closeDetail()
+    closeOwnerDetail()
     await loadOwners()
   } catch (err) {
     console.error(err)
