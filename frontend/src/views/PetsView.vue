@@ -63,6 +63,9 @@
               <button v-if="!petEditOpen" class="btn btn-secondary" @click="openPetEdit">
                 Düzenle
               </button>
+              <button v-if="!petEditOpen" class="btn btn-danger-sm" @click="handleDeletePet" style="margin-left: 0.5rem;">
+                Sil
+              </button>
               <template v-else>
                 <button class="close" @click.stop="closeDetail">Kapat</button>
                 <button class="btn btn-ghost" @click="cancelPetEdit" :disabled="petSaving">İptal</button>
@@ -170,6 +173,7 @@
                     <button class="btn btn-primary" @click="saveVisitEdit(v)" :disabled="visitSaving">
                       {{ visitSaving ? '...' : 'Kaydet' }}
                     </button>
+                    <button class="btn btn-danger-sm" @click="handleDeleteVisit(v)" :disabled="visitSaving">Sil</button>
                   </div>
                 </div>
 
@@ -434,6 +438,38 @@ async function savePetEdit() {
     petSaveError.value = 'Güncellenemedi.'
   } finally {
     petSaving.value = false
+  }
+}
+
+async function handleDeletePet() {
+  if (!selectedPetId.value) return
+  if (!confirm('Bu hastayı silmek istediğinize emin misiniz?')) return
+  
+  try {
+    await http.delete(`/pets/${selectedPetId.value}`)
+    profile.value = null
+    selectedPetId.value = null
+    await loadList()
+  } catch (err) {
+    console.error(err)
+    alert('Hasta silinirken hata oluştu. (Ziyaret kaydı olan hastaları önce silmeniz gerekebilir.)')
+  }
+}
+
+async function handleDeleteVisit(v) {
+  const visitId = v.visitId || v.VisitId || v.id
+  if (!visitId) return
+  if (!confirm('Bu ziyareti silmek istediğinize emin misiniz?')) return
+  
+  visitSaving.value = true
+  try {
+    await http.delete(`/visits/${visitId}`)
+    await openPet(selectedPetId.value)
+  } catch (err) {
+    console.error(err)
+    alert('Ziyaret silinemedi.')
+  } finally {
+    visitSaving.value = false
   }
 }
 </script>

@@ -177,8 +177,11 @@
           <section v-if="selectedVisit" class="modal-section visit-detail-section">
             <div class="section-header-row">
               <h3 class="section-subtitle">Ziyaret Bilgileri</h3>
-              <div class="header-actions">
-                <button v-if="!visitEditOpen" class="btn-action" @click="openVisitEdit">Düzenle</button>
+              <div class="header-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+                <template v-if="!visitEditOpen">
+                  <button class="btn-action" @click="openVisitEdit">Düzenle</button>
+                  <button class="btn-danger-sm" @click="handleDeleteVisit" :disabled="visitSaving">Sil</button>
+                </template>
                 <div v-else class="edit-actions">
                   <button class="btn-text" @click="cancelVisitEdit" :disabled="visitSaving">İptal</button>
                   <button class="btn-primary-sm" @click="saveVisitEdit" :disabled="visitSaving">
@@ -309,6 +312,7 @@
                       <div style="display: flex; gap: 0.5rem;">
                         <button class="btn btn-text btn-xs" @click="editingPlanId = null" style="flex: 1;">İptal</button>
                         <button class="btn btn-primary-sm btn-xs" @click="savePlanEdit(plan.id)" style="flex: 1;">Kaydet</button>
+                        <button class="btn btn-danger-sm btn-xs" @click="deleteAppointment(plan.id)" title="Sil">✕</button>
                       </div>
                     </div>
                   </template>
@@ -478,12 +482,10 @@ function startEditPlan(plan) {
 async function savePlanEdit(planId) {
   try {
     const payload = {
-      scheduledAt: new Date(planDraft.date).toISOString(), // Not: AppointmentsController UTC bekliyor
+      scheduledAt: new Date(planDraft.date).toISOString(), 
       purpose: planDraft.purpose,
       doctorId: selectedVisit.value.doctorId
     }
-    // Aslında appointment'lar farklı bir controller'dan yönetiliyor. 
-    // PlanId burada AppointmentId ile eşleşiyor mu? Evet, SyncRemindersForVisit bunu sağlıyor.
     await http.put(`/appointments/${planId}`, payload)
     
     // Refresh
@@ -496,6 +498,44 @@ async function savePlanEdit(planId) {
   } catch (err) {
     console.error(err)
     alert('Randevu güncellenirken hata oluştu.')
+  }
+}
+
+async function deleteAppointment(id) {
+  if (!confirm('Bu randevuyu silmek istediğinize emin misiniz?')) return
+  try {
+    await http.delete(`/appointments/${id}`)
+    
+    // Refresh
+    const visitId = selectedVisit.value?.id || selectedVisit.value?.Id
+    if (visitId) {
+      const res = await fetchVisitDetail(visitId)
+      selectedVisit.value = res.data ?? res
+    }
+    editingPlanId.value = null
+    await loadCalendarForMonth(currentMonth.value)
+  } catch (err) {
+    console.error(err)
+    alert('Randevu silinemedi.')
+  }
+}
+
+async function handleDeleteVisit() {
+  const visitId = selectedVisit.value?.id || selectedVisit.value?.Id
+  if (!visitId) return
+  if (!confirm('Bu ziyareti ve buna bağlı tüm kasa kayıtlarını SİLMEK istediğinize emin misiniz? Bu işlem geri alınamaz.')) return
+  
+  visitSaving.value = true
+  try {
+    await http.delete(`/visits/${visitId}`)
+    closeDetail()
+    await loadStats()
+    await loadCalendarForMonth(currentMonth.value)
+  } catch (err) {
+    console.error(err)
+    alert('Ziyaret silinirken hata oluştu.')
+  } finally {
+    visitSaving.value = false
   }
 }
 

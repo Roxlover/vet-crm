@@ -175,7 +175,10 @@
           <div class="section-header-row">
             <h3 class="section-subtitle">Ziyaret Bilgileri</h3>
             <div class="header-actions">
-              <button v-if="!visitEditOpen" class="btn btn-ghost btn-xs" @click="openVisitEdit">Düzenle</button>
+              <template v-if="!visitEditOpen">
+                <button class="btn btn-ghost btn-xs" @click="openVisitEdit">Düzenle</button>
+                <button class="btn btn-danger-sm btn-xs" @click="handleDeleteVisit" :disabled="visitSaving">Sil</button>
+              </template>
               <div v-else class="edit-actions" style="display: flex; gap: 0.5rem;">
                 <button class="btn btn-text btn-xs" @click="cancelVisitEdit">İptal</button>
                 <button class="btn btn-primary-sm btn-xs" @click="saveVisitEdit" :disabled="visitSaving">
@@ -382,6 +385,24 @@ async function saveVisitEdit() {
   } catch (err) {
     console.error(err)
     alert('Güncelleme sırasında hata oluştu.')
+  } finally {
+    visitSaving.value = false
+  }
+}
+
+async function handleDeleteVisit() {
+  const visitId = selectedVisit.value?.id || selectedVisit.value?.Id
+  if (!visitId) return
+  if (!confirm('Bu ziyareti silmek istediğinize emin misiniz? (Kasa kayıtları da etkilenecektir)')) return
+  
+  visitSaving.value = true
+  try {
+    await http.delete(`/visits/${visitId}`)
+    closeDetailModal()
+    loadVisits()
+  } catch (err) {
+    console.error(err)
+    alert('Ziyaret silinirken hata oluştu.')
   } finally {
     visitSaving.value = false
   }

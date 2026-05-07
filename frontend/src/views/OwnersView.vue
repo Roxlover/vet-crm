@@ -137,6 +137,7 @@
                 <div class="contact-pill">
                   <span>Telefon: {{ ownerDetail.phoneE164 }}</span>
                   <button class="btn btn-ghost btn-xs" @click="openOwnerEdit" style="margin-left: 1rem;">Düzenle</button>
+                  <button class="btn btn-danger-sm btn-xs" @click="handleDeleteOwner" style="margin-left: 0.5rem;">Sil</button>
                 </div>
               </template>
               <template v-else>
@@ -371,6 +372,39 @@ async function savePetEdit() {
   } catch (err) {
     console.error(err)
     alert('Pet bilgileri güncellenirken hata oluştu.')
+  }
+}
+
+async function handleDeleteOwner() {
+  if (!selectedOwner.value) return
+  if (!confirm('Bu hasta sahibini ve TÜM bağlı pet kayıtlarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) return
+  
+  try {
+    const { http } = await import('@/api/http')
+    await http.delete(`/owners/${selectedOwner.value}`)
+    closeDetail()
+    await loadOwners()
+  } catch (err) {
+    console.error(err)
+    alert('Sahip silinirken hata oluştu. (Ziyaret kaydı olan petleri önce silmeniz gerekebilir.)')
+  }
+}
+
+async function removePet(id) {
+  if (!confirm('Bu pet kaydını silmek istediğinize emin misiniz?')) return
+  try {
+    const { http } = await import('@/api/http')
+    await http.delete(`/pets/${id}`)
+    
+    // Refresh
+    if (selectedOwner.value) {
+      const res = await fetchOwner(selectedOwner.value)
+      ownerDetail.value = res?.data ?? res
+    }
+  } catch (err) {
+    console.error(err)
+    const msg = err.response?.data
+    alert(typeof msg === 'string' ? msg : 'Pet silinemedi. (Ziyaret kaydı olabilir.)')
   }
 }
 
