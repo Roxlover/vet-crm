@@ -25,140 +25,142 @@ namespace VetCrm.Api.Controllers
         [HttpPost]
         public async Task<ActionResult> Create([FromBody] CreateAppointmentRequest request)
         {
-            // 1) Giriş kontrolleri
-            if (request == null)
-                return BadRequest("İstek gövdesi (request) zorunludur.");
-
-            if (request.OwnerId <= 0)
-                return BadRequest("Hasta sahibi (OwnerId) zorunludur.");
-
-            var currentUserId = _currentUser.UserId;
-            if (currentUserId == null)
-                return Unauthorized("Oturum geçersiz. Lütfen tekrar giriş yapın.");
-
-            // 2) Saat aralığı kontrolü (İstanbul saatine göre 10:30 - 19:30)
-            var utc = EnsureUtc(request.ScheduledAt);
-            var localIstanbul = UtcToIstanbul(utc);
-
-            if (!IsWithinWorkingHours(localIstanbul))
-                return BadRequest("Randevu saati 10:30 - 19:30 arasında olmalıdır.");
-
-            var scheduledDateOnly = DateOnly.FromDateTime(localIstanbul);
-
-            Visit? visit = null;
-            if (request.VisitId.HasValue && request.VisitId.Value > 0)
+            Console.WriteLine("===== AppointmentsController.Create CALLED =====");
+            try
             {
-                visit = await _db.Visits.FirstOrDefaultAsync(v => v.Id == request.VisitId.Value);
-                if (visit == null)
-                    return BadRequest("Geçersiz visit.");
-            }
+                if (request == null) return BadRequest("Request body is null.");
+                Console.WriteLine($"Request: OwnerId={request.OwnerId}, PetCount={request.PetIds?.Count}, ScheduledAt={request.ScheduledAt}");
 
-            var owner = await _db.Owners.FirstOrDefaultAsync(o => o.Id == request.OwnerId);
-            if (owner == null)
-                return BadRequest("Geçersiz hasta sahibi (owner).");
+                if (request.OwnerId <= 0)
+                    return BadRequest("Hasta sahibi (OwnerId) zorunludur.");
 
-            // Pet’ler gerçekten bu owner’a mı ait?
-            var distinctPetIds = request.PetIds.Distinct().ToList();
+                if (request.PetIds == null || request.PetIds.Count == 0)
+                    return BadRequest("En az bir hayvan seçilmelidir.");
 
-            var validPetIds = await _db.Pets
-                .Where(p => p.OwnerId == request.OwnerId && distinctPetIds.Contains(p.Id))
-                .Select(p => p.Id)
-                .ToListAsync();
+                var currentUserId = _currentUser.UserId;
+                if (currentUserId == null)
+                    return Unauthorized("Oturum geçersiz. Lütfen tekrar giriş yapın.");
 
-            if (validPetIds.Count != distinctPetIds.Count)
-                return BadRequest("Seçilen hayvanlardan en az biri bu hasta sahibine ait değil.");
+                var now = DateTime.UtcNow;
+                TimeZoneInfo tz;
+                try { tz = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"); }
+                catch { tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul"); }
 
-            // Mikroçip (opsiyonel)
-            if (!string.IsNullOrWhiteSpace(request.MicrochipNumber))
-                visit.MicrochipNumber = request.MicrochipNumber;
+                var localIstanbul = TimeZoneInfo.ConvertTimeFromUtc(request.ScheduledAt.ToUniversalTime(), tz);
+                var utc = DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(localIstanbul, tz), DateTimeKind.Utc);
+                var scheduledDateOnly = DateOnly.FromDateTime(localIstanbul);
 
-            // Visit.NextDate: local gün
-            visit.NextDate = scheduledDateOnly;
+                Console.WriteLine($"Time conversion: Local={localIstanbul}, UTC={utc}");
 
-            var now = DateTime.UtcNow;
-            var createdAppointments = new List<Appointment>();
-
-            foreach (var petId in validPetIds)
-            {
-                // Visit yoksa her pet için yeni bir "Pending" visit oluştur
-                var targetVisit = visit;
-                if (targetVisit == null)
+                Visit? visit = null;
+                if (request.VisitId.HasValue && request.VisitId.Value > 0)
                 {
-                    targetVisit = new Visit
-                    {
-                        PetId = petId,
-                        PerformedAt = utc,
-                        Purpose = request.Purpose,
-                        Status = Visit.VisitStatus.Pending,
-                        CreatedByUserId = currentUserId,
-                        CreatedByUsername = _currentUser.Username,
-                        CreatedByName = _currentUser.FullName,
-                        NextDate = scheduledDateOnly
-                    };
-                    _db.Visits.Add(targetVisit);
+                    visit = await _db.Visits.FirstOrDefaultAsync(v => v.Id == request.VisitId.Value);
+                    if (visit == null)
+                        return BadRequest("Geçersiz visit.");
+                    Console.WriteLine($"Linked to existing VisitId={visit.Id}");
                 }
 
-                var appointment = new Appointment
+                var owner = await _db.Owners.FirstOrDefaultAsync(o => o.Id == request.OwnerId);
+                if (owner == null)
+                    return BadRequest("Geçersiz hasta sahibi (owner).");
+
+                var distinctPetIds = request.PetIds.Distinct().ToList();
+                var validPetIds = await _db.Pets
+                    .Where(p => p.OwnerId == request.OwnerId && distinctPetIds.Contains(p.Id))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                Console.WriteLine($"Valid Pets Count: {validPetIds.Count}");
+
+                var createdAppointments = new List<Appointment>();
+
+                foreach (var petId in validPetIds)
                 {
-                    OwnerId = request.OwnerId,
-                    PetId = petId,
-                    ScheduledAt = utc,
-                    Purpose = request.Purpose,
-                    DoctorId = request.DoctorId,
-                    Visit = targetVisit // Link via navigation property
-                };
+                    var targetVisit = visit;
+                    if (targetVisit == null)
+                    {
+                        Console.WriteLine($"Creating auto-visit for PetId={petId}");
+                        targetVisit = new Visit
+                        {
+                            PetId = petId,
+                            PerformedAt = utc,
+                            Purpose = request.Purpose,
+                            Status = Visit.VisitStatus.Pending,
+                            CreatedByUserId = currentUserId,
+                            CreatedByUsername = _currentUser.Username,
+                            CreatedByName = _currentUser.FullName,
+                            NextDate = scheduledDateOnly
+                        };
+                        _db.Visits.Add(targetVisit);
+                    }
 
-                createdAppointments.Add(appointment);
-                _db.Appointments.Add(appointment);
+                    var appointment = new Appointment
+                    {
+                        OwnerId = request.OwnerId,
+                        PetId = petId,
+                        ScheduledAt = utc,
+                        Purpose = request.Purpose,
+                        DoctorId = request.DoctorId,
+                        Visit = targetVisit
+                    };
 
-                var reminder = new Reminder
+                    createdAppointments.Add(appointment);
+                    _db.Appointments.Add(appointment);
+
+                    var reminder = new Reminder
+                    {
+                        Visit = targetVisit,
+                        DueDate = scheduledDateOnly,
+                        CreatedAt = now,
+                        Status = 0,
+                        IsCompleted = false
+                    };
+                    _db.Reminders.Add(reminder);
+                }
+
+                Console.WriteLine("Saving context...");
+                await _db.SaveChangesAsync();
+                Console.WriteLine("Save successful.");
+
+                var petNames = await _db.Pets
+                    .Where(p => validPetIds.Contains(p.Id))
+                    .Select(p => p.Name)
+                    .ToListAsync();
+
+                var petsText = petNames.Count > 0 ? string.Join(", ", petNames) : "Hasta";
+                var ownerName = owner.FullName ?? "Hasta Sahibi";
+                var message = $"{ownerName} - {petsText} için {localIstanbul:dd.MM.yyyy HH:mm} tarihine randevu oluşturuldu. İşlem: {request.Purpose ?? "Belirtilmedi"}";
+
+                var allUsers = await _db.Users.ToListAsync();
+                foreach (var user in allUsers)
                 {
-                    Visit = targetVisit, // Link via navigation property
-                    DueDate = scheduledDateOnly,
-                    CreatedAt = now,
-                    Status = 0,
-                    IsCompleted = false
-                };
-                _db.Reminders.Add(reminder);
-            }
+                    _db.Notifications.Add(new Notification
+                    {
+                        UserId = user.Id,
+                        Type = "AppointmentCreated",
+                        Message = message,
+                        VisitId = createdAppointments.FirstOrDefault()?.VisitId,
+                        CreatedAt = now,
+                        IsRead = false
+                    });
+                }
 
-            // 5) Bildirim metni (İstanbul saatine göre)
-            var petNames = await _db.Pets
-                .Where(p => validPetIds.Contains(p.Id))
-                .Select(p => p.Name)
-                .ToListAsync();
+                await _db.SaveChangesAsync();
+                Console.WriteLine("Final save successful. Returning OK.");
 
-            var petsText = petNames.Count > 0 ? string.Join(", ", petNames) : "Hasta";
-            var ownerName = owner.FullName ?? "Hasta Sahibi";
-
-            var message =
-                $"{ownerName} - {petsText} için " +
-                $"{localIstanbul:dd.MM.yyyy HH:mm} tarihine randevu oluşturuldu. " +
-                $"İşlem: {request.Purpose ?? "Belirtilmedi"}";
-
-            await _db.SaveChangesAsync();
-
-            var allUsers = await _db.Users.ToListAsync();
-            foreach (var user in allUsers)
-            {
-                _db.Notifications.Add(new Notification
+                return Ok(new
                 {
-                    UserId = user.Id,
-                    Type = "AppointmentCreated",
-                    Message = message,
-                    VisitId = createdAppointments.FirstOrDefault()?.VisitId,
-                    CreatedAt = now,
-                    IsRead = false
+                    appointmentIds = createdAppointments.Select(a => a.Id).ToList(),
+                    visitId = createdAppointments.FirstOrDefault()?.VisitId
                 });
             }
-
-            await _db.SaveChangesAsync();
-
-            return Ok(new
+            catch (Exception ex)
             {
-                appointmentIds = createdAppointments.Select(a => a.Id).ToList(),
-                visitId = createdAppointments.FirstOrDefault()?.VisitId
-            });
+                Console.WriteLine("===== AppointmentsController.Create ERROR =====");
+                Console.WriteLine(ex.ToString());
+                return StatusCode(500, new { error = ex.Message, detail = ex.InnerException?.Message });
+            }
         }
 
         [HttpPut("{id:int}")]
