@@ -171,7 +171,7 @@
                   <button 
                     class="btn btn-primary btn-sm" 
                     @click="handleAddNote" 
-                    :disabled="noteAdding || !noteText.trim()"
+                    :disabled="noteAdding || !noteText?.trim()"
                   >
                     {{ noteAdding ? '...' : 'Ekle' }}
                   </button>
