@@ -294,6 +294,8 @@ const petAdding = ref(false)
 const petAddError = ref('')
 
 const noteError = ref('')
+const noteText = ref('')
+const noteAdding = ref(false)
 
 const ownerEditOpen = ref(false)
 const ownerSaving = ref(false)
