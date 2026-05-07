@@ -35,9 +35,6 @@ namespace VetCrm.Api.Controllers
             if (request.PetIds == null || request.PetIds.Count == 0)
                 return BadRequest("En az bir hayvan seçilmelidir.");
 
-            if (request.VisitId == null || request.VisitId <= 0)
-                return BadRequest("VisitId zorunludur (randevu, bir ziyaret kaydına bağlı olmalıdır).");
-
             var currentUserId = _currentUser.UserId;
             if (currentUserId == null)
                 return Unauthorized("Oturum geçersiz. Lütfen tekrar giriş yapın.");
@@ -51,10 +48,13 @@ namespace VetCrm.Api.Controllers
 
             var scheduledDateOnly = DateOnly.FromDateTime(localIstanbul);
 
-            // 3) İlgili kayıtlar gerçekten var mı?
-            var visit = await _db.Visits.FirstOrDefaultAsync(v => v.Id == request.VisitId.Value);
-            if (visit == null)
-                return BadRequest("Geçersiz visit.");
+            Visit? visit = null;
+            if (request.VisitId.HasValue && request.VisitId.Value > 0)
+            {
+                visit = await _db.Visits.FirstOrDefaultAsync(v => v.Id == request.VisitId.Value);
+                if (visit == null)
+                    return BadRequest("Geçersiz visit.");
+            }
 
             var owner = await _db.Owners.FirstOrDefaultAsync(o => o.Id == request.OwnerId);
             if (owner == null)
@@ -83,15 +83,34 @@ namespace VetCrm.Api.Controllers
 
             foreach (var petId in validPetIds)
             {
+                // Visit yoksa (Takvimden gelindiyse) her pet için yeni bir "Pending" visit oluştur
+                var targetVisit = visit;
+                if (targetVisit == null)
+                {
+                    targetVisit = new Visit
+                    {
+                        PetId = petId,
+                        PerformedAt = utc,
+                        Purpose = request.Purpose,
+                        Status = Visit.VisitStatus.Pending,
+                        CreatedByUserId = currentUserId,
+                        CreatedByUsername = _currentUser.Username,
+                        CreatedByName = _currentUser.FullName,
+                        NextDate = scheduledDateOnly
+                    };
+                    _db.Visits.Add(targetVisit);
+                    await _db.SaveChangesAsync(); // Id almak için
+                }
+
                 // 4) Duplicate engeli: aynı Visit + aynı Pet + aynı ScheduledAt (UTC)
                 var exists = await _db.Appointments.AnyAsync(a =>
-                    a.VisitId == request.VisitId.Value &&
+                    a.VisitId == targetVisit.Id &&
                     a.PetId == petId &&
                     a.ScheduledAt == utc
                 );
 
                 if (exists)
-                    return BadRequest("Aynı randevu zaten mevcut (aynı ziyaret + aynı hayvan + aynı saat).");
+                    continue; // Hata vermek yerine atla (döngü bozulmasın)
 
                 var appointment = new Appointment
                 {
@@ -100,7 +119,7 @@ namespace VetCrm.Api.Controllers
                     ScheduledAt = utc,               // DB’de UTC sakla
                     Purpose = request.Purpose,
                     DoctorId = request.DoctorId,
-                    VisitId = request.VisitId
+                    VisitId = targetVisit.Id
                 };
 
                 createdAppointments.Add(appointment);
@@ -108,7 +127,7 @@ namespace VetCrm.Api.Controllers
 
                 var reminder = new Reminder
                 {
-                    VisitId = visit.Id,
+                    VisitId = targetVisit.Id,
                     DueDate = scheduledDateOnly,
                     CreatedAt = now,
                     Status = 0,
@@ -141,7 +160,7 @@ namespace VetCrm.Api.Controllers
                     UserId = user.Id,
                     Type = "AppointmentCreated",
                     Message = message,
-                    VisitId = visit.Id,
+                    VisitId = createdAppointments.FirstOrDefault()?.VisitId,
                     CreatedAt = now,
                     IsRead = false
                 });
@@ -152,7 +171,7 @@ namespace VetCrm.Api.Controllers
             return Ok(new
             {
                 appointmentIds = createdAppointments.Select(a => a.Id).ToList(),
-                visitId = visit.Id
+                visitId = createdAppointments.FirstOrDefault()?.VisitId
             });
         }
 
