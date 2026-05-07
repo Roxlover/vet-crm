@@ -2062,6 +2062,46 @@ async function submitAppointment() {
   cursor: pointer;
 }
 
-.expand-enter-active, .expand-leave-active { transition: all 0.3s; max-height: 800px; }
-.expand-enter-from, .expand-leave-to { max-height: 0; opacity: 0; overflow: hidden; }
+.search-container { position: relative; width: 100%; }
+.search-input-wrapper { position: relative; width: 100%; }
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px !important;
+  height: 18px !important;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 5;
+}
+.premium-input.has-icon {
+  padding-left: 2.75rem !important;
+}
+
+.premium-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  z-index: 100;
+  margin-top: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+}
+
+.dropdown-option {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f5f9;
+}
+.dropdown-option:hover { background: #f8fafc; }
+.option-main { font-weight: 700; color: #1e293b; }
+.option-sub { font-size: 0.75rem; color: #64748b; }
 </style>
