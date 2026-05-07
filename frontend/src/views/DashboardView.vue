@@ -1141,30 +1141,33 @@ async function openVisitFromCalendar(event) {
 }
 
 function openNewAppointmentFromCalendar(day) {
+  if (!day || !day.iso) return
+
   selectedDayEvents.value = day.appointments || []
   selectedDayDate.value = day.date
   
+  // Modalı ve Randevu formunu aç
   showDetail.value = true
   detailLoading.value = false
-  selectedReminderId.value = null
-  
-  // Eğer o gün randevu varsa, hemen formu açmayalım, listeyi gösterelim. 
-  // Ama kullanıcı "yeni randevu oluşturulduğunda oraya düşsün" diyorsa formu da görebilir.
   showNewAppointment.value = true 
   
+  // Tarih ve varsayılan saat ayarla
   appointmentDate.value = day.iso
-  appointmentTime.value = ''
+  appointmentTime.value = '11:00'
+  
+  // Formu temizle
   appointmentPurpose.value = ''
   selectedDoctorId.value = null
   selectedPetIds.value = []
-  appointmentMode.value = 'single'
+  appointmentMode.value = 'multiple'
   ownerPets.value = []
   selectedOwnerId.value = null
   selectedOwnerLabel.value = ''
   ownerQuery.value = ''
   ownerResults.value = []
   form.microchipNumber = ''
-  showImagePreview.value = false
+  
+  selectedReminderId.value = null
   selectedVisit.value = null
   activeImageIndex.value = 0
 }
@@ -1577,25 +1580,7 @@ async function submitAppointment() {
 
 }
 
-function openNewAppointmentFromCalendar(day) {
-  if (!day || !day.iso) return
-  
-  // Tıklanan günü seç
-  appointmentDate.value = day.iso
-  // Varsayılan bir saat ata
-  appointmentTime.value = '11:00'
-  
-  // Modalı aç
-  showNewAppointment.value = true
-  
-  // Diğer alanları temizle
-  selectedOwnerId.value = null
-  selectedPetIds.value = []
-  appointmentPurpose.value = ''
-  ownerQuery.value = ''
-  ownerResults.value = []
-  ownerPets.value = []
-}
+
 
 // loadList removed
 
