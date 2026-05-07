@@ -107,6 +107,7 @@
                     v-for="event in day.appointments"
                     :key="event.id"
                     class="event-pill"
+                    :class="{ 'is-visit': event.isVisit }"
                     @click.stop="openVisitFromCalendar(event)"
                   >
                     <span class="time">{{ formatTime(event.scheduledAt) }}</span>
@@ -973,13 +974,20 @@ function buildCalendarWeeks(baseDate, appointments) {
   const start = startOfCalendarGrid(baseDate)
   const weeks = []
 
-  const safeAppointments = (appointments || []).filter(
-    (a) => a && a.scheduledAt
-  )
+  // Normalize data (handle both PascalCase and camelCase from backend)
+  const normalized = (appointments || []).map(a => ({
+    id: a.id ?? a.Id,
+    visitId: a.visitId ?? a.VisitId,
+    scheduledAt: a.scheduledAt ?? a.ScheduledAt,
+    isVisit: a.isVisit ?? a.IsVisit ?? false,
+    petName: a.petName ?? a.PetName ?? '—',
+    ownerName: a.ownerName ?? a.OwnerName ?? '',
+    purpose: a.purpose ?? a.Purpose ?? ''
+  })).filter(a => a.scheduledAt)
 
   const byDate = {}
-  safeAppointments.forEach((a) => {
-  const iso = toIsoDate(new Date(a.scheduledAt))
+  normalized.forEach((a) => {
+    const iso = toIsoDate(new Date(a.scheduledAt))
     if (!byDate[iso]) byDate[iso] = []
     byDate[iso].push(a)
   })
@@ -1750,6 +1758,11 @@ async function submitAppointment() {
 
 .event-pill .time {
   opacity: 0.8;
+}
+
+.event-pill.is-visit {
+  background: #10b981 !important;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2) !important;
 }
 
 /* MODAL REFINEMENTS */
