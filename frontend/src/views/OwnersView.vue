@@ -132,10 +132,23 @@
         <div v-else-if="ownerDetail" class="modal-content">
           <header class="modal-header-section">
             <div class="owner-main-info" style="text-align: center; width: 100%;">
-              <h2>{{ ownerDetail.fullName }}</h2>
-              <div class="contact-pill">
-                <span>Telefon: {{ ownerDetail.phoneE164 }}</span>
-              </div>
+              <template v-if="!ownerEditOpen">
+                <h2>{{ ownerDetail.fullName }}</h2>
+                <div class="contact-pill">
+                  <span>Telefon: {{ ownerDetail.phoneE164 }}</span>
+                  <button class="btn btn-ghost btn-xs" @click="openOwnerEdit" style="margin-left: 1rem;">Düzenle</button>
+                </div>
+              </template>
+              <template v-else>
+                <div class="owner-edit-form" style="max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                  <input v-model="ownerDraft.fullName" class="modern-input" placeholder="Ad Soyad" />
+                  <input v-model="ownerDraft.phoneE164" class="modern-input" placeholder="Telefon" />
+                  <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
+                    <button class="btn btn-text btn-sm" @click="cancelOwnerEdit">İptal</button>
+                    <button class="btn btn-primary-sm" @click="saveOwnerEdit" :disabled="ownerSaving">Kaydet</button>
+                  </div>
+                </div>
+              </template>
             </div>
           </header>
 
@@ -209,15 +222,38 @@
                     class="pet-mini-card clickable"
                     @click="goToPetProfile(p.id)"
                   >
-                    <div class="p-info">
-                      <strong>{{ p.name }}</strong>
-                      <span>{{ p.species }} <template v-if="p.breed">({{ p.breed }})</template></span>
-                    </div>
-                    <div class="p-budget">
-                      <span class="total-badge" title="Toplam Bütçe">Tutar: {{ p.totalAmount?.toFixed(2) }} ₺</span>
-                      <span v-if="p.totalCredit > 0" class="credit-badge" title="Veresiye">Veresiye: {{ p.totalCredit?.toFixed(2) }} ₺</span>
-                    </div>
-                    <button class="delete-icon-btn" @click.stop="removePet(p.id)">Sil</button>
+                    <template v-if="editingPetId !== p.id">
+                      <div class="p-info">
+                        <strong>{{ p.name }}</strong>
+                        <span>{{ p.species }} <template v-if="p.breed">({{ p.breed }})</template></span>
+                      </div>
+                      <div class="p-budget">
+                        <span class="total-badge" title="Toplam Bütçe">Tutar: {{ p.totalAmount?.toFixed(2) }} ₺</span>
+                        <span v-if="p.totalCredit > 0" class="credit-badge" title="Veresiye">Veresiye: {{ p.totalCredit?.toFixed(2) }} ₺</span>
+                      </div>
+                      <div class="p-actions" style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-ghost btn-xs" @click.stop="startEditPet(p)">Düzenle</button>
+                        <button class="delete-icon-btn" @click.stop="removePet(p.id)">Sil</button>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="pet-inline-edit" @click.stop style="width: 100%; display: flex; flex-direction: column; gap: 0.5rem;">
+                        <input v-model="petDraft.name" placeholder="Ad" class="mini-input" />
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                          <input v-model="petDraft.species" placeholder="Tür" class="mini-input" />
+                          <input v-model="petDraft.breed" placeholder="Cins" class="mini-input" />
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                          <input v-model.number="petDraft.ageYears" type="number" placeholder="Yıl" class="mini-input" />
+                          <input v-model.number="petDraft.ageMonths" type="number" placeholder="Ay" class="mini-input" />
+                        </div>
+                        <textarea v-model="petDraft.notes" placeholder="Notlar" class="mini-input" style="min-height: 50px;"></textarea>
+                        <div style="display: flex; gap: 0.5rem;">
+                          <button class="btn btn-text btn-xs" @click="editingPetId = null">İptal</button>
+                          <button class="btn btn-primary-sm btn-xs" @click="savePetEdit">Kaydet</button>
+                        </div>
+                      </div>
+                    </template>
                   </div>
                   <div v-if="!ownerDetail.pets?.length" class="empty-pets-hint">
                     Henüz hayvan kaydı yok.
@@ -256,9 +292,87 @@ const formSuccess = ref('')
 const petAdding = ref(false)
 const petAddError = ref('')
 
-const noteText = ref('')
-const noteAdding = ref(false)
 const noteError = ref('')
+
+const ownerEditOpen = ref(false)
+const ownerSaving = ref(false)
+const ownerDraft = reactive({ fullName: '', phoneE164: '' })
+
+const editingPetId = ref(null)
+const petDraft = reactive({ name: '', species: '', breed: '', ageYears: null, ageMonths: null, notes: '' })
+
+function openOwnerEdit() {
+  if (!ownerDetail.value) return
+  ownerDraft.fullName = ownerDetail.value.fullName
+  ownerDraft.phoneE164 = ownerDetail.value.phoneE164
+  ownerEditOpen.value = true
+}
+
+function cancelOwnerEdit() {
+  ownerEditOpen.value = false
+}
+
+async function saveOwnerEdit() {
+  if (!selectedOwner.value) return
+  ownerSaving.value = true
+  try {
+    const payload = {
+      fullName: ownerDraft.fullName,
+      phoneE164: ownerDraft.phoneE164,
+      email: ownerDetail.value.email,
+      address: ownerDetail.value.address,
+      kvkkOptIn: ownerDetail.value.kvkkOptIn
+    }
+    const { http } = await import('@/api/http')
+    await http.put(`/owners/${selectedOwner.value}`, payload)
+    
+    // Refresh
+    const res = await fetchOwner(selectedOwner.value)
+    ownerDetail.value = res?.data ?? res
+    await loadOwners()
+    ownerEditOpen.value = false
+  } catch (err) {
+    console.error(err)
+    alert('Sahip bilgileri güncellenirken hata oluştu.')
+  } finally {
+    ownerSaving.value = false
+  }
+}
+
+function startEditPet(pet) {
+  editingPetId.value = pet.id
+  petDraft.name = pet.name
+  petDraft.species = pet.species
+  petDraft.breed = pet.breed
+  petDraft.ageYears = pet.ageYears
+  petDraft.ageMonths = pet.ageMonths
+  petDraft.notes = pet.notes
+}
+
+async function savePetEdit() {
+  if (!editingPetId.value) return
+  try {
+    const payload = {
+      name: petDraft.name,
+      species: petDraft.species,
+      breed: petDraft.breed,
+      birthDate: ownerDetail.value.pets.find(p => p.id === editingPetId.value)?.birthDate,
+      notes: petDraft.notes,
+      ageYears: petDraft.ageYears,
+      ageMonths: petDraft.ageMonths
+    }
+    const { http } = await import('@/api/http')
+    await http.put(`/pets/${editingPetId.value}`, payload)
+    
+    // Refresh
+    const res = await fetchOwner(selectedOwner.value)
+    ownerDetail.value = res?.data ?? res
+    editingPetId.value = null
+  } catch (err) {
+    console.error(err)
+    alert('Pet bilgileri güncellenirken hata oluştu.')
+  }
+}
 
 const form = reactive({
   fullName: '',

@@ -156,6 +156,45 @@ namespace VetCrm.Api.Controllers
             });
         }
 
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateAppointmentRequest request)
+        {
+            if (request == null) return BadRequest();
+
+            var appointment = await _db.Appointments.FindAsync(id);
+            if (appointment == null) return NotFound();
+
+            var utc = EnsureUtc(request.ScheduledAt);
+            appointment.ScheduledAt = utc;
+            appointment.Purpose = request.Purpose;
+            appointment.DoctorId = request.DoctorId;
+
+            // Eğer bir Visit'e bağlıysa, Visit'in NextDate bilgisini de güncellemeliyiz
+            if (appointment.VisitId.HasValue)
+            {
+                var visit = await _db.Visits.FindAsync(appointment.VisitId.Value);
+                if (visit != null)
+                {
+                    var localIstanbul = UtcToIstanbul(utc);
+                    visit.NextDate = DateOnly.FromDateTime(localIstanbul);
+                }
+            }
+
+            await _db.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var appointment = await _db.Appointments.FindAsync(id);
+            if (appointment == null) return NotFound();
+
+            _db.Appointments.Remove(appointment);
+            await _db.SaveChangesAsync();
+            return NoContent();
+        }
+
         private static DateTime EnsureUtc(DateTime dt)
         {
             if (dt.Kind == DateTimeKind.Utc) return dt;
@@ -182,5 +221,12 @@ namespace VetCrm.Api.Controllers
             var end = 19 * 60 + 30;
             return minutes >= start && minutes <= end;
         }
+    }
+
+    public class UpdateAppointmentRequest
+    {
+        public DateTime ScheduledAt { get; set; }
+        public string? Purpose { get; set; }
+        public int? DoctorId { get; set; }
     }
 }

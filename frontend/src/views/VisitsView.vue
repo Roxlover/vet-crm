@@ -36,7 +36,7 @@
         </div>
 
         <div v-else class="visit-list">
-          <div v-for="visit in visits" :key="visit.id" class="visit-card">
+          <div v-for="visit in visits" :key="visit.id" class="visit-card" @click="openVisitDetail(visit)">
             <div class="visit-header">
               <div>
                 <span class="pet-name">{{ visit.petName }}</span>
@@ -152,6 +152,106 @@
         <p v-if="success" class="state state-success" style="margin-top: 1rem;">{{ success }}</p>
       </div>
     </div>
+
+    <!-- VISIT DETAIL MODAL -->
+    <div v-if="showDetailModal" class="modal-overlay" @click.self="closeDetailModal">
+      <div class="modern-modal" @click.stop>
+        <header class="modal-header">
+          <div class="header-info">
+            <template v-if="!visitEditOpen">
+              <h2>
+                <span class="pet-name">{{ selectedVisit?.petName }}</span>
+                <span class="owner-name">{{ selectedVisit?.ownerName }}</span>
+              </h2>
+            </template>
+            <template v-else>
+              <h2 class="edit-title">Kayıt Düzenleme</h2>
+            </template>
+          </div>
+          <button class="modal-close-btn" @click="closeDetailModal">✕</button>
+        </header>
+
+        <div class="modal-body" v-if="selectedVisit">
+          <div class="section-header-row">
+            <h3 class="section-subtitle">Ziyaret Bilgileri</h3>
+            <div class="header-actions">
+              <button v-if="!visitEditOpen" class="btn btn-ghost btn-xs" @click="openVisitEdit">Düzenle</button>
+              <div v-else class="edit-actions" style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-text btn-xs" @click="cancelVisitEdit">İptal</button>
+                <button class="btn btn-primary-sm btn-xs" @click="saveVisitEdit" :disabled="visitSaving">
+                  {{ visitSaving ? '...' : 'Kaydet' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <template v-if="visitEditOpen && visitDraft">
+              <div class="detail-item">
+                <label>Pet Adı</label>
+                <input type="text" v-model="visitDraft.petName" class="modern-input" />
+              </div>
+              <div class="detail-item">
+                <label>Pet Türü</label>
+                <input type="text" v-model="visitDraft.petSpecies" class="modern-input" />
+              </div>
+              <div class="detail-item">
+                <label>Hasta Sahibi</label>
+                <input type="text" v-model="visitDraft.ownerName" class="modern-input" />
+              </div>
+              <div class="detail-item">
+                <label>Sahip Telefon</label>
+                <input type="text" v-model="visitDraft.ownerPhone" class="modern-input" />
+              </div>
+            </template>
+
+            <div class="detail-item full" style="grid-column: span 2;">
+              <label>İşlem Tarihi</label>
+              <div v-if="!visitEditOpen" class="val">{{ new Date(selectedVisit.performedAt).toLocaleString('tr-TR') }}</div>
+              <input v-else-if="visitDraft" type="datetime-local" v-model="visitDraft.performedAt" class="modern-input" />
+            </div>
+
+            <div class="detail-item" style="grid-column: span 2;">
+              <label>Yapılan İşlemler</label>
+              <div v-if="!visitEditOpen" class="val highlight">{{ selectedVisit.procedures || '—' }}</div>
+              <textarea v-else-if="visitDraft" v-model="visitDraft.procedures" class="modern-input" rows="3"></textarea>
+            </div>
+
+            <div class="detail-item">
+              <label>Ziyaret Tutarı (TL)</label>
+              <div v-if="!visitEditOpen" class="val">{{ selectedVisit.amountTl }} TL</div>
+              <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.amountTl" class="modern-input" />
+            </div>
+
+            <div class="detail-item">
+              <label>Veresiye (TL)</label>
+              <div v-if="!visitEditOpen" class="val">{{ selectedVisit.creditAmountTl || 0 }} TL</div>
+              <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.creditAmountTl" class="modern-input" />
+            </div>
+
+            <div class="detail-item full" style="grid-column: span 2;">
+              <label>Notlar</label>
+              <div v-if="!visitEditOpen" class="val">{{ selectedVisit.notes || '—' }}</div>
+              <textarea v-else-if="visitDraft" v-model="visitDraft.notes" class="modern-input" rows="2"></textarea>
+            </div>
+          </div>
+
+          <!-- BİLANÇO HIZLI TIKLA -->
+          <div class="finance-card" style="margin-top: 2rem; background: #f8fafc; padding: 1.5rem; border-radius: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <span style="font-size: 0.8rem; color: #64748b; display: block;">Kalan Veresiye</span>
+                <strong style="font-size: 1.25rem; color: var(--danger);">₺{{ selectedVisit.creditAmountTl || 0 }}</strong>
+              </div>
+              <div style="text-align: right;">
+                <span style="font-size: 0.8rem; color: #64748b; display: block;">Tahsil Edilen</span>
+                <strong style="font-size: 1.25rem; color: var(--success);">₺{{ selectedVisit.collectedAmountTl || 0 }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -178,16 +278,107 @@ const error = ref('')
 const success = ref('')
 const saving = ref(false)
 
-const form = reactive({
-  procedures: '',
-  vaccines: '',
-  performedAt: new Date().toISOString().substr(0, 16),
-  creditAmountTl: '',
-  amountTl: null,
-  notes: '',
-  imageFiles: [],
   microchipNumber: '',
 })
+
+const showDetailModal = ref(false)
+const selectedVisit = ref(null)
+const visitEditOpen = ref(false)
+const visitSaving = ref(false)
+const visitDraft = ref(null)
+
+async function openVisitDetail(v) {
+  loading.value = true
+  try {
+    const res = await http.get(`/visits/${v.id}`)
+    selectedVisit.value = res.data
+    showDetailModal.value = true
+  } catch (err) {
+    console.error(err)
+    alert('Ziyaret detayı yüklenemedi.')
+  } finally {
+    loading.value = false
+  }
+}
+
+function closeDetailModal() {
+  showDetailModal.value = false
+  selectedVisit.value = null
+  visitEditOpen.value = false
+  visitDraft.value = null
+}
+
+function openVisitEdit() {
+  if (!selectedVisit.value) return
+  const v = selectedVisit.value
+  visitDraft.value = {
+    performedAt: new Date(v.performedAt).toISOString().substr(0, 16),
+    procedures: v.procedures || '',
+    notes: v.notes || '',
+    amountTl: v.amountTl || 0,
+    creditAmountTl: v.creditAmountTl || 0,
+    petName: v.petName || '',
+    petSpecies: v.species || v.petSpecies || '',
+    ownerName: v.ownerName || '',
+    ownerPhone: v.phoneE164 || v.ownerPhone || '',
+  }
+  visitEditOpen.value = true
+}
+
+function cancelVisitEdit() {
+  visitEditOpen.value = false
+  visitDraft.value = null
+}
+
+async function saveVisitEdit() {
+  if (!selectedVisit.value || !visitDraft.value) return
+  visitSaving.value = true
+  try {
+    const v = selectedVisit.value
+    
+    // 1. Pet update
+    if (v.petId) {
+      await http.put(`/pets/${v.petId}`, {
+        name: visitDraft.value.petName,
+        species: visitDraft.value.petSpecies,
+        breed: v.breed,
+        birthDate: v.birthDate,
+        notes: v.petNotes || ''
+      })
+    }
+    
+    // 2. Owner update
+    if (v.ownerId) {
+      await http.put(`/owners/${v.ownerId}`, {
+        fullName: visitDraft.value.ownerName,
+        phoneE164: visitDraft.value.ownerPhone,
+        kvkkOptIn: true
+      })
+    }
+    
+    // 3. Visit update
+    await http.put(`/visits/${v.id}`, {
+      performedAt: new Date(visitDraft.value.performedAt).toISOString(),
+      procedures: visitDraft.value.procedures,
+      amountTl: visitDraft.value.amountTl,
+      creditAmountTl: visitDraft.value.creditAmountTl,
+      notes: visitDraft.value.notes,
+      nextDate: v.nextDate,
+      purpose: v.purpose
+    })
+    
+    // Refresh
+    const res = await http.get(`/visits/${v.id}`)
+    selectedVisit.value = res.data
+    visitEditOpen.value = false
+    loadVisits()
+  } catch (err) {
+    console.error(err)
+    alert('Güncelleme sırasında hata oluştu.')
+  } finally {
+    visitSaving.value = false
+  }
+}
 
 const ownerQuery = ref('')
 const ownerDropdownOpen = ref(false)
@@ -766,4 +957,78 @@ onBeforeUnmount(() => {
   border-color: var(--primary);
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
 }
+.visit-card {
+  cursor: pointer;
+}
+
+/* MODAL STYLES (MATCHING DASHBOARD) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.modern-modal {
+  background: #ffffff;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 { font-size: 1.25rem; font-weight: 800; display: flex; flex-direction: column; }
+.modal-header .pet-name { color: var(--primary); }
+.modal-header .owner-name { font-size: 0.85rem; color: #64748b; }
+
+.modal-close-btn {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.modal-body { padding: 2rem; overflow-y: auto; }
+
+.section-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.section-subtitle { font-weight: 800; color: #1e293b; }
+
+.detail-item { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+.detail-item label { font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+.detail-item .val { font-weight: 600; color: #334155; }
+.detail-item .val.highlight { color: var(--primary); }
+
+.modern-input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-family: inherit;
+}
+
+.modern-input:focus { border-color: var(--primary); outline: none; background: #fff; }
+
+.btn-primary-sm { background: var(--primary); color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.btn-text { background: transparent; border: none; color: #64748b; font-weight: 600; cursor: pointer; }
+.btn-xs { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
 </style>

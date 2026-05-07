@@ -118,15 +118,76 @@
               </div>
 
               <div class="visit-content">
-                <div class="procedure-block">
-                  <label>Uygulanan İşlemler</label>
-                  <p>{{ v.procedures || v.Procedures || 'İşlem kaydı girilmemiş.' }}</p>
+                <!-- DÜZENLEME MODU (ZİYARET) -->
+                <div v-if="visitEditId === (v.visitId || v.VisitId || v.id)" class="visit-edit-box" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--primary-light);">
+                  <div class="edit-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">PET ADI</label>
+                      <input v-model="visitDraft.petName" class="edit-input" />
+                    </div>
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">PET TÜRÜ</label>
+                      <input v-model="visitDraft.petSpecies" class="edit-input" />
+                    </div>
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">HASTA SAHİBİ</label>
+                      <input v-model="visitDraft.ownerName" class="edit-input" />
+                    </div>
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">SAHİP TELEFON</label>
+                      <input v-model="visitDraft.ownerPhone" class="edit-input" />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">İŞLEM TARİHİ</label>
+                    <input type="datetime-local" v-model="visitDraft.performedAt" class="edit-input" />
+                  </div>
+                  
+                  <div class="field">
+                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">UYGULANAN İŞLEMLER</label>
+                    <textarea v-model="visitDraft.procedures" class="edit-input" rows="3"></textarea>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">TUTAR (TL)</label>
+                      <input type="number" v-model.number="visitDraft.amountTl" class="edit-input" />
+                    </div>
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">VERESİYE (TL)</label>
+                      <input type="number" v-model.number="visitDraft.creditAmountTl" class="edit-input" />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">NOTLAR</label>
+                    <textarea v-model="visitDraft.notes" class="edit-input" rows="2"></textarea>
+                  </div>
+
+                  <div class="edit-actions" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button class="btn btn-ghost" @click="cancelVisitEdit">İptal</button>
+                    <button class="btn btn-primary" @click="saveVisitEdit(v)" :disabled="visitSaving">
+                      {{ visitSaving ? '...' : 'Kaydet' }}
+                    </button>
+                  </div>
                 </div>
-                
-                <div v-if="v.notes || v.Notes" class="notes-block">
-                  <label>Hekim Notu</label>
-                  <p>{{ v.notes || v.Notes }}</p>
-                </div>
+
+                <template v-else>
+                  <div class="procedure-block">
+                    <label>Uygulanan İşlemler</label>
+                    <p>{{ v.procedures || v.Procedures || 'İşlem kaydı girilmemiş.' }}</p>
+                  </div>
+                  
+                  <div v-if="v.notes || v.Notes" class="notes-block">
+                    <label>Hekim Notu</label>
+                    <p>{{ v.notes || v.Notes }}</p>
+                  </div>
+
+                  <div style="margin-top: 1rem;">
+                    <button class="btn btn-secondary btn-sm" @click="openVisitEdit(v)">Düzenle</button>
+                  </div>
+                </template>
 
                 <div v-if="getVisitImages(v).length" class="visit-gallery">
                   <div class="gallery-grid">
@@ -217,6 +278,12 @@ function toVisitDraft(v) {
     amountTl: v.amountTl ?? v.AmountTl ?? null,
     notes: v.notes || v.Notes || '',
     creditAmountTl: Number(v.creditAmountTl ?? v.CreditAmountTl ?? 0),
+
+    // Pet & Owner Info
+    petName: v.petName ?? v.PetName ?? '',
+    petSpecies: v.species ?? v.Species ?? v.petSpecies ?? v.PetSpecies ?? '',
+    ownerName: v.ownerName ?? v.OwnerName ?? '',
+    ownerPhone: v.phoneE164 ?? v.PhoneE164 ?? v.ownerPhone ?? v.OwnerPhone ?? '',
   }
 }
 
@@ -233,32 +300,52 @@ function cancelVisitEdit() {
 }
 
 async function saveVisitEdit(v) {
-  const visitId = v?.visitId || v?.VisitId
+  const visitId = v?.visitId || v?.VisitId || v?.id
   if (!visitId || !visitDraft.value) return
   visitSaving.value = true
   try {
+    // 1) Update Pet if changed
+    const petId = profile.value.id
+    if (petId) {
+      await http.put(`/pets/${petId}`, {
+        name: visitDraft.value.petName,
+        species: visitDraft.value.petSpecies,
+        breed: profile.value.breed,
+        birthDate: profile.value.birthDate,
+        notes: profile.value.notes || ''
+      })
+    }
+
+    // 2) Update Owner if changed
+    const ownerId = profile.value.ownerId
+    if (ownerId) {
+      await http.put(`/owners/${ownerId}`, {
+        fullName: visitDraft.value.ownerName,
+        phoneE164: visitDraft.value.ownerPhone,
+        kvkkOptIn: true
+      })
+    }
+
+    // 3) Update Visit
     const payload = {
       performedAt: new Date(visitDraft.value.performedAt).toISOString(),
       procedures: visitDraft.value.procedures.trim() || null,
       amountTl: visitDraft.value.amountTl,
       notes: visitDraft.value.notes.trim() || null,
       purpose: visitDraft.value.purpose.trim() || null,
+      nextDate: v.nextDate || v.NextDate || null,
     }
     await http.put(`/visits/${visitId}`, payload)
+    
     const credit = Number(visitDraft.value.creditAmountTl ?? 0)
     await http.patch(`/visits/${visitId}/credit`, { creditAmountTl: credit })
     
-    // Local update
-    const visits = profile.value.visits || profile.value.Visits || []
-    const idx = visits.findIndex(x => (x.visitId || x.VisitId) === visitId)
-    if (idx >= 0) {
-      const updated = { ...visits[idx], ...payload, creditAmountTl: credit }
-      if (profile.value.visits) profile.value.visits[idx] = updated
-      if (profile.value.Visits) profile.value.Visits[idx] = updated
-    }
+    // Refresh
+    await openPet(selectedPetId.value)
     cancelVisitEdit()
   } catch (e) {
-    visitSaveError.value = 'Ziyaret güncellenemedi.'
+    console.error(e)
+    visitSaveError.value = 'Güncellenemedi.'
   } finally {
     visitSaving.value = false
   }

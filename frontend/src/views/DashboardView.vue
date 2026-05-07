@@ -128,8 +128,13 @@
       <header class="modal-header">
         <div class="header-info">
           <h2 v-if="!showNewAppointment">
-            <span class="pet-name">{{ selectedVisit?.petName || 'Ziyaret Detayı' }}</span>
-            <span class="owner-name">{{ selectedVisit?.ownerName }}</span>
+            <template v-if="!visitEditOpen">
+              <span class="pet-name">{{ selectedVisit?.petName || 'Ziyaret Detayı' }}</span>
+              <span class="owner-name">{{ selectedVisit?.ownerName }}</span>
+            </template>
+            <template v-else>
+              <span class="edit-title">Kayıt Düzenleme</span>
+            </template>
           </h2>
           <h2 v-else>Yeni Randevu Kaydı</h2>
         </div>
@@ -184,6 +189,26 @@
             </div>
 
             <div class="detail-grid">
+              <!-- HASTA & SAHİBİ (DÜZENLEME MODUNDA GÖRÜNÜR) -->
+              <template v-if="visitEditOpen && visitDraft">
+                <div class="detail-item">
+                  <label>Pet Adı</label>
+                  <input type="text" v-model="visitDraft.petName" class="modern-input" />
+                </div>
+                <div class="detail-item">
+                  <label>Pet Türü</label>
+                  <input type="text" v-model="visitDraft.petSpecies" class="modern-input" />
+                </div>
+                <div class="detail-item">
+                  <label>Hasta Sahibi</label>
+                  <input type="text" v-model="visitDraft.ownerName" class="modern-input" />
+                </div>
+                <div class="detail-item">
+                  <label>Sahip Telefon</label>
+                  <input type="text" v-model="visitDraft.ownerPhone" class="modern-input" />
+                </div>
+              </template>
+
               <div class="detail-item full">
                 <label>İşlem Tarihi</label>
                 <div v-if="!visitEditOpen && selectedVisit" class="val">{{ selectedVisit.performedAt }}</div>
@@ -203,13 +228,16 @@
               </div>
 
               <div class="detail-item">
-                <label>Tutar</label>
+                <label>Bilanço (Ziyaret Tutarı)</label>
                 <div v-if="!visitEditOpen" class="val currency">{{ selectedVisit?.amountTl ?? '0' }} TL</div>
-                <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.amountTl" class="modern-input" />
+                <div v-else-if="visitDraft" class="input-with-suffix">
+                  <input type="number" v-model.number="visitDraft.amountTl" class="modern-input" />
+                  <span class="suffix">TL</span>
+                </div>
               </div>
 
               <div class="detail-item full">
-                <label>Notlar</label>
+                <label>Ziyaret Notları</label>
                 <div v-if="!visitEditOpen" class="val">{{ selectedVisit?.notes || '—' }}</div>
                 <textarea v-else-if="visitDraft" v-model="visitDraft.notes" class="modern-input" rows="2"></textarea>
               </div>
@@ -262,6 +290,30 @@
                 </div>
               </div>
               <p v-else class="empty-hint">Bu ziyarete ait görsel yok.</p>
+            </div>
+
+            <!-- 2.5 GELECEK RANDEVULAR (PLANS) -->
+            <div v-if="selectedVisit?.plans?.length" class="modal-section plans-section" style="margin-top: 2rem;">
+              <h3 class="section-subtitle">Gelecek Randevular</h3>
+              <div class="plans-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                <div v-for="plan in selectedVisit.plans" :key="plan.id" class="plan-card" style="background: #f8fafc; padding: 1rem; border-radius: 16px; border: 1px solid #e2e8f0;">
+                  <template v-if="editingPlanId !== plan.id">
+                    <div style="font-weight: 800; color: var(--primary);">{{ plan.date }}</div>
+                    <div style="font-size: 0.9rem; margin-top: 0.25rem;">{{ plan.purpose || 'Kontrol' }}</div>
+                    <button class="btn btn-ghost btn-xs" @click="startEditPlan(plan)" style="margin-top: 0.5rem; width: 100%;">Düzenle</button>
+                  </template>
+                  <template v-else>
+                    <div class="plan-edit-form" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                      <input type="date" v-model="planDraft.date" class="modern-input" />
+                      <input type="text" v-model="planDraft.purpose" placeholder="Amaç" class="modern-input" />
+                      <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-text btn-xs" @click="editingPlanId = null" style="flex: 1;">İptal</button>
+                        <button class="btn btn-primary-sm btn-xs" @click="savePlanEdit(plan.id)" style="flex: 1;">Kaydet</button>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -413,6 +465,39 @@ const visitEditOpen = ref(false)
 const visitDraft = ref(null)
 const visitSaveError = ref('')
 const visitSaving = ref(false)
+
+const editingPlanId = ref(null)
+const planDraft = reactive({ date: '', purpose: '' })
+
+function startEditPlan(plan) {
+  editingPlanId.value = plan.id
+  planDraft.date = plan.date
+  planDraft.purpose = plan.purpose
+}
+
+async function savePlanEdit(planId) {
+  try {
+    const payload = {
+      scheduledAt: new Date(planDraft.date).toISOString(), // Not: AppointmentsController UTC bekliyor
+      purpose: planDraft.purpose,
+      doctorId: selectedVisit.value.doctorId
+    }
+    // Aslında appointment'lar farklı bir controller'dan yönetiliyor. 
+    // PlanId burada AppointmentId ile eşleşiyor mu? Evet, SyncRemindersForVisit bunu sağlıyor.
+    await http.put(`/appointments/${planId}`, payload)
+    
+    // Refresh
+    const visitId = selectedVisit.value?.id || selectedVisit.value?.Id
+    const res = await fetchVisitDetail(visitId)
+    selectedVisit.value = res.data ?? res
+    editingPlanId.value = null
+    
+    await loadCalendarForMonth(currentMonth.value)
+  } catch (err) {
+    console.error(err)
+    alert('Randevu güncellenirken hata oluştu.')
+  }
+}
 
 const showDetail = ref(false)
 const detailLoading = ref(false)
@@ -610,7 +695,6 @@ function toVisitDraft(v) {
   if (!v) return null
 
   const performedAt = v.performedAt ?? v.PerformedAt ?? ''
-  // datetime-local input için: ISO geldiyse "YYYY-MM-DDTHH:mm" formatına kırpacağız
   const dtLocal = performedAt ? String(performedAt).slice(0, 16) : ''
 
   return {
@@ -619,8 +703,13 @@ function toVisitDraft(v) {
     procedures: v.procedures ?? v.Procedures ?? '',
     notes: v.notes ?? v.Notes ?? '',
     amountTl: v.amountTl ?? v.AmountTl ?? null,
+    
+    // Pet & Owner Info for editing
+    petName: v.petName ?? v.PetName ?? '',
+    petSpecies: v.petSpecies ?? v.PetSpecies ?? v.species ?? v.Species ?? '',
+    ownerName: v.ownerName ?? v.OwnerName ?? '',
+    ownerPhone: v.ownerPhone ?? v.OwnerPhone ?? v.phoneE164 ?? v.PhoneE164 ?? '',
 
-    // PUT DTO’da bunlar varsa null basmamak için taşıyoruz:
     nextDate: v.nextDate ?? v.NextDate ?? null,
     purpose: v.purpose ?? v.Purpose ?? null,
     plans: v.plans ?? v.Plans ?? null,
@@ -655,25 +744,47 @@ async function saveVisitEdit() {
   visitSaveError.value = ''
 
   try {
-    // amount normalize
+    // 1) Update Pet if changed
+    const petId = selectedVisit.value?.petId || selectedVisit.value?.PetId
+    if (petId) {
+      const petPayload = {
+        name: visitDraft.value.petName,
+        species: visitDraft.value.petSpecies,
+        // Diğer alanları korumak için mevcutları gönderiyoruz (Backend DTO gereği)
+        breed: selectedVisit.value.breed || selectedVisit.value.Breed,
+        birthDate: selectedVisit.value.birthDate || selectedVisit.value.BirthDate,
+        notes: selectedVisit.value.petNotes || selectedVisit.value.PetNotes || ''
+      }
+      await http.put(`/pets/${petId}`, petPayload)
+    }
+
+    // 2) Update Owner if changed
+    const ownerId = selectedVisit.value?.ownerId || selectedVisit.value?.OwnerId
+    if (ownerId) {
+      const ownerPayload = {
+        fullName: visitDraft.value.ownerName,
+        phoneE164: visitDraft.value.ownerPhone,
+        email: selectedVisit.value.ownerEmail || selectedVisit.value.OwnerEmail,
+        address: selectedVisit.value.ownerAddress || selectedVisit.value.OwnerAddress,
+        kvkkOptIn: true
+      }
+      await http.put(`/owners/${ownerId}`, ownerPayload)
+    }
+
+    // 3) Update Visit
     const rawAmount = visitDraft.value.amountTl
     const amount =
       rawAmount === '' || rawAmount == null
         ? null
         : Number(String(rawAmount).replace(',', '.'))
 
-    if (amount !== null && (Number.isNaN(amount) || amount < 0)) {
-      visitSaveError.value = 'Tutar geçersiz.'
+    const performedAtLocal = (visitDraft.value.performedAt ?? '').toString().trim()
+    if (!performedAtLocal) {
+      visitSaveError.value = 'Yapılan işlem tarihi zorunludur.'
+      visitSaving.value = false
       return
     }
-
-    const performedAtLocal = (visitDraft.value.performedAt ?? '').toString().trim()
-if (!performedAtLocal) {
-  visitSaveError.value = 'Yapılan işlem tarihi zorunludur.'
-  visitSaving.value = false
-  return
-}
-const performedAt = `${performedAtLocal}:00`
+    const performedAt = performedAtLocal.length === 16 ? `${performedAtLocal}:00` : performedAtLocal
 
     const payload = {
       performedAt,
@@ -681,17 +792,9 @@ const performedAt = `${performedAtLocal}:00`
       procedures: visitDraft.value.procedures || null,
       notes: visitDraft.value.notes || null,
       amountTl: amount,
-
-      // Bunlar DTO’da varsa null’a düşmesin diye taşı:
       nextDate: visitDraft.value.nextDate ?? (selectedVisit.value?.nextDate ?? selectedVisit.value?.NextDate ?? null),
       purpose: visitDraft.value.purpose ?? (selectedVisit.value?.purpose ?? selectedVisit.value?.Purpose ?? null),
-      plans:
-  visitDraft.value.plans ??
-  selectedVisit.value?.plans ??
-  selectedVisit.value?.Plans ??
-  selectedVisit.value?.nextVisits ??
-  selectedVisit.value?.NextVisits ??
-  null,
+      plans: visitDraft.value.plans ?? selectedVisit.value?.plans ?? selectedVisit.value?.Plans ?? null,
     }
 
     await http.put(`/visits/${visitId}`, payload)
@@ -702,7 +805,6 @@ const performedAt = `${performedAtLocal}:00`
     selectedVisit.value = fresh
     visitDetail.value = fresh
 
-    // Dashboard ve Takvimi tazele
     await loadStats()
     await loadCalendarForMonth(currentMonth.value)
 
@@ -711,10 +813,7 @@ const performedAt = `${performedAtLocal}:00`
   } catch (e) {
     console.error('[VISIT_EDIT] save error', e)
     const msg = e?.response?.data
-    visitSaveError.value =
-      typeof msg === 'string'
-        ? msg
-        : (msg?.message || 'Ziyaret güncellenemedi.')
+    visitSaveError.value = typeof msg === 'string' ? msg : (msg?.message || 'Güncelleme sırasında bir hata oluştu.')
   } finally {
     visitSaving.value = false
   }
