@@ -1,5 +1,9 @@
 using System.Text;
 using Hangfire;
+
+// ✅ Fix for Npgsql 6.0+ DateTime issue (prevents 500 error when comparing local/UTC dates)
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
