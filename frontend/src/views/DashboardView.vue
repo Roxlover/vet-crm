@@ -403,6 +403,30 @@
                       </select>
                     </div>
                   </div>
+
+                  <!-- NEW: Financial & Clinical Info -->
+                  <div class="form-divider"><span>Klinik & Finansal (Opsiyonel)</span></div>
+
+                  <div class="form-group">
+                    <label>Yapılan İşlemler</label>
+                    <textarea v-model="appointmentProcedures" class="premium-input" rows="2" placeholder="Aşı, parazit, tıraş vb."></textarea>
+                  </div>
+
+                  <div class="form-group split">
+                    <div class="field-item">
+                      <label>Toplam Tutar (TL)</label>
+                      <input type="number" v-model.number="appointmentAmount" class="premium-input" placeholder="0" />
+                    </div>
+                    <div class="field-item">
+                      <label>Veresiye (TL)</label>
+                      <input type="number" v-model.number="appointmentCredit" class="premium-input" placeholder="0" />
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Notlar</label>
+                    <textarea v-model="appointmentNotes" class="premium-input" rows="2" placeholder="Özel notlar..."></textarea>
+                  </div>
                 </div>
 
                 <div class="form-footer-actions">
@@ -550,10 +574,12 @@ const collectedShown = computed(() =>
 const ownerPets = ref([])
 const showNewAppointment = ref(false)
 const appointmentDate = ref('')
-const appointmentTime = ref('')
-const appointmentPurpose = ref('')
 const selectedPetIds = ref([])
 const appointmentMode = ref('multiple')
+const appointmentAmount = ref(null)
+const appointmentCredit = ref(null)
+const appointmentProcedures = ref('')
+const appointmentNotes = ref('')
 
 const selectedDayEvents = ref([])
 const selectedDayDate = ref(null)
@@ -1080,9 +1106,14 @@ function openNewAppointmentFromCalendar(day) {
   ownerPets.value = []
   selectedOwnerId.value = null
   selectedOwnerLabel.value = ''
-  ownerQuery.value = ''
   ownerResults.value = []
   form.microchipNumber = ''
+  
+  // Yeni alanları temizle
+  appointmentProcedures.value = ''
+  appointmentAmount.value = null
+  appointmentCredit.value = null
+  appointmentNotes.value = ''
   
   selectedReminderId.value = null
   selectedVisit.value = null
@@ -1490,6 +1521,10 @@ async function submitAppointment() {
     doctorId: selectedDoctorId.value || null,
     visitId: selectedVisit.value ? selectedVisit.value.id : null,
     microchipNumber: form.microchipNumber || null,
+    procedures: appointmentProcedures.value || null,
+    amountTl: appointmentAmount.value || null,
+    creditAmountTl: appointmentCredit.value || null,
+    notes: appointmentNotes.value || null
   }
 
 
@@ -2315,4 +2350,28 @@ async function submitAppointment() {
 .dropdown-option:hover { background: #f8fafc; }
 .option-main { font-weight: 700; color: #1e293b; }
 .option-sub { font-size: 0.75rem; color: #64748b; }
+
+.form-divider {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.5rem 0 1rem;
+}
+
+.form-divider span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.form-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #f1f5f9;
+}
 </style>

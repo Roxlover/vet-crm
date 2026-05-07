@@ -10,5 +10,11 @@ namespace VetCrm.Api.Dtos
         public int? CreatedByUserId { get; set; }
         public int? VisitId { get; set; }
         public string? MicrochipNumber { get; set; }
-}
+        
+        // Yeni alanlar: Randevu oluştururken finansal/klinik bilgi girişi için
+        public decimal? AmountTl { get; set; }
+        public decimal? CreditAmountTl { get; set; }
+        public string? Procedures { get; set; }
+        public string? Notes { get; set; }
+    }
 }

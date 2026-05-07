@@ -86,13 +86,25 @@ namespace VetCrm.Api.Controllers
                             PetId = petId,
                             PerformedAt = utc,
                             Purpose = request.Purpose,
-                            Status = Visit.VisitStatus.Pending,
+                            Procedures = request.Procedures,
+                            AmountTl = request.AmountTl,
+                            CreditAmountTl = request.CreditAmountTl,
+                            Notes = request.Notes,
+                            Status = (request.AmountTl > 0) ? Visit.VisitStatus.Completed : Visit.VisitStatus.Pending,
                             CreatedByUserId = currentUserId,
                             CreatedByUsername = _currentUser.Username,
                             CreatedByName = _currentUser.FullName,
                             NextDate = scheduledDateOnly
                         };
                         _db.Visits.Add(targetVisit);
+                    }
+                    else
+                    {
+                        // Mevcut visit varsa bilgileri güncelle (opsiyonel ama mantıklı)
+                        if (request.AmountTl.HasValue) targetVisit.AmountTl = request.AmountTl;
+                        if (request.CreditAmountTl.HasValue) targetVisit.CreditAmountTl = request.CreditAmountTl;
+                        if (!string.IsNullOrWhiteSpace(request.Procedures)) targetVisit.Procedures = request.Procedures;
+                        if (!string.IsNullOrWhiteSpace(request.Notes)) targetVisit.Notes = request.Notes;
                     }
 
                     var appointment = new Appointment
@@ -144,6 +156,12 @@ namespace VetCrm.Api.Controllers
                         CreatedAt = now,
                         IsRead = false
                     });
+                }
+                
+                // ✅ Sync Ledger for each visit
+                foreach (var v in createdAppointments.Select(a => a.Visit).Distinct())
+                {
+                    if (v != null) await SyncLedgerForVisit(v);
                 }
 
                 await _db.SaveChangesAsync();
@@ -221,12 +239,52 @@ namespace VetCrm.Api.Controllers
             return TimeZoneInfo.ConvertTimeFromUtc(utc, tz);
         }
 
-        private static bool IsWithinWorkingHours(DateTime localIstanbul)
+        private async Task SyncLedgerForVisit(Visit visit)
         {
-            var minutes = localIstanbul.Hour * 60 + localIstanbul.Minute;
-            var start = 10 * 60 + 30;
-            var end = 19 * 60 + 30;
-            return minutes >= start && minutes <= end;
+            var userId = _currentUser.UserId ?? visit.CreatedByUserId;
+            if (!userId.HasValue) return;
+
+            var existing = await _db.LedgerEntries
+                .Where(x => x.VisitId == visit.Id && x.Category == "Visit")
+                .ToListAsync();
+
+            var total = visit.AmountTl ?? 0m;
+            var credit = visit.CreditAmountTl ?? 0m;
+            var income = Math.Max(0m, total - credit);
+
+            if (visit.Status != Visit.VisitStatus.Completed || income <= 0m)
+            {
+                if (existing.Any())
+                {
+                    _db.LedgerEntries.RemoveRange(existing);
+                }
+                return;
+            }
+
+            if (!existing.Any())
+            {
+                _db.LedgerEntries.Add(new LedgerEntry
+                {
+                    UserId = userId.Value,
+                    VisitId = visit.Id,
+                    Date = DateOnly.FromDateTime(visit.PerformedAt.Date),
+                    Amount = income,
+                    IsIncome = true,
+                    Category = "Visit",
+                    Note = $"Ziyaret Geliri (VisitId={visit.Id})",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                var first = existing.First();
+                first.Amount = income;
+                first.Date = DateOnly.FromDateTime(visit.PerformedAt.Date);
+                if (existing.Count > 1)
+                {
+                    _db.LedgerEntries.RemoveRange(existing.Skip(1));
+                }
+            }
         }
     }
 
