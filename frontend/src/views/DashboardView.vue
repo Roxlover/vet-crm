@@ -385,8 +385,8 @@
                   <div class="form-group">
                     <label>Hayvan(lar)</label>
                     <div class="pet-selection-grid">
-                      <div v-for="pet in ownerPets" :key="pet.id" class="pet-toggle-card" :class="{ 'is-selected': selectedPetIds.includes(pet.id) }">
-                        <input type="checkbox" :id="'pet-cb-'+pet.id" :value="pet.id" v-model="selectedPetIds" />
+                      <div v-for="pet in ownerPets" :key="pet.id" class="pet-toggle-card" :class="{ 'is-selected': selectedPetId === pet.id }">
+                        <input type="radio" :id="'pet-cb-'+pet.id" :value="pet.id" v-model="selectedPetId" />
                         <label :for="'pet-cb-'+pet.id">
                           <span class="pet-icon">🐾</span>
                           <span class="pet-name-label">{{ pet.name }}</span>
@@ -606,7 +606,7 @@ const showNewAppointment = ref(false)
 const appointmentDate = ref('')
 const appointmentTime = ref('')
 const appointmentPurpose = ref('')
-const selectedPetIds = ref([])
+const selectedPetId = ref(null)
 const appointmentMode = ref('multiple')
 const appointmentAmount = ref(null)
 const appointmentPaid = ref(null)
@@ -944,8 +944,8 @@ async function submitAppointment() {
     alert('Lütfen hasta sahibini seçin.')
     return
   }
-  if (!selectedPetIds.value || selectedPetIds.value.length === 0) {
-    alert('En az bir hayvan seçmelisiniz.')
+  if (!selectedPetId.value) {
+    alert('Lütfen bir hayvan seçin.')
     return
   }
   if (!appointmentDate.value || !appointmentTime.value) {
@@ -960,7 +960,7 @@ async function submitAppointment() {
   appointmentSaving.value = true
   const formData = new FormData()
   formData.append('OwnerId', selectedOwnerId.value)
-  selectedPetIds.value.forEach(id => formData.append('PetIds', id))
+  formData.append('PetId', selectedPetId.value)
   formData.append('ScheduledAt', `${appointmentDate.value}T${appointmentTime.value}`)
   formData.append('Purpose', appointmentPurpose.value)
   formData.append('DoctorId', selectedDoctorId.value || '')
@@ -1165,7 +1165,7 @@ async function selectOwner(owner) {
     ownerPets.value = []
   }
 
-  selectedPetIds.value = []
+  selectedPetId.value = null
 }
 
 function closeOwnerSearch() {
@@ -1214,7 +1214,7 @@ function openNewAppointmentFromCalendar(day) {
   // Formu temizle
   appointmentPurpose.value = ''
   selectedDoctorId.value = null
-  selectedPetIds.value = []
+  selectedPetId.value = null
   appointmentMode.value = 'multiple'
   ownerPets.value = []
   selectedOwnerId.value = null

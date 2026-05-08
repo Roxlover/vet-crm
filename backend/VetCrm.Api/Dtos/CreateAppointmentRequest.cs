@@ -3,7 +3,7 @@ namespace VetCrm.Api.Dtos
     public class CreateAppointmentRequest
     {
         public int OwnerId { get; set; }
-        public List<int> PetIds { get; set; } = new();
+        public int PetId { get; set; }
         public DateTime ScheduledAt { get; set; }     
         public string? Purpose { get; set; }
         public int? DoctorId { get; set; }

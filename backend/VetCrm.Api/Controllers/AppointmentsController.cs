@@ -29,13 +29,13 @@ namespace VetCrm.Api.Controllers
             try
             {
                 if (request == null) return BadRequest("Request body is null.");
-                Console.WriteLine($"Request: OwnerId={request.OwnerId}, PetCount={request.PetIds?.Count}, ScheduledAt={request.ScheduledAt}");
+                Console.WriteLine($"Request: OwnerId={request.OwnerId}, PetId={request.PetId}, ScheduledAt={request.ScheduledAt}");
 
                 if (request.OwnerId <= 0)
                     return BadRequest("Hasta sahibi (OwnerId) zorunludur.");
 
-                if (request.PetIds == null || request.PetIds.Count == 0)
-                    return BadRequest("En az bir hayvan seçilmelidir.");
+                if (request.PetId <= 0)
+                    return BadRequest("Hayvan seçilmelidir.");
 
                 var currentUserId = _currentUser.UserId;
                 if (currentUserId == null)
@@ -65,13 +65,11 @@ namespace VetCrm.Api.Controllers
                 if (owner == null)
                     return BadRequest("Geçersiz hasta sahibi (owner).");
 
-                var distinctPetIds = request.PetIds.Distinct().ToList();
-                var validPetIds = await _db.Pets
-                    .Where(p => p.OwnerId == request.OwnerId && distinctPetIds.Contains(p.Id))
-                    .Select(p => p.Id)
-                    .ToListAsync();
+                var validPet = await _db.Pets
+                    .FirstOrDefaultAsync(p => p.OwnerId == request.OwnerId && p.Id == request.PetId);
 
-                Console.WriteLine($"Valid Pets Count: {validPetIds.Count}");
+                if (validPet == null)
+                    return BadRequest("Seçilen hayvan bulunamadı veya bu hasta sahibine ait değil.");
 
                 var createdAppointments = new List<Appointment>();
                 
@@ -80,60 +78,59 @@ namespace VetCrm.Api.Controllers
                 var paidAmount = request.PaidAmountTl ?? 0m;
                 var creditAmount = Math.Max(0, totalAmount - paidAmount);
 
-                foreach (var petId in validPetIds)
+                var petId = validPet.Id;
+
+                var targetVisit = visit;
+                if (targetVisit == null)
                 {
-                    var targetVisit = visit;
-                    if (targetVisit == null)
+                    Console.WriteLine($"Creating auto-visit for PetId={petId}");
+                    targetVisit = new Visit
                     {
-                        Console.WriteLine($"Creating auto-visit for PetId={petId}");
-                        targetVisit = new Visit
-                        {
-                            PetId = petId,
-                            PerformedAt = utc,
-                            Purpose = request.Purpose,
-                            Procedures = request.Procedures,
-                            AmountTl = totalAmount,
-                            CreditAmountTl = creditAmount,
-                            Notes = request.Notes,
-                            Status = (totalAmount > 0) ? Visit.VisitStatus.Completed : Visit.VisitStatus.Pending,
-                            CreatedByUserId = currentUserId,
-                            CreatedByUsername = _currentUser.Username,
-                            CreatedByName = _currentUser.FullName,
-                            NextDate = scheduledDateOnly
-                        };
-                        _db.Visits.Add(targetVisit);
-                    }
-                    else
-                    {
-                        if (request.AmountTl.HasValue) targetVisit.AmountTl = totalAmount;
-                        if (request.PaidAmountTl.HasValue) targetVisit.CreditAmountTl = creditAmount;
-                        if (!string.IsNullOrWhiteSpace(request.Procedures)) targetVisit.Procedures = request.Procedures;
-                        if (!string.IsNullOrWhiteSpace(request.Notes)) targetVisit.Notes = request.Notes;
-                    }
-
-                    var appointment = new Appointment
-                    {
-                        OwnerId = request.OwnerId,
                         PetId = petId,
-                        ScheduledAt = utc,
+                        PerformedAt = utc,
                         Purpose = request.Purpose,
-                        DoctorId = request.DoctorId,
-                        Visit = targetVisit
+                        Procedures = request.Procedures,
+                        AmountTl = totalAmount,
+                        CreditAmountTl = creditAmount,
+                        Notes = request.Notes,
+                        Status = (totalAmount > 0) ? Visit.VisitStatus.Completed : Visit.VisitStatus.Pending,
+                        CreatedByUserId = currentUserId,
+                        CreatedByUsername = _currentUser.Username,
+                        CreatedByName = _currentUser.FullName,
+                        NextDate = scheduledDateOnly
                     };
-
-                    createdAppointments.Add(appointment);
-                    _db.Appointments.Add(appointment);
-
-                    var reminder = new Reminder
-                    {
-                        Visit = targetVisit,
-                        DueDate = scheduledDateOnly,
-                        CreatedAt = now,
-                        Status = 0,
-                        IsCompleted = false
-                    };
-                    _db.Reminders.Add(reminder);
+                    _db.Visits.Add(targetVisit);
                 }
+                else
+                {
+                    if (request.AmountTl.HasValue) targetVisit.AmountTl = totalAmount;
+                    if (request.PaidAmountTl.HasValue) targetVisit.CreditAmountTl = creditAmount;
+                    if (!string.IsNullOrWhiteSpace(request.Procedures)) targetVisit.Procedures = request.Procedures;
+                    if (!string.IsNullOrWhiteSpace(request.Notes)) targetVisit.Notes = request.Notes;
+                }
+
+                var appointment = new Appointment
+                {
+                    OwnerId = request.OwnerId,
+                    PetId = petId,
+                    ScheduledAt = utc,
+                    Purpose = request.Purpose,
+                    DoctorId = request.DoctorId,
+                    Visit = targetVisit
+                };
+
+                createdAppointments.Add(appointment);
+                _db.Appointments.Add(appointment);
+
+                var reminder = new Reminder
+                {
+                    Visit = targetVisit,
+                    DueDate = scheduledDateOnly,
+                    CreatedAt = now,
+                    Status = 0,
+                    IsCompleted = false
+                };
+                _db.Reminders.Add(reminder);
 
                 Console.WriteLine("Saving context...");
                 await _db.SaveChangesAsync();
@@ -168,12 +165,7 @@ namespace VetCrm.Api.Controllers
 
                 Console.WriteLine("Save successful.");
 
-                var petNames = await _db.Pets
-                    .Where(p => validPetIds.Contains(p.Id))
-                    .Select(p => p.Name)
-                    .ToListAsync();
-
-                var petsText = petNames.Count > 0 ? string.Join(", ", petNames) : "Hasta";
+                var petsText = validPet.Name ?? "Hasta";
                 var ownerName = owner.FullName ?? "Hasta Sahibi";
                 var message = $"{ownerName} - {petsText} için {localIstanbul:dd.MM.yyyy HH:mm} tarihine randevu oluşturuldu. İşlem: {request.Purpose ?? "Belirtilmedi"}";
 
