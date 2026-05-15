@@ -251,6 +251,35 @@ public async Task<ActionResult> AddNoteToOwner(int ownerId, [FromBody] AddOwnerN
         CreatedAt = note.CreatedAt
     });
 }
+
+[HttpPut("{ownerId}/notes/{noteId}")]
+public async Task<ActionResult> UpdateNote(int ownerId, int noteId, [FromBody] AddOwnerNoteRequest request)
+{
+    var note = await _db.OwnerNotes.FirstOrDefaultAsync(n => n.Id == noteId && n.OwnerId == ownerId);
+    if (note == null)
+        return NotFound();
+
+    if (string.IsNullOrWhiteSpace(request.Note))
+        return BadRequest("Not içeriği boş olamaz.");
+
+    note.Note = request.Note.Trim();
+    await _db.SaveChangesAsync();
+
+    return NoContent();
+}
+
+[HttpDelete("{ownerId}/notes/{noteId}")]
+public async Task<ActionResult> DeleteNote(int ownerId, int noteId)
+{
+    var note = await _db.OwnerNotes.FirstOrDefaultAsync(n => n.Id == noteId && n.OwnerId == ownerId);
+    if (note == null)
+        return NotFound();
+
+    _db.OwnerNotes.Remove(note);
+    await _db.SaveChangesAsync();
+
+    return NoContent();
+}
  
 
     [HttpGet("{id:int}/pets")]

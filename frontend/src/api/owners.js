@@ -35,3 +35,13 @@ export async function searchOwners(query) {
   const res = await http.get('/owners/search', { params: { query } })
   return res.data
 }
+
+export async function updateOwnerNote(ownerId, noteId, note) {
+  const res = await http.put(`/owners/${ownerId}/notes/${noteId}`, { note })
+  return res.data
+}
+
+export async function deleteOwnerNote(ownerId, noteId) {
+  const res = await http.delete(`/owners/${ownerId}/notes/${noteId}`)
+  return res.data
+}

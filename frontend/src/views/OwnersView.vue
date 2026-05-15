@@ -179,8 +179,23 @@
 
                 <div class="notes-scroll-area">
                   <div v-for="note in (ownerDetail.notes || [])" :key="note.id" class="modern-note-card">
-                    <p>{{ note.note }}</p>
-                    <span class="date">{{ new Date(note.createdAt).toLocaleDateString('tr-TR') }}</span>
+                    <template v-if="editingNoteId !== note.id">
+                      <p>{{ note.note }}</p>
+                      <div class="note-footer">
+                        <span class="date">{{ new Date(note.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</span>
+                        <div class="note-actions">
+                          <button class="btn-text-action" @click="startEditNote(note)">Düzenle</button>
+                          <button class="btn-text-action delete" @click="handleDeleteNote(note.id)">Sil</button>
+                        </div>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <textarea v-model="noteDraft" class="mini-textarea-note" rows="2"></textarea>
+                      <div class="note-edit-actions">
+                        <button class="btn btn-text btn-xs" @click="cancelEditNote">İptal</button>
+                        <button class="btn btn-primary-sm btn-xs" @click="saveNoteEdit" :disabled="noteSaving">Kaydet</button>
+                      </div>
+                    </template>
                   </div>
                   <div v-if="!ownerDetail.notes?.length" class="empty-notes-hint">
                     Henüz not eklenmemiş.
@@ -280,7 +295,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchOwners, createOwner, fetchOwner, addPetToOwner, deletePet, addOwnerNote, searchOwners } from '../api/owners'
+import { fetchOwners, createOwner, fetchOwner, addPetToOwner, deletePet, addOwnerNote, searchOwners, updateOwnerNote, deleteOwnerNote } from '../api/owners'
 
 const router = useRouter()
 const owners = ref([])
@@ -311,6 +326,56 @@ const ownerDraft = reactive({ fullName: '', phoneE164: '' })
 
 const editingPetId = ref(null)
 const petDraft = reactive({ name: '', species: '', breed: '', ageYears: null, ageMonths: null, notes: '', amountTl: null, creditAmountTl: null })
+
+const editingNoteId = ref(null)
+const noteDraft = ref('')
+const noteSaving = ref(false)
+
+function startEditNote(note) {
+  editingNoteId.value = note.id
+  noteDraft.value = note.note
+}
+
+function cancelEditNote() {
+  editingNoteId.value = null
+  noteDraft.value = ''
+}
+
+async function saveNoteEdit() {
+  if (!selectedOwner.value || !editingNoteId.value) return
+  if (!noteDraft.value.trim()) return
+
+  noteSaving.value = true
+  try {
+    await updateOwnerNote(selectedOwner.value, editingNoteId.value, noteDraft.value.trim())
+    
+    // Refresh
+    const res = await fetchOwner(selectedOwner.value)
+    ownerDetail.value = res?.data ?? res
+    editingNoteId.value = null
+  } catch (err) {
+    console.error(err)
+    alert('Not güncellenirken hata oluştu.')
+  } finally {
+    noteSaving.value = false
+  }
+}
+
+async function handleDeleteNote(noteId) {
+  if (!selectedOwner.value) return
+  if (!confirm('Bu notu silmek istediğinize emin misiniz?')) return
+
+  try {
+    await deleteOwnerNote(selectedOwner.value, noteId)
+    
+    // Refresh
+    const res = await fetchOwner(selectedOwner.value)
+    ownerDetail.value = res?.data ?? res
+  } catch (err) {
+    console.error(err)
+    alert('Not silinirken hata oluştu.')
+  }
+}
 
 function openOwnerEdit() {
   if (!ownerDetail.value) return
@@ -1255,5 +1320,84 @@ onMounted(loadOwners)
     gap: 1rem;
     margin-bottom: 1.5rem;
   }
+}
+.btn-text-action {
+  background: transparent;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0;
+  margin-left: 0.75rem;
+  opacity: 0.7;
+  transition: all 0.2s;
+}
+
+.btn-text-action:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.btn-text-action.delete {
+  color: var(--danger);
+}
+
+.note-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.5rem;
+}
+
+.note-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.mini-textarea-note {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--primary-light);
+  background: #f8fafc;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+}
+
+.mini-textarea-note:focus {
+  border-color: var(--primary);
+  background: #ffffff;
+}
+
+.btn-primary-sm {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-primary-sm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-text {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-weight: 600;
 }
 </style>

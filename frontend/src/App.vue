@@ -181,6 +181,8 @@ import {
 } from '@/api/notifications'
 import '@/style.css'
 import { getUser } from '@/utils/auth'
+import { Capacitor } from '@capacitor/core'
+import { PushNotifications } from '@capacitor/push-notifications'
 
 
 const rawUser = computed(() => getUser() || null)
@@ -265,12 +267,52 @@ watch(
   }
 )
 
+async function initPushNotifications() {
+  if (!Capacitor.isNativePlatform()) return
+
+  try {
+    let permStatus = await PushNotifications.checkPermissions()
+    if (permStatus.receive === 'prompt') {
+      permStatus = await PushNotifications.requestPermissions()
+    }
+
+    if (permStatus.receive !== 'granted') {
+      console.warn('Push notification permission denied')
+      return
+    }
+
+    await PushNotifications.register()
+
+    PushNotifications.addListener('registration', (token) => {
+      console.log('Push registration success, token: ' + token.value)
+      localStorage.setItem('fcm_token', token.value)
+    })
+
+    PushNotifications.addListener('registrationError', (error) => {
+      console.error('Push registration error: ', JSON.stringify(error))
+    })
+
+    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      console.log('Push received: ', JSON.stringify(notification))
+      loadNotifications()
+    })
+
+    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+      console.log('Push action performed: ', JSON.stringify(notification))
+    })
+  } catch (error) {
+    console.error('Push init error', error)
+  }
+}
+
 onMounted(() => {
   handleResize()
   window.addEventListener('resize', handleResize)
 
   loadNotifications()
   notifIntervalId = setInterval(loadNotifications, 60000)
+
+  initPushNotifications()
 })
 
 onBeforeUnmount(() => {
@@ -414,10 +456,12 @@ onBeforeUnmount(() => {
 
 /* TOPBAR REFINEMENT */
 .topbar {
-  height: 85px;
+  height: calc(85px + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
   background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px);
-  padding: 0 2rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -541,7 +585,11 @@ onBeforeUnmount(() => {
 
 /* RESPONSIVE */
 @media (max-width: 768px) {
-  .topbar { padding: 0 1rem; height: 70px; }
+  .topbar { 
+    padding-left: 1rem; 
+    padding-right: 1rem; 
+    height: calc(70px + env(safe-area-inset-top)); 
+  }
   .search-pill { display: none; }
   .user-name-mini { display: none; }
   .content { padding: 1rem; }

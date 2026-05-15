@@ -119,8 +119,13 @@
         <!-- Görsel Ekleme (Cloudflare R2) -->
         <div class="form-group">
           <label>Görsel(ler) Ekle</label>
-          <div class="image-upload-wrapper">
+          <div class="image-upload-wrapper" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <button v-if="isNative" type="button" class="btn btn-secondary btn-sm" @click="takePicture" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              Kamera ile Fotoğraf Çek
+            </button>
             <input
+              v-else
               type="file"
               accept="image/*"
               multiple
@@ -264,6 +269,10 @@ import { fetchOwners } from '../api/owners'
 import { fetchPets, fetchPetsByOwner } from '../api/pets'
 import { http } from '@/api/http'
 import { uploadVisitImages } from '../api/visits'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { Capacitor } from '@capacitor/core'
+
+const isNative = Capacitor.isNativePlatform()
 
 const visits = ref([])
 const owners = ref([])
@@ -508,6 +517,28 @@ async function loadOwnersAndPets() {
 
 function onFilesSelected(e) {
   form.imageFiles = Array.from(e.target.files || [])
+}
+
+async function takePicture() {
+  try {
+    const image = await Camera.getPhoto({
+      quality: 80,
+      allowEditing: false,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Camera
+    })
+
+    const response = await fetch(image.webPath)
+    const blob = await response.blob()
+    const file = new File([blob], 'photo_' + new Date().getTime() + '.jpg', { type: 'image/jpeg' })
+    
+    form.imageFiles.push(file)
+  } catch (e) {
+    if (e.message && !e.message.includes('User cancelled')) {
+      console.error("Camera error", e)
+      error.value = 'Kamera açılırken bir hata oluştu.'
+    }
+  }
 }
 
 function openOwnerDropdown() {
