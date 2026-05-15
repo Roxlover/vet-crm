@@ -515,6 +515,7 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
         visit.PerformedAt     = dto.PerformedAt;
         visit.Procedures      = dto.Procedures;
         visit.AmountTl        = dto.AmountTl;
+        visit.CreditAmountTl  = dto.CreditAmountTl;
         visit.Notes           = dto.Notes;
         visit.MicrochipNumber = dto.MicrochipNumber;
 

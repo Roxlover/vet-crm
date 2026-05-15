@@ -804,6 +804,7 @@ function toVisitDraft(v) {
     procedures: v.procedures ?? v.Procedures ?? '',
     notes: v.notes ?? v.Notes ?? '',
     amountTl: v.amountTl ?? v.AmountTl ?? null,
+    creditAmountTl: v.creditAmountTl ?? v.CreditAmountTl ?? 0,
     
     // Pet & Owner Info for editing
     petName: v.petName ?? v.PetName ?? '',
@@ -893,6 +894,7 @@ async function saveVisitEdit() {
       procedures: (visitDraft.value.procedures || '').trim() || null,
       notes: (visitDraft.value.notes || '').trim() || null,
       amountTl: amount,
+      creditAmountTl: visitDraft.value.creditAmountTl,
       nextDate: visitDraft.value.nextDate ?? (selectedVisit.value?.nextDate ?? selectedVisit.value?.NextDate ?? null),
       purpose: (visitDraft.value.purpose || '').trim() || null,
       plans: (visitDraft.value.plans || '').trim() || null,

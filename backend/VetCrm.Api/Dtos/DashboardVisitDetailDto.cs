@@ -19,6 +19,7 @@ public class DashboardVisitDetailDto
     public string? Notes { get; set; }
     public string? ImageUrl { get; set; }
     public decimal? CreditAmountTl { get; set; }
+    public decimal? CollectedAmountTl { get; set; }
 
     public int? DoctorId { get; set; }
     public string? DoctorName { get; set; }

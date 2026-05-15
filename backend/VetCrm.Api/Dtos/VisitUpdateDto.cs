@@ -8,6 +8,7 @@ public class VisitUpdateDto
     public string? Procedures { get; set; }
     public decimal? AmountTl { get; set; }
     public string? Notes { get; set; }
+    public decimal? CreditAmountTl { get; set; }
     public string? Purpose { get; set; }
 
     public DateOnly? NextDate { get; set; }

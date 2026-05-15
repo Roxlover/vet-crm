@@ -31,10 +31,10 @@ public class DashboardController : ControllerBase
             // 1. Aktif Hasta Sayısı
             var activePets = await _db.Pets.CountAsync(p => p.IsActive);
 
-            // 2. Aylık Tahsilat
-            var monthlyRevenue = await _db.Visits
-                .Where(v => v.PerformedAt >= firstDayOfMonth)
-                .SumAsync(v => (decimal?)(v.AmountTl ?? 0)) ?? 0;
+            // 2. Aylık Tahsilat (Gelir Ledger Kayıtları)
+            var monthlyRevenue = await _db.LedgerEntries
+                .Where(x => x.IsIncome && x.Date.Year == todayDt.Year && x.Date.Month == todayDt.Month)
+                .SumAsync(x => (decimal?)x.Amount) ?? 0;
 
             // 3. Bugünkü Randevular
             var todayStart = todayDt.Date;
@@ -351,6 +351,7 @@ var dto = await _db.Visits
         AmountTl = v.AmountTl,
         Notes = v.Notes,
         CreditAmountTl = v.CreditAmountTl,
+        CollectedAmountTl = v.CollectedAmountTl,
         ImageUrl = v.ImageUrl,
 
         DoctorId = v.DoctorId,
