@@ -322,23 +322,22 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
 
         var (fromDt, toDt) = ToUtcRange(from, to);
 
-        var baseQuery = _db.Visits
+        // 1) Get all visits in range
+        var visitQuery = _db.Visits
             .Where(v => v.PerformedAt >= fromDt && v.PerformedAt <= toDt);
-
-        baseQuery = ApplyLedgerInclusionRule(baseQuery);
-
-        // Veritabanı seviyesinde gruplama ve projeksiyon
-        var groupedData = await baseQuery
+        visitQuery = ApplyLedgerInclusionRule(visitQuery);
+        
+        var visitsRaw = await visitQuery
             .Select(v => new
             {
                 v.Id,
+                v.CreatedByUserId,
+                v.CreatedByUsername,
+                v.CreatedByName,
                 v.PerformedAt,
                 v.AmountTl,
                 v.CreditAmountTl,
                 v.CollectedAmountTl,
-                v.CreatedByUserId,
-                v.CreatedByUsername,
-                v.CreatedByName,
                 PetName = v.Pet != null ? v.Pet.Name : "—",
                 OwnerName = (v.Pet != null && v.Pet.Owner != null) ? v.Pet.Owner.FullName : "—",
                 OwnerPhone = (v.Pet != null && v.Pet.Owner != null) ? v.Pet.Owner.PhoneE164 : null,
@@ -346,67 +345,74 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
                 v.Procedures,
                 v.Notes
             })
-            .GroupBy(v => new
-            {
-                v.CreatedByUserId,
-                v.CreatedByUsername,
-                v.CreatedByName
-            })
             .ToListAsync();
 
-        var result = groupedData
-            .Select(g =>
+        // 2) Get all ledger entries in range to calculate real totals
+        var ledgerEntries = await _db.LedgerEntries
+            .Where(l => l.Date >= from && l.Date <= to && l.IsIncome)
+            .ToListAsync();
+
+        // 3) Group and Prepare Results
+        var grouped = visitsRaw.GroupBy(v => v.CreatedByUserId ?? 0);
+        var results = new List<LedgerUserGroupDto>();
+
+        foreach (var g in grouped)
+        {
+            var userId = g.Key;
+            var first = g.First();
+
+            // Filter ledger entries for this user
+            var userLedger = userId == 0
+                ? ledgerEntries.Where(l => l.UserId == 0).ToList()
+                : ledgerEntries.Where(l => l.UserId == userId).ToList();
+            
+            // Revenue: VisitIncome + ManualIncomes
+            var totalAmount = userLedger.Where(l => l.Category != "VisitCollected").Sum(l => l.Amount);
+            
+            // Collected: VisitCollected + ManualIncomes
+            var totalCollected = userLedger.Where(l => l.Category != "VisitIncome").Sum(l => l.Amount);
+            
+            var totalCredit = Math.Max(0, totalAmount - totalCollected);
+
+            var items = g.Select(v =>
             {
-                decimal totalAmount = 0m;
-                decimal totalCollected = 0m;
-                decimal totalCredit = 0m;
-
-                var items = g.Select(v =>
+                var (total, collected, credit) = CalcAmounts(v.AmountTl, v.CreditAmountTl, v.CollectedAmountTl);
+                return new LedgerVisitItemDto
                 {
-                    var (total, collected, credit) = CalcAmounts(v.AmountTl, v.CreditAmountTl, v.CollectedAmountTl);
-                    totalAmount += total;
-                    totalCollected += collected;
-                    totalCredit += credit;
-
-                    return new LedgerVisitItemDto
-                    {
-                        VisitId = v.Id,
-                        PerformedAt = v.PerformedAt,
-                        PetName = v.PetName,
-                        OwnerName = v.OwnerName,
-                        OwnerPhoneE164 = v.OwnerPhone,
-                        TotalAmount = total,
-                        CollectedAmount = collected,
-                        CreditAmount = credit,
-                        CreatedByUsername = v.CreatedByUsername,
-                        CreatedByName = v.CreatedByName,
-                        Purpose = v.Purpose,
-                        Procedures = v.Procedures,
-                        Notes = v.Notes
-                    };
-                })
-                .OrderByDescending(x => x.PerformedAt)
-                .ToList();
-
-                return new LedgerUserGroupDto
-                {
-                    UserId = g.Key.CreatedByUserId,
-                    Username = g.Key.CreatedByUsername,
-                    FullName = g.Key.CreatedByName,
-                    Summary = new LedgerSummaryDto
-                    {
-                        TotalAmount = totalAmount,
-                        TotalCollected = totalCollected,
-                        TotalCredit = totalCredit,
-                        VisitCount = items.Count
-                    },
-                    Items = items
+                    VisitId = v.Id,
+                    PerformedAt = v.PerformedAt,
+                    PetName = v.PetName,
+                    OwnerName = v.OwnerName,
+                    OwnerPhoneE164 = v.OwnerPhone,
+                    TotalAmount = total,
+                    CollectedAmount = collected,
+                    CreditAmount = credit,
+                    CreatedByUsername = v.CreatedByUsername,
+                    CreatedByName = v.CreatedByName,
+                    Purpose = v.Purpose,
+                    Procedures = v.Procedures,
+                    Notes = v.Notes
                 };
             })
-            .OrderBy(g => g.UserId.HasValue ? 0 : 1)
-            .ThenBy(g => g.FullName ?? g.Username)
+            .OrderByDescending(x => x.PerformedAt)
             .ToList();
 
-        return Ok(result);
+            results.Add(new LedgerUserGroupDto
+            {
+                UserId = userId == 0 ? null : userId,
+                Username = first.CreatedByUsername ?? "Sistem",
+                FullName = first.CreatedByName ?? "Sistem / Manuel",
+                Summary = new LedgerSummaryDto
+                {
+                    TotalAmount = totalAmount,
+                    TotalCollected = totalCollected,
+                    TotalCredit = totalCredit,
+                    VisitCount = items.Count
+                },
+                Items = items
+            });
+        }
+
+        return Ok(results.OrderBy(r => r.UserId.HasValue ? 0 : 1).ThenBy(r => r.FullName).ToList());
     }
 }
