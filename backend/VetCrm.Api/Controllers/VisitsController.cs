@@ -650,9 +650,10 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
 
     return Ok(results);
 }
+
 private async Task SyncLedgerForVisit(Visit visit)
 {
-    Console.WriteLine($"[SyncLedger] VisitId={visit.Id}, Status={visit.Status}, Amount={visit.AmountTl}, Credit={visit.CreditAmountTl}");
+    Console.WriteLine($"[SyncLedger] VisitId={visit.Id}, Status={visit.Status}, Amount={visit.AmountTl}, Credit={visit.CreditAmountTl}, Collected={visit.CollectedAmountTl}");
 
     var userId = _currentUser.UserId ?? visit.CreatedByUserId;
     if (!userId.HasValue) 
@@ -661,60 +662,77 @@ private async Task SyncLedgerForVisit(Visit visit)
         return;
     }
 
-    // Mevcut "Visit" kategorili ledger kayıtlarını bul
-    var existing = await _db.LedgerEntries
-        .Where(x => x.VisitId == visit.Id && x.Category == "Visit")
-        .ToListAsync();
+    // 1) Handle VisitIncome (Revenue/Ciro)
+    // Rule: If AmountTl > 0, we have revenue. (Doesn't necessarily need to be Completed, but usually it is)
+    var billableAmount = visit.AmountTl ?? 0m;
+    var existingIncome = await _db.LedgerEntries
+        .FirstOrDefaultAsync(x => x.VisitId == visit.Id && x.Category == "VisitIncome");
 
-    // Kural: Sadece "Completed" ise veya manuel tahsilat (CollectedAmountTl) girildiyse bilanço olur
-    // Şimdilik ana bütçe kuralı: AmountTl - CreditAmountTl = Gelir
-    var total = visit.AmountTl ?? 0m;
-    var credit = visit.CreditAmountTl ?? 0m;
-    var income = Math.Max(0m, total - credit);
-
-    // Eğer durum "Completed" değilse geliri siliyoruz (veya hiç eklemiyoruz)
-    if (visit.Status != Visit.VisitStatus.Completed || income <= 0m)
+    if (billableAmount <= 0m)
     {
-        if (existing.Any())
-        {
-            Console.WriteLine($"[SyncLedger] REMOVING {existing.Count} entries because status is {visit.Status} or income is 0.");
-            _db.LedgerEntries.RemoveRange(existing);
-            await _db.SaveChangesAsync();
-        }
-        return;
-    }
-
-    // "Completed" ise ve income > 0 ise ledger olmalı
-    if (!existing.Any())
-    {
-        Console.WriteLine($"[SyncLedger] ADDING new ledger entry: {income} TL");
-        _db.LedgerEntries.Add(new LedgerEntry
-        {
-            UserId = userId.Value,
-            VisitId = visit.Id,
-            Date = DateOnly.FromDateTime(visit.PerformedAt.Date),
-            Amount = income,
-            IsIncome = true,
-            Category = "Visit",
-            Note = $"Ziyaret Geliri (VisitId={visit.Id})",
-            CreatedAt = DateTime.UtcNow
-        });
+        if (existingIncome != null) _db.LedgerEntries.Remove(existingIncome);
     }
     else
     {
-        var first = existing.First();
-        if (first.Amount != income)
+        if (existingIncome == null)
         {
-            Console.WriteLine($"[SyncLedger] UPDATING ledger entry: {first.Amount} -> {income} TL");
-            first.Amount = income;
-            first.Date = DateOnly.FromDateTime(visit.PerformedAt.Date);
+            _db.LedgerEntries.Add(new LedgerEntry
+            {
+                UserId = userId.Value,
+                VisitId = visit.Id,
+                Date = DateOnly.FromDateTime(visit.PerformedAt.Date),
+                Amount = billableAmount,
+                IsIncome = true,
+                Category = "VisitIncome",
+                Note = $"Ziyaret Tahakkuk (VisitId={visit.Id})",
+                CreatedAt = DateTime.UtcNow
+            });
         }
-        
-        if (existing.Count > 1)
+        else
         {
-             _db.LedgerEntries.RemoveRange(existing.Skip(1));
+            existingIncome.Amount = billableAmount;
+            existingIncome.Date = DateOnly.FromDateTime(visit.PerformedAt.Date);
         }
     }
+
+    // 2) Handle VisitCollected (Actual Cash Flow)
+    // Rule: If CollectedAmountTl > 0, we have cash flow.
+    var collectedAmount = visit.CollectedAmountTl ?? 0m;
+    var existingCollected = await _db.LedgerEntries
+        .FirstOrDefaultAsync(x => x.VisitId == visit.Id && x.Category == "VisitCollected");
+
+    if (collectedAmount <= 0m)
+    {
+        if (existingCollected != null) _db.LedgerEntries.Remove(existingCollected);
+    }
+    else
+    {
+        if (existingCollected == null)
+        {
+            _db.LedgerEntries.Add(new LedgerEntry
+            {
+                UserId = userId.Value,
+                VisitId = visit.Id,
+                Date = DateOnly.FromDateTime(visit.PerformedAt.Date),
+                Amount = collectedAmount,
+                IsIncome = true,
+                Category = "VisitCollected",
+                Note = $"Ziyaret Tahsilat (VisitId={visit.Id})",
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            existingCollected.Amount = collectedAmount;
+            existingCollected.Date = DateOnly.FromDateTime(visit.PerformedAt.Date);
+        }
+    }
+
+    // 3) Cleanup old "Visit" category (Migration)
+    var legacy = await _db.LedgerEntries
+        .Where(x => x.VisitId == visit.Id && x.Category == "Visit")
+        .ToListAsync();
+    if (legacy.Any()) _db.LedgerEntries.RemoveRange(legacy);
 
     await _db.SaveChangesAsync();
 }

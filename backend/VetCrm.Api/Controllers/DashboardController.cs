@@ -31,9 +31,9 @@ public class DashboardController : ControllerBase
             // 1. Aktif Hasta Sayısı
             var activePets = await _db.Pets.CountAsync(p => p.IsActive);
 
-            // 2. Aylık Tahsilat (Gelir Ledger Kayıtları)
+            // 2. Aylık Tahsilat (Gerçekleşen Nakit Akışı: VisitCollected + Manuel Gelirler)
             var monthlyRevenue = await _db.LedgerEntries
-                .Where(x => x.IsIncome && x.Date.Year == todayDt.Year && x.Date.Month == todayDt.Month)
+                .Where(x => x.IsIncome && x.Category != "VisitIncome" && x.Date.Year == todayDt.Year && x.Date.Month == todayDt.Month)
                 .SumAsync(x => (decimal?)x.Amount) ?? 0;
 
             // 3. Bugünkü Randevular

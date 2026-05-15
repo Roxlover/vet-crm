@@ -19,13 +19,14 @@ public class LedgerController : ControllerBase
         _db = db;
     }
 
-private static (decimal total, decimal collected, decimal credit) CalcAmounts(decimal? amount, decimal? credit)
+private static (decimal total, decimal collected, decimal credit) CalcAmounts(decimal? amount, decimal? credit, decimal? collectedActual)
 {
     var total = amount ?? 0m;
     var creditVal = credit ?? 0m;
-
-    // Hiçbir şey kesilmez / 0'lanmaz:
-    var collected = total - creditVal; // negatif olabilir (veri tutarsızlığını gösterir)
+    
+    // Eğer collectedActual (LedgerEntries'den gelen gerçek tahsilat) varsa onu kullan, 
+    // yoksa (eski veri veya henüz senkronize olmamışsa) Amount - Credit yap.
+    var collected = collectedActual ?? (total - creditVal);
 
     return (total, collected, creditVal);
 }
@@ -197,36 +198,41 @@ public async Task<ActionResult<LedgerSummaryDto>> GetVisitSummary(
 
     var (fromDt, toDt) = ToUtcRange(from, to);
 
-    var query = _db.Visits
+    // 1) Visit Count (Hala visitlerden alıyoruz)
+    var visitQuery = _db.Visits
         .Where(v => v.PerformedAt >= fromDt && v.PerformedAt <= toDt);
+    visitQuery = ApplyLedgerInclusionRule(visitQuery);
+    var visitCount = await visitQuery.CountAsync();
 
-      query = ApplyLedgerInclusionRule(query);
-    var visits = await query
-        .Select(v => new
-        {
-            v.AmountTl,
-            v.CreditAmountTl
-        })
+    // 2) Financial Totals (LedgerEntries'den alıyoruz - EN ÖNEMLİ DEĞİŞİKLİK)
+    var entries = await _db.LedgerEntries
+        .Where(l => l.Date >= from && l.Date <= to)
         .ToListAsync();
 
-    decimal totalAmount = 0m;
-    decimal totalCollected = 0m;
-    decimal totalCredit = 0m;
+    // Revenue: VisitIncome kategorisi + VisitCollected olmayan manuel gelirler
+    // Aslında basiti: IsIncome = true olan her şey "Ciro" (Revenue) dur, 
+    // AMA VisitCollected olanlar "Tahsilat"tır, mükerrer saymamak lazım.
+    
+    // Visitlerden beklenen toplam gelir (Ciro) + Manuel Gelirler
+    var totalRevenue = entries
+        .Where(l => l.IsIncome && l.Category != "VisitCollected")
+        .Sum(l => l.Amount);
 
-    foreach (var v in visits)
-    {
-        var (t, c, cr) = CalcAmounts(v.AmountTl, v.CreditAmountTl);
-        totalAmount += t;
-        totalCollected += c;
-        totalCredit += cr;
-    }
+    // Gerçekleşen toplam tahsilat (VisitCollected + Manuel Gelirler)
+    var totalCollected = entries
+        .Where(l => l.IsIncome && l.Category != "VisitIncome")
+        .Sum(l => l.Amount);
+        
+    // Manuel Gelirler (Visit ile bağlı olmayanlar) için de bir mantık kurmak lazım.
+    // Eğer Category VisitIncome veya VisitCollected değilse, o bir Genel Gelirdir.
+    // Şimdilik Ciro = Tüm Gelirler (VisitCollected hariç) diyelim.
 
     var dto = new LedgerSummaryDto
     {
-        TotalAmount = totalAmount,
+        TotalAmount = totalRevenue,
         TotalCollected = totalCollected,
-        TotalCredit = totalCredit,
-        VisitCount = visits.Count
+        TotalCredit = Math.Max(0, totalRevenue - totalCollected),
+        VisitCount = visitCount
     };
 
     return Ok(dto);
@@ -259,6 +265,7 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
             v.PerformedAt,
             v.AmountTl,
             v.CreditAmountTl,
+            v.CollectedAmountTl,
             PetName = v.Pet.Name,
             OwnerName = v.Pet.Owner.FullName,
             v.Pet.Owner.PhoneE164,
@@ -273,7 +280,7 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
     var result = data
         .Select(v =>
         {
-            var (total, collected, credit) = CalcAmounts(v.AmountTl, v.CreditAmountTl);
+            var (total, collected, credit) = CalcAmounts(v.AmountTl, v.CreditAmountTl, v.CollectedAmountTl);
             return new LedgerVisitItemDto
             {
                 VisitId = v.Id,
@@ -328,6 +335,7 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
                 v.PerformedAt,
                 v.AmountTl,
                 v.CreditAmountTl,
+                v.CollectedAmountTl,
                 v.CreatedByUserId,
                 v.CreatedByUsername,
                 v.CreatedByName,
@@ -355,7 +363,7 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
 
                 var items = g.Select(v =>
                 {
-                    var (total, collected, credit) = CalcAmounts(v.AmountTl, v.CreditAmountTl);
+                    var (total, collected, credit) = CalcAmounts(v.AmountTl, v.CreditAmountTl, v.CollectedAmountTl);
                     totalAmount += total;
                     totalCollected += collected;
                     totalCredit += credit;
