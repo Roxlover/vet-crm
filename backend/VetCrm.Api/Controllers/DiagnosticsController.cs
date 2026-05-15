@@ -73,7 +73,15 @@ public class DiagnosticsController : ControllerBase
             }
 
             // 2. VisitCollected
-            if ((v.CollectedAmountTl ?? 0m) > 0m)
+            // Eğer CollectedAmountTl açıkça girilmişse onu kullan.
+            // Girilmemişse (eski kayıtlar), AmountTl - CreditAmountTl = net tahsilat say.
+            var totalBilled = v.AmountTl ?? 0m;
+            var credit = v.CreditAmountTl ?? 0m;
+            var effectiveCollected = v.CollectedAmountTl.HasValue
+                ? v.CollectedAmountTl.Value
+                : Math.Max(0m, totalBilled - credit);
+
+            if (effectiveCollected > 0m)
             {
                 var hasColl = await _db.LedgerEntries.AnyAsync(l => l.VisitId == v.Id && l.Category == "VisitCollected");
                 if (!hasColl)
@@ -83,7 +91,7 @@ public class DiagnosticsController : ControllerBase
                         UserId = v.CreatedByUserId ?? 1,
                         VisitId = v.Id,
                         Date = DateOnly.FromDateTime(v.PerformedAt.Date),
-                        Amount = v.CollectedAmountTl ?? 0m,
+                        Amount = effectiveCollected,
                         IsIncome = true,
                         Category = "VisitCollected",
                         Note = "[Sync] Ziyaret Tahsilat",
