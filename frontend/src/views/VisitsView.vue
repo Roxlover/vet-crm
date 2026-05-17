@@ -430,7 +430,7 @@ const selectedOwner = computed(() => {
 
 const filteredOwners = computed(() => {
   const q = ownerQuery.value.trim().toLowerCase()
-  if (q.length < 2) return []
+  if (!q) return owners.value.slice(0, 50)
   return owners.value.filter(o => 
     (o.fullName || '').toLowerCase().includes(q) || (o.phoneE164 || '').includes(q)
   ).slice(0, 50)
@@ -570,8 +570,8 @@ async function handleSave() {
       petId: Number(selectedPetId.value),
       performedAt: new Date(form.performedAt).toISOString(),
       procedures: form.procedures,
-      amountTl: form.amountTl ?? 0,
-      creditAmountTl: form.creditAmountTl ? Number(form.creditAmountTl) : null,
+      amountTl: form.amountTl === '' || form.amountTl === null ? 0 : Number(form.amountTl),
+      creditAmountTl: form.creditAmountTl === '' || form.creditAmountTl === null ? null : Number(form.creditAmountTl),
       notes: form.notes,
     }
     
