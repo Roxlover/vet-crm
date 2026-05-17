@@ -73,7 +73,15 @@ public class R2VisitImageStorage : IR2Storage
         // Compile hata verirse bu satırı silin.
         req.UseChunkEncoding = false;
 
-        await _s3.PutObjectAsync(req);
+        try
+        {
+            await _s3.PutObjectAsync(req);
+        }
+        catch (AmazonS3Exception ex)
+        {
+            var debugInfo = $"AccountId: {_opt.AccountId?.Length} chars, AccessKey: {_opt.AccessKey?.Length} chars, Bucket: {_opt.Bucket}";
+            throw new Exception($"S3 Upload Failed. Config Check: {debugInfo} | S3 Error: {ex.Message} | ErrorCode: {ex.ErrorCode}", ex);
+        }
 
         return $"{_opt.PublicBaseUrl.TrimEnd('/')}/{key}";
     }
