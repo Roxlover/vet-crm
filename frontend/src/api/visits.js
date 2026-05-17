@@ -55,7 +55,12 @@ export async function uploadVisitImages(visitId, files) {
   })
 
   if (!res.ok) {
-    throw new Error(`Upload failed with status: ${res.status}`)
+    let errorText = ''
+    try {
+        errorText = await res.text()
+    } catch(e) {}
+    console.error('Server 500 Error Details:', errorText)
+    throw new Error(`Upload failed with status: ${res.status}. Details: ${errorText}`)
   }
 
   const data = await res.json()
