@@ -646,7 +646,7 @@ async function handleAddNote() {
 
 function goToPetProfile(petId) {
   closeOwnerDetail()
-  router.push({ name: 'Pets', query: { id: petId } })
+  router.push({ name: 'pets', query: { id: petId } })
 }
 
 function addPetRow() {
