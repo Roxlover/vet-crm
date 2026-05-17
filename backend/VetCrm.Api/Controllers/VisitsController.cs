@@ -654,8 +654,8 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[UploadImages Error]: {ex.Message}");
-        return StatusCode(500, new { message = "Görsel yüklenirken sunucu hatası oluştu.", error = ex.Message });
+        Console.WriteLine($"[UploadImages Error]: {ex.ToString()}");
+        return StatusCode(500, new { message = "Görsel yüklenirken sunucu hatası oluştu.", error = ex.ToString() });
     }
 }
 
