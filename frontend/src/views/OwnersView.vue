@@ -286,6 +286,94 @@
               </section>
             </div>
           </div>
+
+          <!-- ZİYARET GEÇMİŞİ VE İŞLEMLER (YENİ) -->
+          <div class="visits-full-section" style="margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 2rem;">
+            <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+              <h4 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Ziyaret Geçmişi ve İşlemler</h4>
+              <button class="btn btn-primary btn-sm" @click="showAddVisitForm = !showAddVisitForm">
+                {{ showAddVisitForm ? 'Kapat' : '+ Yeni İşlem Ekle' }}
+              </button>
+            </div>
+
+            <div v-if="showAddVisitForm" class="modern-visit-card" style="margin-bottom: 2rem; border-color: var(--primary-light); background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0;">
+              <h5 style="margin-bottom: 1rem; font-weight: 700; color: var(--primary);">Yeni Ziyaret / İşlem Kaydı</h5>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">Hangi Hayvan İçin?</label>
+                  <select v-model="newVisit.petId" class="modern-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;">
+                    <option value="">-- Hayvan Seçin --</option>
+                    <option v-for="p in ownerDetail?.pets" :key="p.id" :value="p.id">{{ p.name }} ({{ p.species || 'Tür yok' }})</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">İşlem Tarihi</label>
+                  <input type="datetime-local" v-model="newVisit.performedAt" class="modern-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;" />
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">Uygulanan İşlemler (Aşı, Parazit vb.)</label>
+                <textarea v-model="newVisit.procedures" class="modern-input" rows="2" placeholder="Örn: İç dış parazit yapıldı..." style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;"></textarea>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">Alınan Ücret (TL)</label>
+                  <input type="number" v-model.number="newVisit.amountTl" class="modern-input" min="0" step="0.01" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">Veresiye (TL)</label>
+                  <input type="number" v-model.number="newVisit.creditAmountTl" class="modern-input" min="0" step="0.01" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;" />
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">Fotoğraf / Görsel Yükle (İsteğe Bağlı)</label>
+                <input type="file" multiple accept="image/*" @change="handleVisitFiles" class="modern-input" style="padding: 0.5rem; width: 100%;" />
+                <small style="color: #64748b; margin-top: 0.25rem; display: block;">Birden fazla görsel seçebilirsiniz.</small>
+              </div>
+              <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn btn-ghost" @click="showAddVisitForm = false">İptal</button>
+                <button class="btn btn-primary" @click="handleAddVisit" :disabled="visitAdding || !newVisit.petId || !newVisit.procedures">
+                  {{ visitAdding ? 'Kaydediliyor...' : 'İşlemi Kaydet' }}
+                </button>
+              </div>
+              <p v-if="visitAddError" class="state state-error" style="margin-top: 1rem;">{{ visitAddError }}</p>
+            </div>
+
+            <div v-if="loadingVisits" class="state">Ziyaretler yükleniyor...</div>
+            <div v-else-if="ownerVisits.length === 0" class="empty-notes-hint" style="text-align: center; padding: 2rem;">
+              Bu müşteriye ait henüz bir ziyaret kaydı bulunmuyor.
+            </div>
+            <div v-else class="visit-timeline" style="display: flex; flex-direction: column; gap: 1.5rem;">
+              <div v-for="v in ownerVisits" :key="v.id || v.visitId" class="modern-visit-card" style="background: #ffffff; padding: 1.5rem; border-radius: 12px; border: 1px solid #f1f5f9; box-shadow: var(--shadow-sm); position: relative; border-left: 4px solid var(--primary);">
+                <div class="visit-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                  <div>
+                    <span style="display: block; font-weight: 800; font-size: 1.1rem;">{{ formatDt(v.performedAt) }}</span>
+                    <span style="font-size: 0.85rem; color: var(--primary); font-weight: 700;">Pet: {{ v.petName || 'Bilinmiyor' }}</span>
+                  </div>
+                  <div style="display: flex; gap: 1rem; text-align: right;">
+                    <div v-if="v.amountTl > 0">
+                      <span style="font-size: 0.7rem; color: #64748b; display: block;">ALINAN</span>
+                      <span style="font-weight: 800; color: var(--success);">{{ fmtMoney(v.amountTl) }}</span>
+                    </div>
+                    <div v-if="v.creditAmountTl > 0">
+                      <span style="font-size: 0.7rem; color: #64748b; display: block;">VERESİYE</span>
+                      <span style="font-weight: 800; color: var(--danger);">{{ fmtMoney(v.creditAmountTl) }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="procedure-block" style="background: #f8fafc; padding: 1rem; border-radius: 8px; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1rem;">
+                  <strong style="color: #64748b; font-size: 0.8rem; text-transform: uppercase;">Uygulanan İşlemler</strong>
+                  <p style="margin-top: 0.25rem;">{{ v.procedures || 'Belirtilmemiş' }}</p>
+                </div>
+                
+                <div v-if="getVisitImages(v).length > 0" class="visit-gallery" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
+                  <div v-for="(img, idx) in getVisitImages(v)" :key="idx" class="gallery-item" style="width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+                    <img :src="normalizeMediaUrl(getImageUrl(img))" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" @click="window.open(normalizeMediaUrl(getImageUrl(img)), '_blank')" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -296,6 +384,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchOwners, createOwner, fetchOwner, addPetToOwner, deletePet, addOwnerNote, searchOwners, updateOwnerNote, deleteOwnerNote } from '../api/owners'
+import { fetchVisits, createVisit, uploadVisitImages } from '../api/visits'
+import { API_BASE } from '../api/http'
 
 const router = useRouter()
 const owners = ref([])
@@ -330,6 +420,98 @@ const petDraft = reactive({ name: '', species: '', breed: '', ageYears: null, ag
 const editingNoteId = ref(null)
 const noteDraft = ref('')
 const noteSaving = ref(false)
+
+const ownerVisits = ref([])
+const loadingVisits = ref(false)
+
+const showAddVisitForm = ref(false)
+const visitAdding = ref(false)
+const visitAddError = ref('')
+const newVisit = reactive({
+  petId: '',
+  performedAt: new Date().toISOString().slice(0, 16),
+  procedures: '',
+  amountTl: null,
+  creditAmountTl: null,
+  notes: '',
+})
+const visitImagesToUpload = ref([])
+
+function formatDt(iso) { return iso ? new Date(iso).toLocaleString('tr-TR') : '—' }
+function fmtMoney(val) { return `${Number(val || 0).toFixed(2)}₺` }
+function getImageUrl(img) { return img?.url || img?.imageUrl || '' }
+function getVisitImages(v) { return v?.images || v?.Images || [] }
+function normalizeMediaUrl(rawUrl) {
+  if (!rawUrl) return ''
+  if (rawUrl.startsWith('http')) return rawUrl
+  const base = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE
+  const path = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`
+  return `${base}${path}`
+}
+
+async function loadOwnerVisits() {
+  if (!selectedOwner.value) return
+  loadingVisits.value = true
+  try {
+    const res = await fetchVisits({ ownerId: selectedOwner.value })
+    ownerVisits.value = res?.data ?? res
+  } catch (e) {
+    console.error('Ziyaretler yüklenemedi:', e)
+  } finally {
+    loadingVisits.value = false
+  }
+}
+
+function handleVisitFiles(e) {
+  visitImagesToUpload.value = Array.from(e.target.files)
+}
+
+async function handleAddVisit() {
+  if (!newVisit.petId) { visitAddError.value = 'Lütfen bir hayvan seçin.'; return }
+  if (!newVisit.procedures?.trim()) { visitAddError.value = 'İşlem detayını girin.'; return }
+  
+  visitAdding.value = true
+  visitAddError.value = ''
+  try {
+    const payload = {
+      petId: Number(newVisit.petId),
+      performedAt: new Date(newVisit.performedAt).toISOString(),
+      procedures: newVisit.procedures.trim(),
+      amountTl: newVisit.amountTl,
+      creditAmountTl: newVisit.creditAmountTl,
+      status: 1, // completed
+      notes: newVisit.notes?.trim() || null
+    }
+    
+    const created = await createVisit(payload)
+    const newVisitId = created?.data?.id || created?.id
+
+    if (newVisitId && visitImagesToUpload.value.length > 0) {
+      await uploadVisitImages(newVisitId, visitImagesToUpload.value)
+    }
+
+    // Refresh everything
+    await loadOwnerVisits()
+    const res = await fetchOwner(selectedOwner.value)
+    ownerDetail.value = res?.data ?? res
+    
+    // Reset form
+    showAddVisitForm.value = false
+    newVisit.procedures = ''
+    newVisit.amountTl = null
+    newVisit.creditAmountTl = null
+    newVisit.notes = ''
+    newVisit.petId = ''
+    visitImagesToUpload.value = []
+    
+    // Reset file input UI by creating a tiny reactive toggle if needed, or user can just click normally next time
+  } catch(err) {
+    console.error(err)
+    visitAddError.value = 'Ziyaret eklenirken hata oluştu.'
+  } finally {
+    visitAdding.value = false
+  }
+}
 
 function startEditNote(note) {
   editingNoteId.value = note.id
@@ -571,6 +753,7 @@ async function openOwnerDetail(id) {
     selectedOwner.value = id
     const res = await fetchOwner(id)
     ownerDetail.value = res?.data ?? res
+    await loadOwnerVisits()
   } catch (err) {
     console.error(err)
     ownerDetail.value = null
@@ -583,6 +766,7 @@ function closeOwnerDetail() {
   showDetailModal.value = false
   ownerDetail.value = null
   selectedOwner.value = null
+  showAddVisitForm.value = false
   showAddPetForm.value = false
   resetNewPet()
 }
