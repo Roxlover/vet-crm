@@ -46,7 +46,7 @@ export async function uploadVisitImages(visitId, files) {
   const { getToken } = await import('../utils/auth')
 
   const token = getToken()
-  const res = await fetch(`${API_BASE}/visits/${visitId}/images`, {
+  const res = await fetch(`${API_BASE}/api/visits/${visitId}/images`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`
