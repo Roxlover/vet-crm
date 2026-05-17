@@ -68,7 +68,7 @@
 
         <div class="form-group">
           <label>Hasta Sahibi</label>
-          <div class="combo" ref="ownerComboRef">
+          <div class="combo" ref="ownerComboRef" style="position: relative;">
             <div v-if="selectedOwner" class="chip" style="background: var(--primary-light); border: none; padding: 0.75rem 1rem; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
               <span class="chip-text" style="font-weight: 700; color: var(--primary);">
                 {{ selectedOwner.fullName }}
@@ -91,7 +91,7 @@
                 <div class="combo-title">{{ owner.fullName }}</div>
                 <div class="combo-sub">{{ owner.phoneE164 }}</div>
               </div>
-              <div v-if="ownerQuery.length >= 2 && !filteredOwners.length" class="combo-item">Sonuç bulunamadı.</div>
+              <div v-if="ownerQuery && !filteredOwners.length" class="combo-item">Sonuç bulunamadı.</div>
             </div>
           </div>
         </div>
