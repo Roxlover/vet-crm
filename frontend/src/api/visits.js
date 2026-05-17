@@ -42,9 +42,7 @@ export async function uploadVisitImages(visitId, files) {
     fd.append('files', file) // backend expects 'files'
   }
 
-  const { data } = await http.post(`/visits/${visitId}/images`, fd, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await http.post(`/visits/${visitId}/images`, fd)
 
   return data
 }
