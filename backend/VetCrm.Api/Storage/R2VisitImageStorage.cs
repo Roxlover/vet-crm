@@ -22,7 +22,8 @@ public class R2VisitImageStorage : IR2Storage
         var cfg = new AmazonS3Config
         {
             ServiceURL = endpoint,
-            ForcePathStyle = true
+            ForcePathStyle = true,
+            AuthenticationRegion = "auto"
         };
 
         var creds = new BasicAWSCredentials(_opt.AccessKey, _opt.SecretKey);
