@@ -522,7 +522,8 @@ function onFilesSelected(e) {
 async function takePicture() {
   try {
     const image = await Camera.getPhoto({
-      quality: 80,
+      quality: 60,
+      width: 1200,
       allowEditing: false,
       resultType: CameraResultType.Uri,
       source: CameraSource.Camera

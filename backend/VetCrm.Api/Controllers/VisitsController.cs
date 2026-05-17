@@ -597,58 +597,66 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
     int id,
     [FromForm] List<IFormFile> files)
 {
-    var visit = await _db.Visits.FindAsync(id);
-    if (visit is null) return NotFound();
-
-    if (files == null || files.Count == 0)
-        return BadRequest("Dosya yok.");
-
-    var created = new List<VisitImage>();
-    string? lastUrl = null;
-
-    foreach (var file in files)
+    try
     {
-        await using var stream = file.OpenReadStream();
+        var visit = await _db.Visits.FindAsync(id);
+        if (visit is null) return NotFound();
 
-        var url = await _storage.UploadVisitImageAsync(
-            visitId: visit.Id,
-            stream: stream,
-            contentType: file.ContentType ?? "application/octet-stream"
-        );
+        if (files == null || files.Count == 0)
+            return BadRequest("Dosya yok.");
 
-        lastUrl = url;
+        var created = new List<VisitImage>();
+        string? lastUrl = null;
 
-        var image = new VisitImage
+        foreach (var file in files)
         {
-            VisitId = visit.Id,
-            ImageUrl = url,
-            CreatedAt = DateTime.UtcNow,
-            // CreatedByUserId varsa burada setleyebilirsin
-        };
+            await using var stream = file.OpenReadStream();
 
-        created.Add(image);
+            var url = await _storage.UploadVisitImageAsync(
+                visitId: visit.Id,
+                stream: stream,
+                contentType: file.ContentType ?? "application/octet-stream"
+            );
+
+            lastUrl = url;
+
+            var image = new VisitImage
+            {
+                VisitId = visit.Id,
+                ImageUrl = url,
+                CreatedAt = DateTime.UtcNow,
+                // CreatedByUserId varsa burada setleyebilirsin
+            };
+
+            created.Add(image);
+        }
+
+        // toplu ekle
+        _db.VisitImages.AddRange(created);
+
+        // tek kural: her zaman en son yüklenen
+        if (!string.IsNullOrWhiteSpace(lastUrl))
+            visit.ImageUrl = lastUrl;
+
+        await _db.SaveChangesAsync();
+
+        var results = created
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => new VisitImageDto
+            {
+                Id = x.Id,
+                ImageUrl = x.ImageUrl,
+                CreatedAt = x.CreatedAt
+            })
+            .ToList();
+
+        return Ok(results);
     }
-
-    // toplu ekle
-    _db.VisitImages.AddRange(created);
-
-    // tek kural: her zaman en son yüklenen
-    if (!string.IsNullOrWhiteSpace(lastUrl))
-        visit.ImageUrl = lastUrl;
-
-    await _db.SaveChangesAsync();
-
-    var results = created
-        .OrderByDescending(x => x.CreatedAt)
-        .Select(x => new VisitImageDto
-        {
-            Id = x.Id,
-            ImageUrl = x.ImageUrl,
-            CreatedAt = x.CreatedAt
-        })
-        .ToList();
-
-    return Ok(results);
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[UploadImages Error]: {ex.Message}");
+        return StatusCode(500, new { message = "Görsel yüklenirken sunucu hatası oluştu.", error = ex.Message });
+    }
 }
 
 private async Task SyncLedgerForVisit(Visit visit)
