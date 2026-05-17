@@ -42,7 +42,23 @@ export async function uploadVisitImages(visitId, files) {
     fd.append('files', file) // backend expects 'files'
   }
 
-  const { data } = await http.post(`/visits/${visitId}/images`, fd)
+  const { API_BASE } = await import('./http')
+  const { getToken } = await import('../utils/auth')
+
+  const token = getToken()
+  const res = await fetch(`${API_BASE}/visits/${visitId}/images`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    body: fd
+  })
+
+  if (!res.ok) {
+    throw new Error(`Upload failed with status: ${res.status}`)
+  }
+
+  const data = await res.json()
 
   return data
 }
