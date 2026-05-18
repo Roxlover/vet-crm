@@ -1,5 +1,6 @@
 <template>
   <div class="app-root">
+    <BirthdayPopup />
     <!-- LOGIN / AUTH SAYFALARI: tam ekran, sidebar yok -->
     <RouterView v-if="isAuthRoute" />
 
@@ -175,6 +176,7 @@ import {
   computed,
   watch,
 } from 'vue'
+import BirthdayPopup from '@/components/BirthdayPopup.vue'
 import {
   fetchNotifications,
   markNotificationsRead,
