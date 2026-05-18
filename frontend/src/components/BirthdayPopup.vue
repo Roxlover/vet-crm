@@ -1,6 +1,6 @@
 <template>
-  <div v-if="isVisible" class="birthday-overlay" @click="close">
-    <div class="birthday-card" @click.stop>
+  <div v-if="isVisible" class="birthday-overlay">
+    <div class="birthday-card">
       <h2>Doğum günün kutlu olsunn Bullboss! 🎉</h2>
       <div class="cake">🎂</div>
       <p>Nice mutlu yıllara!</p>
@@ -18,13 +18,13 @@ onMounted(() => {
   const hasSeen = localStorage.getItem('bullboss_birthday_seen')
   if (!hasSeen) {
     isVisible.value = true
-    localStorage.setItem('bullboss_birthday_seen', 'true')
     triggerConfetti()
   }
 })
 
 function close() {
   isVisible.value = false
+  localStorage.setItem('bullboss_birthday_seen', 'true')
 }
 
 function triggerConfetti() {
