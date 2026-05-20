@@ -7,7 +7,7 @@
       </div>
     </header>
 
-    <div class="layout">
+    <div class="pets-view-layout">
       <!-- Sol: Liste -->
       <aside class="sidebar-section">
         <div class="search-card">
@@ -519,7 +519,7 @@ async function handleDeleteVisit(v) {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.layout {
+.pets-view-layout {
   display: grid;
   grid-template-columns: 350px 1fr;
   gap: 2.5rem;
@@ -527,7 +527,7 @@ async function handleDeleteVisit(v) {
 }
 
 @media (max-width: 1024px) {
-  .layout {
+  .pets-view-layout {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
@@ -881,7 +881,7 @@ async function handleDeleteVisit(v) {
 .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
 
 @media (max-width: 1024px) {
-  .layout { grid-template-columns: 1fr; }
+  .pets-view-layout { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -1089,7 +1089,7 @@ async function handleDeleteVisit(v) {
 .tiny { padding: 0.4rem; font-size: 0.9rem; }
 
 @media (max-width: 768px) {
-  .layout { grid-template-columns: 1fr; }
+  .pets-view-layout { grid-template-columns: 1fr; }
   .visit-finances { grid-template-columns: 1fr; }
 }
 </style>
