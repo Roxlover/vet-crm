@@ -147,11 +147,45 @@ namespace VetCrm.Api.Controllers
 
                         foreach (var file in request.Images)
                         {
-                            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-                            var filePath = Path.Combine(uploadsPath, fileName);
-                            using (var stream = new FileStream(filePath, FileMode.Create))
+                            var contentType = file.ContentType ?? "application/octet-stream";
+                            var originalFileName = file.FileName;
+
+                            string fileName;
+                            if (VetCrm.Api.Storage.ImageOptimizer.IsImage(contentType, originalFileName))
                             {
-                                await file.CopyToAsync(stream);
+                                fileName = $"{Guid.NewGuid()}.webp";
+                                var filePath = Path.Combine(uploadsPath, fileName);
+
+                                try
+                                {
+                                    await using var rawStream = file.OpenReadStream();
+                                    var (optStream, _, _) = await VetCrm.Api.Storage.ImageOptimizer.OptimizeToWebpAsync(rawStream);
+
+                                    await using (var stream = new FileStream(filePath, FileMode.Create))
+                                    {
+                                        await optStream.CopyToAsync(stream);
+                                    }
+                                    await optStream.DisposeAsync();
+                                }
+                                catch
+                                {
+                                    // Fallback to saving raw upload if optimization failed
+                                    fileName = $"{Guid.NewGuid()}{Path.GetExtension(originalFileName)}";
+                                    var fallbackPath = Path.Combine(uploadsPath, fileName);
+                                    await using (var stream = new FileStream(fallbackPath, FileMode.Create))
+                                    {
+                                        await file.CopyToAsync(stream);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                fileName = $"{Guid.NewGuid()}{Path.GetExtension(originalFileName)}";
+                                var filePath = Path.Combine(uploadsPath, fileName);
+                                await using (var stream = new FileStream(filePath, FileMode.Create))
+                                {
+                                    await file.CopyToAsync(stream);
+                                }
                             }
 
                             _db.VisitImages.Add(new VisitImage

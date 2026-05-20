@@ -32,17 +32,43 @@ public class R2VisitImageStorage : IR2Storage
 
     public async Task<string> UploadVisitImageAsync(int visitId, Stream stream, string contentType)
     {
-        if (string.IsNullOrWhiteSpace(contentType))
-            contentType = "application/octet-stream";
+        Stream activeStream = stream;
+        string activeContentType = contentType;
+        string ext = "";
 
-        var ext = contentType switch
+        bool isOptimized = false;
+        if (ImageOptimizer.IsImage(activeContentType))
         {
-            "image/jpeg" => ".jpg",
-            "image/png"  => ".png",
-            "image/webp" => ".webp",
-            "image/gif"  => ".gif",
-            _ => ""
-        };
+            try
+            {
+                var (optStream, optContentType, optExt) = await ImageOptimizer.OptimizeToWebpAsync(stream);
+                activeStream = optStream;
+                activeContentType = optContentType;
+                ext = optExt;
+                isOptimized = true;
+            }
+            catch
+            {
+                // Fallback to original
+                activeStream = stream;
+                activeContentType = contentType;
+            }
+        }
+
+        if (!isOptimized)
+        {
+            if (string.IsNullOrWhiteSpace(activeContentType))
+                activeContentType = "application/octet-stream";
+
+            ext = activeContentType switch
+            {
+                "image/jpeg" => ".jpg",
+                "image/png"  => ".png",
+                "image/webp" => ".webp",
+                "image/gif"  => ".gif",
+                _ => ""
+            };
+        }
 
         var key = $"visits/{visitId}/{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{ext}";
 
@@ -50,8 +76,13 @@ public class R2VisitImageStorage : IR2Storage
         byte[] data;
         await using (var ms = new MemoryStream())
         {
-            await stream.CopyToAsync(ms);
+            await activeStream.CopyToAsync(ms);
             data = ms.ToArray();
+        }
+
+        if (isOptimized)
+        {
+            await activeStream.DisposeAsync();
         }
 
         var mem = new MemoryStream(data);
@@ -61,7 +92,7 @@ public class R2VisitImageStorage : IR2Storage
             BucketName = _opt.Bucket,
             Key = key,
             InputStream = mem,
-            ContentType = contentType,
+            ContentType = activeContentType,
             AutoCloseStream = true
         };
 
@@ -88,25 +119,56 @@ public class R2VisitImageStorage : IR2Storage
 
     public async Task<string> UploadOwnerNoteImageAsync(int ownerId, Stream stream, string contentType)
     {
-        if (string.IsNullOrWhiteSpace(contentType))
-            contentType = "application/octet-stream";
+        Stream activeStream = stream;
+        string activeContentType = contentType;
+        string ext = "";
 
-        var ext = contentType switch
+        bool isOptimized = false;
+        if (ImageOptimizer.IsImage(activeContentType))
         {
-            "image/jpeg" => ".jpg",
-            "image/png"  => ".png",
-            "image/webp" => ".webp",
-            "image/gif"  => ".gif",
-            _ => ""
-        };
+            try
+            {
+                var (optStream, optContentType, optExt) = await ImageOptimizer.OptimizeToWebpAsync(stream);
+                activeStream = optStream;
+                activeContentType = optContentType;
+                ext = optExt;
+                isOptimized = true;
+            }
+            catch
+            {
+                // Fallback to original
+                activeStream = stream;
+                activeContentType = contentType;
+            }
+        }
+
+        if (!isOptimized)
+        {
+            if (string.IsNullOrWhiteSpace(activeContentType))
+                activeContentType = "application/octet-stream";
+
+            ext = activeContentType switch
+            {
+                "image/jpeg" => ".jpg",
+                "image/png"  => ".png",
+                "image/webp" => ".webp",
+                "image/gif"  => ".gif",
+                _ => ""
+            };
+        }
 
         var key = $"owners/{ownerId}/notes/{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{ext}";
 
         byte[] data;
         await using (var ms = new MemoryStream())
         {
-            await stream.CopyToAsync(ms);
+            await activeStream.CopyToAsync(ms);
             data = ms.ToArray();
+        }
+
+        if (isOptimized)
+        {
+            await activeStream.DisposeAsync();
         }
 
         var mem = new MemoryStream(data);
@@ -116,7 +178,7 @@ public class R2VisitImageStorage : IR2Storage
             BucketName = _opt.Bucket,
             Key = key,
             InputStream = mem,
-            ContentType = contentType,
+            ContentType = activeContentType,
             AutoCloseStream = true
         };
 
