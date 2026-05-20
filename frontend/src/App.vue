@@ -3,7 +3,59 @@
     <!-- LOGIN / AUTH SAYFALARI: tam ekran, sidebar yok -->
     <RouterView v-if="isAuthRoute" />
 
-    <!-- DİĞER SAYFALAR: sidebar + içerik -->
+    <!-- MÜŞTERİ PORTALI TEMA & YERLEŞİM (Emerald Green / Glassmorphism) -->
+    <div v-else-if="isClientRoute" class="client-layout">
+      <!-- ANA İÇERİK -->
+      <main class="client-main">
+        <section class="client-content">
+          <RouterView />
+        </section>
+      </main>
+
+      <!-- MÜŞTERİ ALT NAVİGASYON (Premium Zümrüt Yeşili) -->
+      <nav class="client-bottom-nav">
+        <RouterLink to="/client/dashboard" class="client-nav-item" :class="{ active: route.name === 'client-dashboard' }">
+          <span class="client-nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+          </span>
+          <span class="client-nav-label">Özet</span>
+        </RouterLink>
+        <RouterLink to="/client/pets" class="client-nav-item" :class="{ active: route.name === 'client-pets' }">
+          <span class="client-nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </span>
+          <span class="client-nav-label">Dostlarım</span>
+        </RouterLink>
+        <RouterLink to="/client/visits" class="client-nav-item" :class="{ active: route.name === 'client-visits' }">
+          <span class="client-nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </span>
+          <span class="client-nav-label">Geçmiş</span>
+        </RouterLink>
+        <button class="client-nav-item logout-btn" @click="handleClientLogout">
+          <span class="client-nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </span>
+          <span class="client-nav-label">Çıkış</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- DİĞER SAYFALAR: sidebar + içerik (Veteriner CRM) -->
     <div v-else class="layout">
       <!-- SOL MENÜ -->
       <aside
@@ -167,7 +219,7 @@
 </template>
 
 <script setup>
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import {
   onMounted,
   onBeforeUnmount,
@@ -253,9 +305,21 @@ function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value
 }
 
+const router = useRouter()
+
 const isAuthRoute = computed(() =>
-  ['login'].includes(route.name),
+  ['login', 'client-login'].includes(route.name),
 )
+
+const isClientRoute = computed(() =>
+  route.path.startsWith('/client'),
+)
+
+function handleClientLogout() {
+  localStorage.removeItem('vetcrm_token')
+  localStorage.removeItem('vetcrm_user')
+  router.push('/client/login')
+}
 
 // Sayfa değiştiğinde (link tıklandığında) mobilde menüyü kapat
 watch(
@@ -712,5 +776,171 @@ onBeforeUnmount(() => {
   .hamburger.is-active span:nth-child(3) {
     transform: translateY(-8px) rotate(-45deg);
   }
+}
+
+/* --- CLIENT PORTAL STYLES ( Emerald Green & Glassmorphism ) --- */
+.client-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  color: #166534;
+  font-family: 'Inter', sans-serif;
+  padding-bottom: 80px; /* Safe space for bottom navigation */
+}
+
+.client-main {
+  flex: 1;
+  width: 100%;
+  max-width: 600px; /* Force mobile width center on desktop */
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+  box-sizing: border-box;
+}
+
+.client-content {
+  width: 100%;
+}
+
+/* Premium Client Bottom Nav */
+.client-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 600px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(22, 101, 52, 0.1);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -8px 32px rgba(22, 101, 52, 0.08);
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.client-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #71717a;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex: 1;
+}
+
+.client-nav-item.logout-btn {
+  font-family: inherit;
+}
+
+.client-nav-item .client-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: #6b7280;
+  transition: transform 0.3s ease;
+}
+
+.client-nav-item .client-nav-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.client-nav-item:hover .client-nav-icon {
+  transform: translateY(-2px);
+}
+
+.client-nav-item.active {
+  color: #059669;
+}
+
+.client-nav-item.active .client-nav-icon {
+  color: #059669;
+  transform: translateY(-2px) scale(1.1);
+}
+
+.client-nav-item.active .client-nav-label {
+  color: #047857;
+  font-weight: 700;
+}
+
+/* Global Custom Styles for Client Dashboard & Views */
+.client-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px -10px rgba(4, 120, 87, 0.1);
+  margin-bottom: 1.25rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.client-card:active {
+  transform: scale(0.98);
+}
+
+.client-btn {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: white;
+  border: none;
+  padding: 1rem 1.5rem;
+  border-radius: 16px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  box-shadow: 0 8px 20px -6px rgba(4, 120, 87, 0.4);
+  transition: all 0.3s ease;
+}
+
+.client-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 4px 10px -3px rgba(4, 120, 87, 0.3);
+}
+
+.client-badge-success {
+  background-color: #d1fae5;
+  color: #065f46;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.client-badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.client-badge-danger {
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 </style>

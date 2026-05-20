@@ -32,6 +32,8 @@ public class VetCrmDbContext : DbContext
         {
             b.Property(o => o.FullName).IsRequired().HasMaxLength(120);
             b.Property(o => o.PhoneE164).IsRequired().HasMaxLength(20);
+            b.Property(o => o.PasswordHash).HasMaxLength(256);
+            b.HasIndex(o => o.PhoneE164); // Hızlı giriş aramaları için
         });
 
         modelBuilder.Entity<Pet>(b =>

@@ -75,4 +75,35 @@ public class TokenService : ITokenService
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    public string CreateToken(Owner owner)
+    {
+        var keyBytes = Encoding.UTF8.GetBytes(_settings.Key);
+        var key = new SymmetricSecurityKey(keyBytes);
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, owner.Id.ToString()),
+            new(ClaimTypes.NameIdentifier, owner.Id.ToString()),
+            new(ClaimTypes.Name, owner.FullName),
+            new(ClaimTypes.Role, "Client"),
+            new("phone", owner.PhoneE164)
+        };
+
+        var expiresMinutes = _settings.ExpiresMinutes > 0
+            ? _settings.ExpiresMinutes
+            : 720;
+
+        var token = new JwtSecurityToken(
+            issuer: _settings.Issuer,
+            audience: _settings.Audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(expiresMinutes),
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 }
+

@@ -139,7 +139,11 @@ http.interceptors.response.use(
         console.warn('[AUTH] 401 geldi, token temizleniyor...')
         clearAuth()
         if (isBrowser && !isNativeApp) {
-          window.location.href = '/login'
+          if (window.location.pathname.startsWith('/client')) {
+            window.location.href = '/client/login'
+          } else {
+            window.location.href = '/login'
+          }
         }
       }
     } else if (err.request) {

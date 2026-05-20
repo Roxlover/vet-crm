@@ -46,61 +46,77 @@ const router = createRouter({
       name: 'calendar',
       component: () => import('@/views/CalendarView.vue'),
     },
+    // Müşteri Portalı Rotaları
+    {
+      path: '/client/login',
+      name: 'client-login',
+      component: () => import('@/views/client/ClientLoginView.vue'),
+    },
+    {
+      path: '/client/dashboard',
+      name: 'client-dashboard',
+      component: () => import('@/views/client/ClientDashboardView.vue'),
+    },
+    {
+      path: '/client/pets',
+      name: 'client-pets',
+      component: () => import('@/views/client/ClientPetsView.vue'),
+    },
+    {
+      path: '/client/visits',
+      name: 'client-visits',
+      component: () => import('@/views/client/ClientVisitsView.vue'),
+    },
   ],
 })
 
 router.beforeEach((to, from, next) => {
-  const publicPages = ['/login']
-  const authRequired = !publicPages.includes(to.path)
-
+  const isClientPath = to.path.startsWith('/client')
   const token = localStorage.getItem('vetcrm_token')
   const userRaw = localStorage.getItem('vetcrm_user')
   const user = userRaw ? JSON.parse(userRaw) : null
+  const isClient = user && (String(user.role).toLowerCase() === 'client')
 
   console.log('[ROUTER]', {
     to: to.path,
-    metaRoles: to.meta?.roles,
     userRole: user?.role,
-    userUsername: user?.username,
+    isClient,
     hasToken: !!token,
   })
-  if (to.path === '/bilanco') {
-  const role = String(user?.role || '').trim()                 // Admin
-  const username = String(user?.username || '').trim().toLowerCase()
 
-  const allowedUsers = ['bullboss'] // whitelist
-  const isAdmin = role === 'Admin'
-  const isExplicitAllowed = allowedUsers.includes(username)
-
-  if (!isAdmin && !isExplicitAllowed) return next('/')
-}
-
-  // 1) Auth gerekiyorsa ve yoksa -> login
-  if (authRequired && (!user || !token)) {
-    return next('/login')
-  }
-
-  // 2) Login sayfasına auth’lu girilirse -> dashboard
-  if (!authRequired && user && token) {
-    return next('/')
-  }
-
-  // 3) Role kontrolü (varsa)
-  const requiredRoles = to.meta?.roles
-  if (requiredRoles && requiredRoles.length) {
-    const role = String(user?.role || '').trim().toLowerCase()
-    const username = String(user?.username || '').trim().toLowerCase()
-    const allowed = requiredRoles.map(r => String(r).trim().toLowerCase())
-
-    const ok = allowed.includes(role) || username === 'bullboss'
-    if (!ok) {
-      return next('/') // yetkisiz -> dashboard
+  if (isClientPath) {
+    const isClientLogin = to.path === '/client/login'
+    if (!isClientLogin && (!token || !isClient)) {
+      return next('/client/login')
     }
-  }
+    if (isClientLogin && token && isClient) {
+      return next('/client/dashboard')
+    }
+    return next()
+  } else {
+    // Hekim / CRM sayfaları
+    const isHekimLogin = to.path === '/login'
+    if (!isHekimLogin && (!token || isClient)) {
+      if (isClient) return next('/client/dashboard')
+      return next('/login')
+    }
+    if (isHekimLogin && token && !isClient) {
+      return next('/')
+    }
 
-  // 4) HER HALÜKARDA devam et
-  return next()
+    if (to.path === '/bilanco') {
+      const role = String(user?.role || '').trim().toLowerCase()
+      const username = String(user?.username || '').trim().toLowerCase()
+      const allowedUsers = ['bullboss'] // whitelist
+      const isAdmin = role === 'admin'
+      const isExplicitAllowed = allowedUsers.includes(username)
+
+      if (!isAdmin && !isExplicitAllowed) return next('/')
+    }
+
+    return next()
+  }
 })
 
-
 export default router
+

@@ -63,5 +63,49 @@ namespace VetCrm.Api.Controllers
                 Token = token
             });
         }
+
+        public class ClientLoginRequestDto
+        {
+            public string Phone { get; set; } = null!;
+            public string Password { get; set; } = null!;
+        }
+
+        public class ClientLoginResponseDto
+        {
+            public int Id { get; set; }
+            public string FullName { get; set; } = null!;
+            public string Phone { get; set; } = null!;
+            public string Role { get; set; } = "Client";
+            public string Token { get; set; } = null!;
+        }
+
+        [HttpPost("client-login")]
+        public async Task<ActionResult<ClientLoginResponseDto>> ClientLogin([FromBody] ClientLoginRequestDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Phone) || string.IsNullOrWhiteSpace(dto.Password))
+                return BadRequest("Telefon numarası ve şifre zorunludur.");
+
+            var cleanedPhone = new string(dto.Phone.Where(char.IsDigit).ToArray());
+            if (cleanedPhone.Length == 10 && cleanedPhone.StartsWith("5"))
+            {
+                cleanedPhone = "90" + cleanedPhone;
+            }
+
+            var owner = await _db.Owners
+                .FirstOrDefaultAsync(o => o.PhoneE164 == cleanedPhone);
+
+            if (owner == null || string.IsNullOrWhiteSpace(owner.PasswordHash) || !BC.Verify(dto.Password, owner.PasswordHash))
+                return Unauthorized("Telefon numarası veya şifre hatalı.");
+
+            var token = _tokenService.CreateToken(owner);
+
+            return Ok(new ClientLoginResponseDto
+            {
+                Id = owner.Id,
+                FullName = owner.FullName,
+                Phone = owner.PhoneE164,
+                Token = token
+            });
+        }
     }
 }

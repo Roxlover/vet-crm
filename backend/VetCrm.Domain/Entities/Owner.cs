@@ -11,7 +11,10 @@ public class Owner
 
     public bool KvkkOptIn { get; set; } = true;
 
+    public string? PasswordHash { get; set; }
+
     // Navigation
     public ICollection<Pet> Pets { get; set; } = new List<Pet>();
     public ICollection<OwnerNote> Notes { get; set; } = new List<OwnerNote>();
 }
+

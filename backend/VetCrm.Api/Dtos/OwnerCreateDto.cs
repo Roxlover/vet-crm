@@ -13,6 +13,7 @@ public class OwnerCreateDto
 {
     public string FullName { get; set; } = string.Empty;
     public string PhoneE164 { get; set; } = string.Empty;
+    public string? Password { get; set; }
     public bool KvkkOptIn { get; set; }
 
     public List<OwnerPetCreateDto> Pets { get; set; } = new();

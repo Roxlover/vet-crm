@@ -120,6 +120,7 @@ public async Task<ActionResult<OwnerDto>> GetOwner(int id)
             FullName = dto.FullName,
             PhoneE164 = dto.PhoneE164,
             KvkkOptIn = dto.KvkkOptIn,
+            PasswordHash = !string.IsNullOrWhiteSpace(dto.Password) ? BCrypt.Net.BCrypt.HashPassword(dto.Password) : null,
             Pets = dto.Pets
                 .Where(p => !string.IsNullOrWhiteSpace(p.Name))
 
@@ -170,6 +171,11 @@ public async Task<ActionResult<OwnerDto>> GetOwner(int id)
         owner.Email = dto.Email;
         owner.Address = dto.Address;
         owner.KvkkOptIn = dto.KvkkOptIn;
+
+        if (!string.IsNullOrWhiteSpace(dto.Password))
+        {
+            owner.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+        }
 
         await _db.SaveChangesAsync();
 

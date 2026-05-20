@@ -62,6 +62,12 @@
             <small class="hint" style="margin-top: 0.5rem; display: block;">Ülke kodu ile birlikte (Örn: 90).</small>
           </div>
 
+          <div class="form-group">
+            <label for="password">Müşteri Portalı Şifresi</label>
+            <input id="password" v-model="form.password" type="password" placeholder="Müşteri giriş şifresi (isteğe bağlı)" />
+            <small class="hint" style="margin-top: 0.5rem; display: block;">Boş bırakılırsa hasta sahibi portala giriş yapamaz.</small>
+          </div>
+
           <section class="pets-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
               <h3 style="font-size: 1.1rem; font-weight: 800;">Evcil Hayvanlar</h3>
@@ -144,6 +150,7 @@
                 <div class="owner-edit-form" style="max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.5rem;">
                   <input v-model="ownerDraft.fullName" class="modern-input" placeholder="Ad Soyad" />
                   <input v-model="ownerDraft.phoneE164" class="modern-input" placeholder="Telefon" />
+                  <input v-model="ownerDraft.password" class="modern-input" type="password" placeholder="Yeni Şifre (Değiştirmek istemiyorsanız boş bırakın)" />
                   <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
                     <button class="btn btn-text btn-sm" @click="cancelOwnerEdit">İptal</button>
                     <button class="btn btn-primary-sm" @click="saveOwnerEdit" :disabled="ownerSaving">Kaydet</button>
@@ -552,7 +559,7 @@ function clearSelectedNoteImage() {
 
 const ownerEditOpen = ref(false)
 const ownerSaving = ref(false)
-const ownerDraft = reactive({ fullName: '', phoneE164: '' })
+const ownerDraft = reactive({ fullName: '', phoneE164: '', password: '' })
 
 const editingPetId = ref(null)
 const petDraft = reactive({ name: '', species: '', breed: '', ageYears: null, ageMonths: null, notes: '', amountTl: null, creditAmountTl: null })
@@ -810,6 +817,7 @@ function openOwnerEdit() {
   if (!ownerDetail.value) return
   ownerDraft.fullName = ownerDetail.value.fullName
   ownerDraft.phoneE164 = ownerDetail.value.phoneE164
+  ownerDraft.password = ''
   ownerEditOpen.value = true
 }
 
@@ -826,6 +834,7 @@ async function saveOwnerEdit() {
       phoneE164: ownerDraft.phoneE164,
       email: ownerDetail.value.email,
       address: ownerDetail.value.address,
+      password: ownerDraft.password?.trim() || null,
       kvkkOptIn: ownerDetail.value.kvkkOptIn
     }
     const { http } = await import('@/api/http')
@@ -932,6 +941,7 @@ async function removePet(id) {
 const form = reactive({
   fullName: '',
   phoneE164: '',
+  password: '',
   kvkkOptIn: true,
   pets: [{ name: '', species: '', ageYears: null, ageMonths: null, notes: '' }]
 })
@@ -1116,6 +1126,7 @@ async function handleCreate() {
     await createOwner({
       fullName: form.fullName.trim(),
       phoneE164: form.phoneE164.trim(),
+      password: form.password?.trim() || null,
       kvkkOptIn: true,
       pets: cleanedPets
     })
@@ -1125,6 +1136,7 @@ async function handleCreate() {
 
     form.fullName = ''
     form.phoneE164 = ''
+    form.password = ''
     form.pets = [{ name: '', species: '', ageYears: null, ageMonths: null, notes: '' }]
   } catch (err) {
     console.error(err)
