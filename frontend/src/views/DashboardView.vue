@@ -1,32 +1,6 @@
 <template>
   <main class="page-dashboard">
-    <!-- TOP HIGHLIGHTS (Premium CRM Style) -->
-    <section class="highlights-grid">
-      <!-- Activity Line Chart (Dynamic SVG) -->
-      <div class="card highlight-card activity-chart">
-        <div class="chart-header">
-          <h3>Haftalık Aktivite</h3>
-          <span class="trend-up" v-if="trendValue >= 0">+{{ trendValue }}%</span>
-          <span class="trend-down" v-else>{{ trendValue }}%</span>
-        </div>
-        <div class="svg-wrapper">
-          <svg viewBox="0 0 100 30" class="line-chart">
-            <path :d="activityPath" fill="none" stroke="var(--primary)" stroke-width="2" />
-            <circle
-              v-for="(p, i) in activityPoints"
-              :key="i"
-              :cx="p.x"
-              :cy="p.y"
-              r="1.5"
-              fill="var(--primary)"
-            />
-          </svg>
-        </div>
-        <div class="chart-labels">
-          <span v-for="label in activityLabels" :key="label">{{ label }}</span>
-        </div>
-      </div>
-    </section>
+
 
     <!-- STATS GRID - PREMIUM MOBILE CRM STYLE -->
     <!-- STATS GRID - PREMIUM MINIMALIST STYLE -->
@@ -236,7 +210,21 @@
               <div class="detail-item full">
                 <label>Yapılan İşlemler</label>
                 <div v-if="!visitEditOpen" class="val highlight">{{ selectedVisit?.procedures || '—' }}</div>
-                <textarea v-else-if="visitDraft" v-model="visitDraft.procedures" class="modern-input" rows="2"></textarea>
+                <div v-else-if="visitDraft">
+                  <div class="procedure-pills-container">
+                    <button
+                      v-for="pill in predefinedProcedures"
+                      :key="pill"
+                      type="button"
+                      class="pill-select-btn"
+                      :class="{ active: isProcedureSelected(pill, visitDraft.procedures) }"
+                      @click="toggleProcedure(pill, visitDraft, 'procedures')"
+                    >
+                      {{ pill }}
+                    </button>
+                  </div>
+                  <textarea v-model="visitDraft.procedures" class="modern-input" rows="2"></textarea>
+                </div>
               </div>
 
               <div class="detail-item">
@@ -418,6 +406,18 @@
 
                   <div class="form-group">
                     <label>Yapılan İşlemler</label>
+                    <div class="procedure-pills-container">
+                      <button
+                        v-for="pill in predefinedProcedures"
+                        :key="pill"
+                        type="button"
+                        class="pill-select-btn"
+                        :class="{ active: isProcedureSelected(pill, appointmentProcedures) }"
+                        @click="toggleAppointmentProcedure(pill)"
+                      >
+                        {{ pill }}
+                      </button>
+                    </div>
                     <textarea v-model="appointmentProcedures" class="premium-input" rows="2" placeholder="Aşı, parazit, tıraş vb."></textarea>
                   </div>
 
@@ -652,32 +652,46 @@ const stats = reactive({
 
 const trendValue = ref(0)
 
-const activityLabels = computed(() => {
-  if (!stats.weeklyActivity.length) return []
-  return stats.weeklyActivity.map(d => {
-    const date = new Date(d.date)
-    return date.toLocaleDateString('tr-TR', { weekday: 'short' })
-  })
-})
+const predefinedProcedures = [
+  'İlaç A',
+  'İlaç B',
+  'İlaç C',
+  'Aşı A',
+  'Aşı B',
+  'Genel Muayene',
+  'Cerrahi Operasyon',
+  'Laboratuvar Tahlili'
+]
 
-const activityPoints = computed(() => {
-  if (!stats.weeklyActivity.length) return []
-  const max = Math.max(...stats.weeklyActivity.map(d => d.visitCount), 1)
-  return stats.weeklyActivity.map((d, i) => ({
-    x: (i / (stats.weeklyActivity.length - 1)) * 100,
-    y: 25 - (d.visitCount / max) * 20
-  }))
-})
+function isProcedureSelected(pill, currentStr) {
+  const str = currentStr || ''
+  const items = str.split(',').map(i => i.trim().toLowerCase()).filter(Boolean)
+  return items.includes(pill.toLowerCase())
+}
 
-const activityPath = computed(() => {
-  if (!activityPoints.value.length) return ''
-  const pts = activityPoints.value
-  let d = `M ${pts[0].x} ${pts[0].y}`
-  for (let i = 1; i < pts.length; i++) {
-    d += ` L ${pts[i].x} ${pts[i].y}`
+function toggleProcedure(pill, targetObj, key) {
+  let currentVal = targetObj[key] || ''
+  let items = currentVal.split(',').map(i => i.trim()).filter(Boolean)
+  const idx = items.findIndex(i => i.toLowerCase() === pill.toLowerCase())
+  if (idx > -1) {
+    items.splice(idx, 1)
+  } else {
+    items.push(pill)
   }
-  return d
-})
+  targetObj[key] = items.join(', ')
+}
+
+function toggleAppointmentProcedure(pill) {
+  let currentVal = appointmentProcedures.value || ''
+  let items = currentVal.split(',').map(i => i.trim()).filter(Boolean)
+  const idx = items.findIndex(i => i.toLowerCase() === pill.toLowerCase())
+  if (idx > -1) {
+    items.splice(idx, 1)
+  } else {
+    items.push(pill)
+  }
+  appointmentProcedures.value = items.join(', ')
+}
 
 function formatCurrency(val) {
   if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M'
@@ -2532,5 +2546,40 @@ function isTimeWithinWorkingHours(timeStr) {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+.procedure-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.pill-select-btn {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.pill-select-btn:hover {
+  background: #f8fafc;
+  color: var(--primary);
+  border-color: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.pill-select-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
 }
 </style>

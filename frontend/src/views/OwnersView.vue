@@ -345,6 +345,18 @@
               </div>
               <div class="form-group" style="margin-bottom: 1rem;">
                 <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">Uygulanan İşlemler (Aşı, Parazit vb.)</label>
+                <div class="procedure-pills-container">
+                  <button
+                    v-for="pill in predefinedProcedures"
+                    :key="pill"
+                    type="button"
+                    class="pill-select-btn"
+                    :class="{ active: isProcedureSelected(pill, newVisit.procedures) }"
+                    @click="toggleProcedure(pill, newVisit, 'procedures')"
+                  >
+                    {{ pill }}
+                  </button>
+                </div>
                 <textarea v-model="newVisit.procedures" class="modern-input" rows="2" placeholder="Örn: İç dış parazit yapıldı..." style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;"></textarea>
               </div>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
@@ -394,6 +406,18 @@
                   
                   <div class="field" style="margin-bottom: 1rem;">
                     <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">UYGULANAN İŞLEMLER</label>
+                    <div class="procedure-pills-container">
+                      <button
+                        v-for="pill in predefinedProcedures"
+                        :key="pill"
+                        type="button"
+                        class="pill-select-btn"
+                        :class="{ active: isProcedureSelected(pill, visitDraft.procedures) }"
+                        @click="toggleProcedure(pill, visitDraft, 'procedures')"
+                      >
+                        {{ pill }}
+                      </button>
+                    </div>
                     <textarea v-model="visitDraft.procedures" class="edit-input" rows="3" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;"></textarea>
                   </div>
 
@@ -1110,6 +1134,35 @@ async function handleCreate() {
   }
 }
 
+const predefinedProcedures = [
+  'İlaç A',
+  'İlaç B',
+  'İlaç C',
+  'Aşı A',
+  'Aşı B',
+  'Genel Muayene',
+  'Cerrahi Operasyon',
+  'Laboratuvar Tahlili'
+]
+
+function isProcedureSelected(pill, currentStr) {
+  const str = currentStr || ''
+  const items = str.split(',').map(i => i.trim().toLowerCase()).filter(Boolean)
+  return items.includes(pill.toLowerCase())
+}
+
+function toggleProcedure(pill, targetObj, key) {
+  let currentVal = targetObj[key] || ''
+  let items = currentVal.split(',').map(i => i.trim()).filter(Boolean)
+  const idx = items.findIndex(i => i.toLowerCase() === pill.toLowerCase())
+  if (idx > -1) {
+    items.splice(idx, 1)
+  } else {
+    items.push(pill)
+  }
+  targetObj[key] = items.join(', ')
+}
+
 onMounted(loadOwners)
 </script>
 
@@ -1809,5 +1862,40 @@ onMounted(loadOwners)
   color: var(--text-muted);
   cursor: pointer;
   font-weight: 600;
+}
+
+.procedure-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.pill-select-btn {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.pill-select-btn:hover {
+  background: #f8fafc;
+  color: var(--primary);
+  border-color: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.pill-select-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
 }
 </style>

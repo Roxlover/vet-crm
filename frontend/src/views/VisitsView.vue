@@ -108,6 +108,18 @@
 
         <div class="form-group">
           <label>Uygulanan Tedavi</label>
+          <div class="procedure-pills-container">
+            <button
+              v-for="pill in predefinedProcedures"
+              :key="pill"
+              type="button"
+              class="pill-select-btn"
+              :class="{ active: isProcedureSelected(pill, form.procedures) }"
+              @click="toggleProcedure(pill, form, 'procedures')"
+            >
+              {{ pill }}
+            </button>
+          </div>
           <textarea v-model="form.procedures" rows="3" placeholder="Neler yapıldı?"></textarea>
         </div>
 
@@ -222,7 +234,21 @@
             <div class="detail-item" style="grid-column: span 2;">
               <label>Yapılan İşlemler</label>
               <div v-if="!visitEditOpen" class="val highlight">{{ selectedVisit.procedures || '—' }}</div>
-              <textarea v-else-if="visitDraft" v-model="visitDraft.procedures" class="modern-input" rows="3"></textarea>
+              <div v-else-if="visitDraft">
+                <div class="procedure-pills-container">
+                  <button
+                    v-for="pill in predefinedProcedures"
+                    :key="pill"
+                    type="button"
+                    class="pill-select-btn"
+                    :class="{ active: isProcedureSelected(pill, visitDraft.procedures) }"
+                    @click="toggleProcedure(pill, visitDraft, 'procedures')"
+                  >
+                    {{ pill }}
+                  </button>
+                </div>
+                <textarea v-model="visitDraft.procedures" class="modern-input" rows="3"></textarea>
+              </div>
             </div>
 
             <div class="detail-item" style="grid-column: span 2;">
@@ -307,6 +333,35 @@ const form = reactive({
   imageFiles: [],
   microchipNumber: '',
 })
+
+const predefinedProcedures = [
+  'İlaç A',
+  'İlaç B',
+  'İlaç C',
+  'Aşı A',
+  'Aşı B',
+  'Genel Muayene',
+  'Cerrahi Operasyon',
+  'Laboratuvar Tahlili'
+]
+
+function isProcedureSelected(pill, currentStr) {
+  const str = currentStr || ''
+  const items = str.split(',').map(i => i.trim().toLowerCase()).filter(Boolean)
+  return items.includes(pill.toLowerCase())
+}
+
+function toggleProcedure(pill, targetObj, key) {
+  let currentVal = targetObj[key] || ''
+  let items = currentVal.split(',').map(i => i.trim()).filter(Boolean)
+  const idx = items.findIndex(i => i.toLowerCase() === pill.toLowerCase())
+  if (idx > -1) {
+    items.splice(idx, 1)
+  } else {
+    items.push(pill)
+  }
+  targetObj[key] = items.join(', ')
+}
 
 const showDetailModal = ref(false)
 const selectedVisit = ref(null)
@@ -1127,4 +1182,39 @@ onBeforeUnmount(() => {
 .btn-primary-sm { background: var(--primary); color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; cursor: pointer; }
 .btn-text { background: transparent; border: none; color: #64748b; font-weight: 600; cursor: pointer; }
 .btn-xs { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+
+.procedure-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.pill-select-btn {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.pill-select-btn:hover {
+  background: #f8fafc;
+  color: var(--primary);
+  border-color: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.pill-select-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+}
 </style>

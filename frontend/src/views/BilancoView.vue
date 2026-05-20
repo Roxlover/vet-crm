@@ -6,7 +6,7 @@
         <p class="subtitle">Klinik gelir-gider dengesini ve tahsilat durumlarını izleyin.</p>
       </div>
 
-      <div class="header-actions" v-if="canAccessBilanco">
+      <div class="header-actions" v-if="canAccessBilanco" style="display: flex; gap: 1rem; align-items: center;">
         <div class="segmented-control">
           <button
             v-for="p in ['day', 'week', 'month', 'year']"
@@ -18,6 +18,9 @@
             {{ {day: 'Gün', week: 'Hafta', month: 'Ay', year: 'Yıl'}[p] }}
           </button>
         </div>
+        <button class="btn btn-secondary print-btn" @click="printReport" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.25rem; border-radius: 12px; border: 1px solid #cbd5e1; background: #ffffff; color: var(--text-main); font-weight: 700; cursor: pointer; transition: all 0.2s;">
+          <span>🖨️</span> Raporu Yazdır / PDF
+        </button>
       </div>
     </header>
 
@@ -120,37 +123,48 @@
         <div class="manual-section">
           <div class="manual-card">
             <div class="card-header">
-              <h3>Manuel Kayıt Ekle</h3>
+              <h3>Manuel Gider Ekle</h3>
               <div class="net-summary">
-                <span class="pill income">Gelir: {{ fmtMoney(totalIncome) }}</span>
-                <span class="pill expense">Gider: {{ fmtMoney(totalExpense) }}</span>
+                <span class="pill expense">Toplam Gider: {{ fmtMoney(totalExpense) }}</span>
               </div>
             </div>
 
             <form @submit.prevent="submitEntry" class="manual-form">
-              <div class="form-grid">
+              <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
                 <div class="form-group">
                   <label>Tarih</label>
-                  <input type="date" v-model="form.date" required />
+                  <input type="date" v-model="form.date" required style="width: 100%;" />
                 </div>
                 <div class="form-group">
                   <label>Tutar</label>
-                  <input type="number" step="0.01" v-model.number="form.amount" placeholder="0.00" required />
-                </div>
-                <div class="form-group">
-                  <label>Tür</label>
-                  <div class="type-pill-group">
-                    <button type="button" class="type-pill" :class="{ active: form.type === 'income' }" @click="form.type = 'income'">Gelir</button>
-                    <button type="button" class="type-pill" :class="{ active: form.type === 'expense' }" @click="form.type = 'expense'">Gider</button>
-                  </div>
+                  <input type="number" step="0.01" v-model.number="form.amount" placeholder="0.00" required style="width: 100%;" />
                 </div>
               </div>
               <div class="form-group">
-                <label>Kategori / Açıklama</label>
-                <input type="text" v-model="form.category" placeholder="Kira, Fatura, İlaç vb." />
+                <label>Gider Kategorisi</label>
+                <select v-model="form.category" class="modern-select" required style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid #f1f5f9; background: #f8fafc; font-size: 0.95rem;">
+                  <option value="" disabled>-- Kategori Seçin --</option>
+                  <option value="İlaç Alımı">İlaç Alımı</option>
+                  <option value="Mama Alımı">Mama Alımı</option>
+                  <option value="Kum Alımı">Kum Alımı</option>
+                  <option value="Fatura Gideri">Fatura Gideri</option>
+                  <option value="Kira Gideri">Kira Gideri</option>
+                  <option value="Maaş Ödemesi">Maaş Ödemesi</option>
+                  <option value="Kahve - Su Alımı">Kahve - Su Alımı</option>
+                  <option value="Medikal Cihaz / Bakım">Medikal Cihaz / Bakım</option>
+                  <option value="custom">Diğer / Özel...</option>
+                </select>
+              </div>
+              <div v-if="form.category === 'custom'" class="form-group" style="margin-top: 0.25rem;">
+                <label>Özel Gider Kategorisi</label>
+                <input type="text" v-model="form.customCategory" placeholder="Kategori ismi girin..." required style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid #f1f5f9; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="margin-top: 0.25rem;">
+                <label>Açıklama / Not (İsteğe Bağlı)</label>
+                <textarea v-model="form.note" placeholder="Ek detaylar, fatura no, açıklama vb..." rows="2" style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid #f1f5f9; background: #f8fafc; font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
               </div>
               <button class="btn btn-primary" type="submit" :disabled="saving">
-                {{ saving ? 'Kaydediliyor...' : 'Kayıt Ekle' }}
+                {{ saving ? 'Kaydediliyor...' : 'Gideri Kaydet' }}
               </button>
             </form>
 
@@ -159,7 +173,7 @@
                 <thead>
                   <tr>
                     <th>Tarih</th>
-                    <th>Kategori</th>
+                    <th>Kategori / Detay</th>
                     <th class="right">Tutar</th>
                   </tr>
                 </thead>
@@ -167,8 +181,13 @@
                   <tr v-for="e in entries" :key="e.id">
                     <td>{{ e.date }}</td>
                     <td>
-                      <span class="cat">{{ e.category || '—' }}</span>
-                      <span class="badge" :class="e.isIncome ? 'income' : 'expense'">{{ e.isIncome ? 'Gelir' : 'Gider' }}</span>
+                      <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                          <span class="cat">{{ e.category || '—' }}</span>
+                          <span class="badge" :class="e.isIncome ? 'income' : 'expense'">{{ e.isIncome ? 'Gelir' : 'Gider' }}</span>
+                        </div>
+                        <span v-if="e.note" style="font-size: 0.8rem; color: #64748b; font-style: italic;">{{ e.note }}</span>
+                      </div>
                     </td>
                     <td class="right font-bold" :class="e.isIncome ? 'text-success' : 'text-danger'">
                       {{ e.isIncome ? '+' : '-' }}{{ fmtMoney(e.amount) }}
@@ -182,8 +201,12 @@
             <div class="ledger-mobile-list mobile-only">
               <div v-for="e in entries" :key="e.id" class="mini-entry-card">
                 <div class="e-info">
-                  <span class="e-cat">{{ e.category || 'Diğer' }}</span>
-                  <span class="e-date">{{ e.date }}</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="e-cat">{{ e.category || 'Diğer' }}</span>
+                    <span class="badge" :class="e.isIncome ? 'income' : 'expense'" style="font-size: 0.65rem; padding: 2px 4px; border-radius: 4px;">{{ e.isIncome ? 'Gelir' : 'Gider' }}</span>
+                  </div>
+                  <span v-if="e.note" style="font-size: 0.75rem; color: #64748b; font-style: italic; margin-top: 0.1rem; display: block;">{{ e.note }}</span>
+                  <span class="e-date" style="margin-top: 0.25rem;">{{ e.date }}</span>
                 </div>
                 <div class="e-amount" :class="e.isIncome ? 'text-success' : 'text-danger'">
                   {{ e.isIncome ? '+' : '-' }}{{ fmtMoney(e.amount) }}
@@ -194,6 +217,111 @@
         </div>
       </div>
     </template>
+
+    <!-- PRINTABLE REPORT TEMPLATE -->
+    <div class="print-report-container">
+      <div class="print-header">
+        <div class="clinic-brand">
+          <h2>BullVet Veteriner Polikliniği</h2>
+          <p>Mali Durum ve Bilanço Raporu</p>
+        </div>
+        <div class="report-meta">
+          <p><strong>Rapor Dönemi:</strong> {{ from }} / {{ to }}</p>
+          <p><strong>Oluşturma Tarihi:</strong> {{ new Date().toLocaleString('tr-TR') }}</p>
+        </div>
+      </div>
+
+      <div class="print-kpi-grid">
+        <div class="kpi-box">
+          <span class="lbl">Toplam Klinik Cirosu</span>
+          <span class="val">{{ fmtMoney(summaryTotalAmount) }}</span>
+        </div>
+        <div class="kpi-box">
+          <span class="lbl">Tahsil Edilen (Nakit)</span>
+          <span class="val">{{ fmtMoney(summaryTotalCollected) }}</span>
+        </div>
+        <div class="kpi-box">
+          <span class="lbl">Toplam Veresiye</span>
+          <span class="val danger">{{ fmtMoney(summaryTotalCredit) }}</span>
+        </div>
+        <div class="kpi-box">
+          <span class="lbl">Uygulanan Tedavi Adedi</span>
+          <span class="val">{{ summaryVisitCount }} Adet</span>
+        </div>
+      </div>
+
+      <div class="print-kpi-grid" style="margin-top: 1.5rem;">
+        <div class="kpi-box text-center">
+          <span class="lbl">Manuel Gelir Kaydı</span>
+          <span class="val success">{{ fmtMoney(totalIncome) }}</span>
+        </div>
+        <div class="kpi-box text-center">
+          <span class="lbl">Manuel Gider Kaydı</span>
+          <span class="val danger">{{ fmtMoney(totalExpense) }}</span>
+        </div>
+        <div class="kpi-box text-center" style="grid-column: span 2;">
+          <span class="lbl">Net Manuel Bakiye</span>
+          <span class="val" :class="netTotal >= 0 ? 'success' : 'danger'">{{ fmtMoney(netTotal) }}</span>
+        </div>
+      </div>
+
+      <div class="print-section">
+        <h3>Hekim Bazlı İşlem Ciroları</h3>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th>Hekim / Kullanıcı</th>
+              <th class="right">Ziyaret Sayısı</th>
+              <th class="right">Ciro</th>
+              <th class="right">Kalan Veresiye</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="group in visitUserGroups" :key="groupKey(group)">
+              <td>{{ group.fullName || group.username || '—' }}</td>
+              <td class="right">{{ groupSummary(group).visitCount || 0 }} Ziyaret</td>
+              <td class="right">{{ fmtMoney(groupTotalAmount(group)) }}</td>
+              <td class="right text-danger">{{ fmtMoney(groupTotalCredit(group)) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="print-section">
+        <h3>Manuel Ledger Giderleri ve Hareketleri</h3>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th>Tarih</th>
+              <th>Kategori</th>
+              <th>Açıklama / Not</th>
+              <th class="right">Tutar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="e in entries" :key="e.id">
+              <td>{{ e.date }}</td>
+              <td>
+                <span class="cat">{{ e.category || '—' }}</span>
+                <span class="print-badge" :class="e.isIncome ? 'income' : 'expense'">{{ e.isIncome ? 'Gelir' : 'Gider' }}</span>
+              </td>
+              <td>{{ e.note || '—' }}</td>
+              <td class="right font-bold" :class="e.isIncome ? 'text-success' : 'text-danger'">
+                {{ e.isIncome ? '+' : '-' }}{{ fmtMoney(e.amount) }}
+              </td>
+            </tr>
+            <tr v-if="!entries || !entries.length">
+              <td colspan="4" class="text-center" style="color: #64748b;">Bu dönemde kaydedilmiş manuel hareket bulunmuyor.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="print-footer">
+        <p>Bu rapor BullVet CRM sisteminden otomatik olarak alınmıştır. Bilgilerin doğruluğu sistem kayıtları ile sınırlıdır.</p>
+        <p>© {{ new Date().getFullYear() }} BullVet. Tüm Hakları Saklıdır.</p>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -236,10 +364,15 @@ const to = ref(toIsoDate(todayDate))
 const form = ref({
   date: toIsoDate(todayDate),
   amount: null,
-  type: 'income',
+  type: 'expense',
   category: '',
+  customCategory: '',
   note: '',
 })
+
+function printReport() {
+  window.print()
+}
 
 const totalIncome = computed(() =>
   (entries.value || []).filter(e => e?.isIncome).reduce((s, e) => s + Number(e?.amount || 0), 0),
@@ -345,8 +478,9 @@ async function submitEntry() {
   const payload = {
     date: form.value.date,
     amount: Number(form.value.amount),
-    isIncome: form.value.type === 'income',
-    category: form.value.category || null,
+    isIncome: false,
+    category: form.value.category === 'custom' ? form.value.customCategory : form.value.category,
+    note: form.value.note || null,
   }
   saving.value = true
   try {
@@ -356,6 +490,8 @@ async function submitEntry() {
     }
     form.value.amount = null
     form.value.category = ''
+    form.value.customCategory = ''
+    form.value.note = ''
   } catch (e) {
     alert('Hata oluştu.')
   } finally {
@@ -902,5 +1038,200 @@ onMounted(() => {
   .card-header h3 {
     font-size: 1.1rem;
   }
+}
+
+/* Print Styling Rules */
+.print-report-container {
+  display: none;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  
+  /* Hide standard interface elements */
+  .sidebar,
+  .topbar,
+  .top-bar,
+  .no-print,
+  .page-header,
+  .filters-bar,
+  .stats-grid,
+  .ledger-layout,
+  header,
+  footer,
+  aside,
+  nav,
+  button,
+  .segmented-control,
+  .access-denied,
+  .main-nav {
+    display: none !important;
+  }
+
+  .print-report-container {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    background: #ffffff !important;
+  }
+  
+  @page {
+    size: A4 portrait;
+    margin: 1.5cm;
+  }
+}
+
+.print-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #1e293b;
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.clinic-brand h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+.clinic-brand p {
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0.25rem 0 0 0;
+}
+
+.report-meta {
+  text-align: right;
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.report-meta p {
+  margin: 0.25rem 0;
+}
+
+.print-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.kpi-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.kpi-box .lbl {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.kpi-box .val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.kpi-box .val.danger {
+  color: #ef4444;
+}
+
+.kpi-box .val.success {
+  color: #10b981;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.print-section {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.print-section h3 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #1e293b;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-table th {
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.print-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.print-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.print-table .right {
+  text-align: right;
+}
+
+.print-badge {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  margin-left: 0.5rem;
+  display: inline-block;
+}
+
+.print-badge.income {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.print-badge.expense {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.print-footer {
+  margin-top: 4rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 </style>
