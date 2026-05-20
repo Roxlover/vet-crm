@@ -104,7 +104,19 @@
           <h2 v-if="!showNewAppointment">
             <template v-if="!visitEditOpen">
               <span class="pet-name">{{ selectedVisit?.petName || 'Ziyaret Detayı' }}</span>
-              <span class="owner-name">{{ selectedVisit?.ownerName }}</span>
+              <span class="owner-name">
+                {{ selectedVisit?.ownerName }}
+                <button 
+                  v-if="selectedVisit?.ownerPhone" 
+                  class="btn-whatsapp-icon" 
+                  title="WhatsApp ile Hatırlat"
+                  @click="sendWhatsAppReminder(selectedVisit.ownerName, selectedVisit.ownerPhone, selectedVisit.petName, selectedVisit.performedAt, selectedVisit.procedures)"
+                >
+                  <svg viewBox="0 0 24 24" class="wp-icon" fill="currentColor">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.197 1.451 4.819 1.452 5.485 0 9.94-4.447 9.943-9.923.002-2.652-1.031-5.147-2.907-7.027-1.878-1.88-4.376-2.914-7.026-2.915-5.486 0-9.941 4.448-9.944 9.927-.001 1.785.484 3.528 1.408 5.048L1.1 21.09l4.547-1.192-.04.024zm10.154-7.587c-.244-.122-1.442-.712-1.666-.793-.223-.08-.386-.122-.549.122-.163.243-.63.793-.772.955-.143.162-.285.182-.529.06-2.023-1.009-3.342-2.07-4.686-4.37-.354-.606-.035-.93.266-1.23.271-.27.549-.64.67-.89.12-.25.06-.47-.03-.65-.09-.18-.549-1.32-.752-1.81-.197-.474-.396-.41-.549-.418-.143-.007-.306-.007-.468-.007-.163 0-.427.06-.65.3-.224.24-.854.83-.854 2.03s.874 2.35 1.002 2.51c.122.16 1.7 2.59 4.12 3.64.57.25 1.02.4 1.37.5.58.18 1.1.16 1.52.1.47-.07 1.442-.59 1.646-1.16.204-.57.204-1.06.142-1.16-.06-.1-.22-.16-.47-.28z"/>
+                  </svg>
+                </button>
+              </span>
             </template>
             <template v-else>
               <span class="edit-title">Kayıt Düzenleme</span>
@@ -298,8 +310,22 @@
               <div class="plans-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                 <div v-for="plan in selectedVisit.plans" :key="plan.id" class="plan-card" style="background: #f8fafc; padding: 1rem; border-radius: 16px; border: 1px solid #e2e8f0;">
                   <template v-if="editingPlanId !== plan.id">
-                    <div style="font-weight: 800; color: var(--primary);">{{ plan.date }}</div>
-                    <div style="font-size: 0.9rem; margin-top: 0.25rem;">{{ plan.purpose || 'Kontrol' }}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                      <div>
+                        <div style="font-weight: 800; color: var(--primary);">{{ plan.date }}</div>
+                        <div style="font-size: 0.9rem; margin-top: 0.25rem;">{{ plan.purpose || 'Kontrol' }}</div>
+                      </div>
+                      <button 
+                        v-if="selectedVisit?.ownerPhone" 
+                        class="btn-whatsapp-icon-sm" 
+                        title="WhatsApp ile Hatırlat"
+                        @click="sendWhatsAppReminder(selectedVisit.ownerName, selectedVisit.ownerPhone, selectedVisit.petName, plan.date, plan.purpose)"
+                      >
+                        <svg viewBox="0 0 24 24" class="wp-icon" fill="currentColor">
+                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.197 1.451 4.819 1.452 5.485 0 9.94-4.447 9.943-9.923.002-2.652-1.031-5.147-2.907-7.027-1.878-1.88-4.376-2.914-7.026-2.915-5.486 0-9.941 4.448-9.944 9.927-.001 1.785.484 3.528 1.408 5.048L1.1 21.09l4.547-1.192-.04.024zm10.154-7.587c-.244-.122-1.442-.712-1.666-.793-.223-.08-.386-.122-.549.122-.163.243-.63.793-.772.955-.143.162-.285.182-.529.06-2.023-1.009-3.342-2.07-4.686-4.37-.354-.606-.035-.93.266-1.23.271-.27.549-.64.67-.89.12-.25.06-.47-.03-.65-.09-.18-.549-1.32-.752-1.81-.197-.474-.396-.41-.549-.418-.143-.007-.306-.007-.468-.007-.163 0-.427.06-.65.3-.224.24-.854.83-.854 2.03s.874 2.35 1.002 2.51c.122.16 1.7 2.59 4.12 3.64.57.25 1.02.4 1.37.5.58.18 1.1.16 1.52.1.47-.07 1.442-.59 1.646-1.16.204-.57.204-1.06.142-1.16-.06-.1-.22-.16-.47-.28z"/>
+                        </svg>
+                      </button>
+                    </div>
                     <button class="btn btn-ghost btn-xs" @click="startEditPlan(plan)" style="margin-top: 0.5rem; width: 100%;">Düzenle</button>
                   </template>
                   <template v-else>
@@ -1603,13 +1629,35 @@ function isTimeWithinWorkingHours(timeStr) {
   return total >= start && total <= end
 }
 
+function sendWhatsAppReminder(ownerName, ownerPhone, petName, dateStr, purpose) {
+  if (!ownerPhone) {
+    alert('Müşterinin telefon numarası kayıtlı değil.');
+    return;
+  }
+  const cleanPhone = ownerPhone.replace(/\D/g, '');
+  
+  let displayDate = dateStr || 'Belirtilmemiş Tarih';
+  if (displayDate.includes('T') || (displayDate.includes('-') && displayDate.length >= 10)) {
+    try {
+      const dt = new Date(displayDate);
+      if (!isNaN(dt.getTime())) {
+        displayDate = dt.toLocaleString('tr-TR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
 
-
-
-
-// loadList removed
-
-// titleForFilter removed
+  const message = `Merhaba ${ownerName}, BullVet Veteriner Kliniği'nden hatırlatma: ${petName} isimli dostumuzun ${displayDate} tarihindeki "${purpose || 'Kontrol'}" randevusu/işlemi yaklaşmaktadır. Bilgi almak veya değişiklik yapmak için bizimle iletişime geçebilirsiniz. Sağlıklı günler dileriz!`;
+  const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+}
 </script>
 
 <style scoped>
@@ -2581,5 +2629,58 @@ function isTimeWithinWorkingHours(timeStr) {
   color: #ffffff;
   border-color: var(--primary);
   box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+}
+
+/* WHATSAPP REMINDER BUTTONS */
+.btn-whatsapp-icon {
+  background: #25D366;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 5px rgba(37, 211, 102, 0.3);
+  vertical-align: middle;
+}
+.btn-whatsapp-icon:hover {
+  background: #20ba5a;
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 4px 10px rgba(37, 211, 102, 0.5);
+}
+.btn-whatsapp-icon .wp-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-whatsapp-icon-sm {
+  background: #25D366;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(37, 211, 102, 0.3);
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+.btn-whatsapp-icon-sm:hover {
+  background: #20ba5a;
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 3px 8px rgba(37, 211, 102, 0.5);
+}
+.btn-whatsapp-icon-sm .wp-icon {
+  width: 13px;
+  height: 13px;
 }
 </style>

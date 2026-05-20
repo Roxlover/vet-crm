@@ -9,6 +9,7 @@ public class VisitDto
 
     public int OwnerId { get; set; }
     public string OwnerName { get; set; } = null!;
+    public string? OwnerPhone { get; set; }
 
     public DateTime PerformedAt { get; set; }      // işlem tarihi
     public string? Procedures { get; set; }        // neler uygulandı

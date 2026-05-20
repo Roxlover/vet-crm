@@ -222,7 +222,7 @@
     <div class="print-report-container">
       <div class="print-header">
         <div class="clinic-brand">
-          <h2>BullVet Veteriner Polikliniği</h2>
+          <h2>BullVet Veteriner Kliniği</h2>
           <p>Mali Durum ve Bilanço Raporu</p>
         </div>
         <div class="report-meta">
