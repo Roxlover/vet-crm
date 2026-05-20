@@ -85,4 +85,54 @@ public class R2VisitImageStorage : IR2Storage
 
         return $"{_opt.PublicBaseUrl.TrimEnd('/')}/{key}";
     }
+
+    public async Task<string> UploadOwnerNoteImageAsync(int ownerId, Stream stream, string contentType)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+            contentType = "application/octet-stream";
+
+        var ext = contentType switch
+        {
+            "image/jpeg" => ".jpg",
+            "image/png"  => ".png",
+            "image/webp" => ".webp",
+            "image/gif"  => ".gif",
+            _ => ""
+        };
+
+        var key = $"owners/{ownerId}/notes/{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{ext}";
+
+        byte[] data;
+        await using (var ms = new MemoryStream())
+        {
+            await stream.CopyToAsync(ms);
+            data = ms.ToArray();
+        }
+
+        var mem = new MemoryStream(data);
+
+        var req = new PutObjectRequest
+        {
+            BucketName = _opt.Bucket,
+            Key = key,
+            InputStream = mem,
+            ContentType = contentType,
+            AutoCloseStream = true
+        };
+
+        req.Headers.ContentLength = data.LongLength;
+        req.UseChunkEncoding = false;
+
+        try
+        {
+            await _s3.PutObjectAsync(req);
+        }
+        catch (AmazonS3Exception ex)
+        {
+            var debugInfo = $"AccountId: {_opt.AccountId?.Length} chars, AccessKey: {_opt.AccessKey?.Length} chars, Bucket: {_opt.Bucket}";
+            throw new Exception($"S3 Upload Failed. Config Check: {debugInfo} | S3 Error: {ex.Message} | ErrorCode: {ex.ErrorCode}", ex);
+        }
+
+        return $"{_opt.PublicBaseUrl.TrimEnd('/')}/{key}";
+    }
 }

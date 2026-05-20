@@ -110,8 +110,12 @@
                 </div>
                 <div class="visit-finances-summary">
                   <div class="fin-pill amount">
-                    <span class="label">Alınan:</span>
+                    <span class="label">Tutar:</span>
                     <span class="value">{{ fmtMoney(v.amountTl || v.AmountTl) }}</span>
+                  </div>
+                  <div class="fin-pill success">
+                    <span class="label">Nakit:</span>
+                    <span class="value" style="color: var(--success); font-weight: bold;">{{ fmtMoney((v.collectedAmountTl ?? v.CollectedAmountTl) ?? ((v.amountTl || v.AmountTl) - (v.creditAmountTl || v.CreditAmountTl || 0))) }}</span>
                   </div>
                   <div class="fin-pill credit" v-if="(v.creditAmountTl || v.CreditAmountTl) > 0">
                     <span class="label">Veresiye:</span>
@@ -152,14 +156,18 @@
                     <textarea v-model="visitDraft.procedures" class="edit-input" rows="3"></textarea>
                   </div>
 
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
                     <div class="field">
                       <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">TUTAR (TL)</label>
-                      <input type="number" v-model.number="visitDraft.amountTl" class="edit-input" />
+                      <input type="number" v-model.number="visitDraft.amountTl" @input="onEditAmountInput" class="edit-input" />
+                    </div>
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">NAKİT (TL)</label>
+                      <input type="number" v-model.number="visitDraft.collectedAmountTl" @input="onEditCollectedInput" class="edit-input" />
                     </div>
                     <div class="field">
                       <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">VERESİYE (TL)</label>
-                      <input type="number" v-model.number="visitDraft.creditAmountTl" class="edit-input" />
+                      <input type="number" v-model.number="visitDraft.creditAmountTl" @input="onEditCreditInput" class="edit-input" />
                     </div>
                   </div>
 
@@ -275,13 +283,17 @@ function normalizeMediaUrl(rawUrl) {
 function toVisitDraft(v) {
   if (!v) return null
   const perf = v.performedAt || v.PerformedAt || ''
+  const amount = v.amountTl ?? v.AmountTl ?? null
+  const credit = v.creditAmountTl ?? v.CreditAmountTl ?? null
+  const collected = v.collectedAmountTl ?? v.CollectedAmountTl ?? null
   return {
     performedAt: perf ? new Date(perf).toISOString().slice(0, 16) : '',
     purpose: v.purpose || v.Purpose || '',
     procedures: v.procedures || v.Procedures || '',
-    amountTl: v.amountTl ?? v.AmountTl ?? null,
+    amountTl: amount,
     notes: v.notes || v.Notes || '',
-    creditAmountTl: Number(v.creditAmountTl ?? v.CreditAmountTl ?? 0),
+    creditAmountTl: Number(credit ?? 0),
+    collectedAmountTl: collected ?? (amount !== null ? Math.max(0, amount - (credit || 0)) : null),
 
     // Pet & Owner Info
     petName: v.petName ?? v.PetName ?? '',
@@ -301,6 +313,30 @@ function cancelVisitEdit() {
   visitEditId.value = null
   visitDraft.value = null
   visitSaveError.value = ''
+}
+
+function onEditAmountInput() {
+  const total = visitDraft.value.amountTl || 0
+  const credit = visitDraft.value.creditAmountTl || 0
+  visitDraft.value.collectedAmountTl = Math.max(0, total - credit)
+}
+
+function onEditCreditInput() {
+  const total = visitDraft.value.amountTl || 0
+  const credit = visitDraft.value.creditAmountTl || 0
+  if (credit > total) {
+    visitDraft.value.amountTl = credit
+  }
+  visitDraft.value.collectedAmountTl = Math.max(0, (visitDraft.value.amountTl || 0) - credit)
+}
+
+function onEditCollectedInput() {
+  const total = visitDraft.value.amountTl || 0
+  const collected = visitDraft.value.collectedAmountTl || 0
+  if (collected > total) {
+    visitDraft.value.amountTl = collected
+  }
+  visitDraft.value.creditAmountTl = Math.max(0, (visitDraft.value.amountTl || 0) - collected)
 }
 
 async function saveVisitEdit(v) {
@@ -338,11 +374,10 @@ async function saveVisitEdit(v) {
       notes: (visitDraft.value.notes || '').trim() || null,
       purpose: (visitDraft.value.purpose || '').trim() || null,
       nextDate: v.nextDate || v.NextDate || null,
+      creditAmountTl: visitDraft.value.creditAmountTl,
+      collectedAmountTl: visitDraft.value.collectedAmountTl
     }
     await http.put(`/visits/${visitId}`, payload)
-    
-    const credit = Number(visitDraft.value.creditAmountTl ?? 0)
-    await http.patch(`/visits/${visitId}/credit`, { creditAmountTl: credit })
     
     // Refresh
     await openPet(selectedPetId.value)

@@ -6,5 +6,6 @@ namespace VetCrm.Api.Storage;
 public interface IR2Storage
 {
     Task<string> UploadVisitImageAsync(int visitId, Stream stream, string contentType);
+    Task<string> UploadOwnerNoteImageAsync(int ownerId, Stream stream, string contentType);
 }
 

@@ -12,10 +12,12 @@ namespace VetCrm.Api.Controllers;
 public class OwnersController : ControllerBase
 {
     private readonly VetCrmDbContext _db;
+    private readonly Storage.IR2Storage _storage;
 
-    public OwnersController(VetCrmDbContext db)
+    public OwnersController(VetCrmDbContext db, Storage.IR2Storage storage)
     {
         _db = db;
+        _storage = storage;
     }
     private static DateOnly? BirthDateFromAge(int? years, int? months)
 {
@@ -101,6 +103,7 @@ public async Task<ActionResult<OwnerDto>> GetOwner(int id)
             {
                 Id = n.Id,
                 Note = n.Note,
+                ImageUrl = n.ImageUrl,
                 CreatedAt = n.CreatedAt
             })
             .ToList()
@@ -225,19 +228,31 @@ var pet = new Pet
 }
 
 [HttpPost("{ownerId}/notes")]
-public async Task<ActionResult> AddNoteToOwner(int ownerId, [FromBody] AddOwnerNoteRequest request)
+public async Task<ActionResult> AddNoteToOwner(int ownerId, [FromForm] AddOwnerNoteRequest request)
 {
     var owner = await _db.Owners.FindAsync(ownerId);
     if (owner == null)
         return NotFound();
 
-    if (string.IsNullOrWhiteSpace(request.Note))
-        return BadRequest("Not içeriği boş olamaz.");
+    if (string.IsNullOrWhiteSpace(request.Note) && request.Image == null)
+        return BadRequest("Not veya görsel eklenmelidir.");
+
+    string? imageUrl = null;
+    if (request.Image != null)
+    {
+        await using var stream = request.Image.OpenReadStream();
+        imageUrl = await _storage.UploadOwnerNoteImageAsync(
+            ownerId: ownerId,
+            stream: stream,
+            contentType: request.Image.ContentType ?? "application/octet-stream"
+        );
+    }
 
     var note = new OwnerNote
     {
         OwnerId = ownerId,
-        Note = request.Note.Trim(),
+        Note = request.Note?.Trim(),
+        ImageUrl = imageUrl,
         CreatedAt = DateTime.UtcNow
     };
 
@@ -248,6 +263,7 @@ public async Task<ActionResult> AddNoteToOwner(int ownerId, [FromBody] AddOwnerN
     {
         Id = note.Id,
         Note = note.Note,
+        ImageUrl = note.ImageUrl,
         CreatedAt = note.CreatedAt
     });
 }
@@ -259,10 +275,10 @@ public async Task<ActionResult> UpdateNote(int ownerId, int noteId, [FromBody] A
     if (note == null)
         return NotFound();
 
-    if (string.IsNullOrWhiteSpace(request.Note))
-        return BadRequest("Not içeriği boş olamaz.");
+    if (string.IsNullOrWhiteSpace(request.Note) && string.IsNullOrWhiteSpace(note.ImageUrl))
+        return BadRequest("Not veya görsel eklenmelidir.");
 
-    note.Note = request.Note.Trim();
+    note.Note = request.Note?.Trim();
     await _db.SaveChangesAsync();
 
     return NoContent();

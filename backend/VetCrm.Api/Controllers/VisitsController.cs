@@ -448,6 +448,7 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
                 CreatedByUsername = _currentUser.Username,
                 CreatedByName     = _currentUser.FullName,
                 CreditAmountTl = dto.CreditAmountTl,
+                CollectedAmountTl = dto.CollectedAmountTl ?? Math.Max(0m, (dto.AmountTl ?? 0m) - (dto.CreditAmountTl ?? 0m)),
                 MicrochipNumber   = dto.MicrochipNumber,
                 Status = dto.Status.HasValue ? (Visit.VisitStatus)dto.Status.Value : Visit.VisitStatus.Pending
             };
@@ -516,6 +517,7 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
         visit.Procedures      = dto.Procedures;
         visit.AmountTl        = dto.AmountTl;
         visit.CreditAmountTl  = dto.CreditAmountTl;
+        visit.CollectedAmountTl = dto.CollectedAmountTl ?? Math.Max(0m, (dto.AmountTl ?? 0m) - (dto.CreditAmountTl ?? 0m));
         visit.Notes           = dto.Notes;
         visit.MicrochipNumber = dto.MicrochipNumber;
 
@@ -557,6 +559,9 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
 
         var apps = _db.Appointments.Where(a => a.VisitId == id);
         _db.Appointments.RemoveRange(apps);
+
+        var ledgerEntries = _db.LedgerEntries.Where(l => l.VisitId == id);
+        _db.LedgerEntries.RemoveRange(ledgerEntries);
 
         _db.Visits.Remove(visit);
         await _db.SaveChangesAsync();

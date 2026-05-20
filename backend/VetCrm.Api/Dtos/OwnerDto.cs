@@ -56,11 +56,13 @@ public class OwnerPetFullDto
 public class OwnerNoteDto
 {
     public int Id { get; set; }
-    public string Note { get; set; } = null!;
+    public string? Note { get; set; }
+    public string? ImageUrl { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
 public class AddOwnerNoteRequest
 {
-    public string Note { get; set; } = null!;
+    public string? Note { get; set; }
+    public Microsoft.AspNetCore.Http.IFormFile? Image { get; set; }
 }

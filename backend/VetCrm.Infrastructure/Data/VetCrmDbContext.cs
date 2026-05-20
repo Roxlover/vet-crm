@@ -163,7 +163,7 @@ public class VetCrmDbContext : DbContext
                 .WithMany(o => o.Notes)
                 .HasForeignKey(x => x.OwnerId)
                 .OnDelete(DeleteBehavior.Cascade);
-            b.Property(x => x.Note).IsRequired();
+            b.Property(x => x.Note).IsRequired(false);
             b.Property(x => x.CreatedAt).HasDefaultValueSql("NOW()");
         });
 

@@ -162,25 +162,57 @@
                   <span class="count-badge">{{ ownerDetail.notes?.length || 0 }}</span>
                 </div>
                 
-                <div class="note-input-box">
+                <div class="note-input-box" style="display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;">
                   <textarea 
                     v-model="noteText" 
-                    placeholder="Yeni bir not ekleyin..."
+                    placeholder="Yeni bir not ekleyin veya görsel seçin..."
                     rows="2"
+                    style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.5rem 0.75rem; font-family: inherit; font-size: 0.9rem; resize: vertical;"
                   ></textarea>
-                  <button 
-                    class="btn btn-primary btn-sm" 
-                    @click="handleAddNote" 
-                    :disabled="noteAdding || !noteText?.trim()"
-                  >
-                    {{ noteAdding ? '...' : 'Ekle' }}
-                  </button>
+                  
+                  <!-- Note Image Preview -->
+                  <div v-if="noteImagePreviewUrl" class="note-image-preview" style="position: relative; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid var(--primary-light);">
+                    <img :src="noteImagePreviewUrl" style="width: 100%; height: 100%; object-fit: cover;" />
+                    <button type="button" @click="clearSelectedNoteImage" style="position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;">✕</button>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label class="btn btn-ghost btn-xs" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.6rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff;">
+                      <span style="font-size: 1.1rem; line-height: 1;">📷</span> Görsel Ekle
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        @change="handleNoteFileChange" 
+                        style="display: none;" 
+                      />
+                    </label>
+                    
+                    <button 
+                      class="btn btn-primary btn-sm" 
+                      @click="handleAddNote" 
+                      :disabled="noteAdding || (!noteText?.trim() && !noteImageFile)"
+                      style="border-radius: 8px; padding: 0.4rem 1rem;"
+                    >
+                      {{ noteAdding ? 'Ekleniyor...' : 'Ekle' }}
+                    </button>
+                  </div>
                 </div>
 
                 <div class="notes-scroll-area">
                   <div v-for="note in (ownerDetail.notes || [])" :key="note.id" class="modern-note-card">
                     <template v-if="editingNoteId !== note.id">
-                      <p>{{ note.note }}</p>
+                      <p v-if="note.note">{{ note.note }}</p>
+                      
+                      <!-- Note Image View -->
+                      <div v-if="note.imageUrl" class="note-image-wrapper" style="margin-top: 0.75rem; max-width: 220px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm); background: #f8fafc;">
+                        <img 
+                          :src="normalizeMediaUrl(note.imageUrl)" 
+                          style="width: 100%; max-height: 160px; object-fit: cover; cursor: pointer; display: block;" 
+                          @click="window.open(normalizeMediaUrl(note.imageUrl), '_blank')" 
+                          title="Görseli Büyüt"
+                        />
+                      </div>
+
                       <div class="note-footer">
                         <span class="date">{{ new Date(note.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</span>
                         <div class="note-actions">
@@ -345,30 +377,96 @@
             </div>
             <div v-else class="visit-timeline" style="display: flex; flex-direction: column; gap: 1.5rem;">
               <div v-for="v in ownerVisits" :key="v.id || v.visitId" class="modern-visit-card" style="background: #ffffff; padding: 1.5rem; border-radius: 12px; border: 1px solid #f1f5f9; box-shadow: var(--shadow-sm); position: relative; border-left: 4px solid var(--primary);">
-                <div class="visit-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                  <div>
-                    <span style="display: block; font-weight: 800; font-size: 1.1rem;">{{ formatDt(v.performedAt) }}</span>
-                    <span style="font-size: 0.85rem; color: var(--primary); font-weight: 700;">Pet: {{ v.petName || 'Bilinmiyor' }}</span>
+                <!-- DÜZENLEME MODU (ZİYARET) -->
+                <div v-if="visitEditId === (v.id || v.visitId)">
+                  <div class="edit-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">İŞLEM TARİHİ</label>
+                      <input type="datetime-local" v-model="visitDraft.performedAt" class="edit-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;" />
+                    </div>
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">HANGİ HAYVAN İÇİN?</label>
+                      <select v-model="visitDraft.petId" class="edit-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;">
+                        <option v-for="p in ownerDetail?.pets" :key="p.id" :value="p.id">{{ p.name }}</option>
+                      </select>
+                    </div>
                   </div>
-                  <div style="display: flex; gap: 1rem; text-align: right;">
-                    <div v-if="v.amountTl > 0">
-                      <span style="font-size: 0.7rem; color: #64748b; display: block;">ALINAN</span>
-                      <span style="font-weight: 800; color: var(--success);">{{ fmtMoney(v.amountTl) }}</span>
+                  
+                  <div class="field" style="margin-bottom: 1rem;">
+                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">UYGULANAN İŞLEMLER</label>
+                    <textarea v-model="visitDraft.procedures" class="edit-input" rows="3" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;"></textarea>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">TUTAR (TL)</label>
+                      <input type="number" v-model.number="visitDraft.amountTl" @input="onEditAmountInput" class="edit-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;" />
                     </div>
-                    <div v-if="v.creditAmountTl > 0">
-                      <span style="font-size: 0.7rem; color: #64748b; display: block;">VERESİYE</span>
-                      <span style="font-weight: 800; color: var(--danger);">{{ fmtMoney(v.creditAmountTl) }}</span>
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">NAKİT (TL)</label>
+                      <input type="number" v-model.number="visitDraft.collectedAmountTl" @input="onEditCollectedInput" class="edit-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;" />
                     </div>
+                    <div class="field">
+                      <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">VERESİYE (TL)</label>
+                      <input type="number" v-model.number="visitDraft.creditAmountTl" @input="onEditCreditInput" class="edit-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;" />
+                    </div>
+                  </div>
+
+                  <div class="field" style="margin-bottom: 1rem;">
+                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">HEKİM NOTU</label>
+                    <textarea v-model="visitDraft.notes" class="edit-input" rows="2" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;"></textarea>
+                  </div>
+
+                  <div v-if="visitSaveError" class="state state-error" style="font-size: 0.85rem; margin-bottom: 1rem; padding: 0.5rem;">{{ visitSaveError }}</div>
+
+                  <div class="edit-actions" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button class="btn btn-ghost btn-sm" @click="cancelVisitEdit">İptal</button>
+                    <button class="btn btn-primary btn-sm" @click="saveVisitEdit(v)" :disabled="visitSaving">
+                      {{ visitSaving ? 'Kaydediliyor...' : 'Kaydet' }}
+                    </button>
+                    <button class="btn btn-danger-sm btn-sm" @click="handleDeleteVisit(v)" :disabled="visitSaving">Sil</button>
                   </div>
                 </div>
-                <div class="procedure-block" style="background: #f8fafc; padding: 1rem; border-radius: 8px; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1rem;">
-                  <strong style="color: #64748b; font-size: 0.8rem; text-transform: uppercase;">Uygulanan İşlemler</strong>
-                  <p style="margin-top: 0.25rem;">{{ v.procedures || 'Belirtilmemiş' }}</p>
-                </div>
-                
-                <div v-if="getVisitImages(v).length > 0" class="visit-gallery" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
-                  <div v-for="(img, idx) in getVisitImages(v)" :key="idx" class="gallery-item" style="width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
-                    <img :src="normalizeMediaUrl(getImageUrl(img))" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" @click="window.open(normalizeMediaUrl(getImageUrl(img)), '_blank')" />
+
+                <!-- GÖRÜNTÜLEME MODU -->
+                <div v-else>
+                  <div class="visit-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div>
+                      <span style="display: block; font-weight: 800; font-size: 1.1rem;">{{ formatDt(v.performedAt) }}</span>
+                      <span style="font-size: 0.85rem; color: var(--primary); font-weight: 700;">Pet: {{ v.petName || 'Bilinmiyor' }}</span>
+                    </div>
+                    <div style="display: flex; gap: 1rem; text-align: right;">
+                      <div>
+                        <span style="font-size: 0.7rem; color: #64748b; display: block;">TOPLAM TUTAR</span>
+                        <span style="font-weight: 800; color: #1e293b;">{{ fmtMoney(v.amountTl) }}</span>
+                      </div>
+                      <div>
+                        <span style="font-size: 0.7rem; color: #64748b; display: block;">NAKİT</span>
+                        <span style="font-weight: 800; color: var(--success);">{{ fmtMoney(v.collectedAmountTl ?? (v.amountTl - (v.creditAmountTl ?? 0))) }}</span>
+                      </div>
+                      <div v-if="v.creditAmountTl > 0">
+                        <span style="font-size: 0.7rem; color: #64748b; display: block;">VERESİYE</span>
+                        <span style="font-weight: 800; color: var(--danger);">{{ fmtMoney(v.creditAmountTl) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="procedure-block" style="background: #f8fafc; padding: 1rem; border-radius: 8px; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1rem;">
+                    <strong style="color: #64748b; font-size: 0.8rem; text-transform: uppercase;">Uygulanan İşlemler</strong>
+                    <p style="margin-top: 0.25rem;">{{ v.procedures || 'Belirtilmemiş' }}</p>
+                  </div>
+                  <div v-if="v.notes" class="notes-block" style="background: #fffbeb; padding: 1rem; border-radius: 8px; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1rem; border: 1px solid #fef3c7;">
+                    <strong style="color: #d97706; font-size: 0.8rem; text-transform: uppercase;">Hekim Notu</strong>
+                    <p style="margin-top: 0.25rem;">{{ v.notes }}</p>
+                  </div>
+                  
+                  <div v-if="getVisitImages(v).length > 0" class="visit-gallery" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
+                    <div v-for="(img, idx) in getVisitImages(v)" :key="idx" class="gallery-item" style="width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+                      <img :src="normalizeMediaUrl(getImageUrl(img))" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" @click="window.open(normalizeMediaUrl(getImageUrl(img)), '_blank')" />
+                    </div>
+                  </div>
+
+                  <div style="display: flex; justify-content: flex-start; margin-top: 1rem;">
+                    <button class="btn btn-secondary btn-sm" @click="openVisitEdit(v)">Düzenle</button>
                   </div>
                 </div>
               </div>
@@ -409,6 +507,24 @@ const petAddError = ref('')
 const noteError = ref('')
 const noteText = ref('')
 const noteAdding = ref(false)
+const noteImageFile = ref(null)
+const noteImagePreviewUrl = ref(null)
+
+function handleNoteFileChange(e) {
+  const file = e.target.files?.[0]
+  if (file) {
+    noteImageFile.value = file
+    noteImagePreviewUrl.value = URL.createObjectURL(file)
+  }
+}
+
+function clearSelectedNoteImage() {
+  noteImageFile.value = null
+  if (noteImagePreviewUrl.value) {
+    URL.revokeObjectURL(noteImagePreviewUrl.value)
+    noteImagePreviewUrl.value = null
+  }
+}
 
 const ownerEditOpen = ref(false)
 const ownerSaving = ref(false)
@@ -423,6 +539,113 @@ const noteSaving = ref(false)
 
 const ownerVisits = ref([])
 const loadingVisits = ref(false)
+
+const visitEditId = ref(null)
+const visitDraft = ref(null)
+const visitSaving = ref(false)
+const visitSaveError = ref('')
+
+function toVisitDraft(v) {
+  if (!v) return null
+  const perf = v.performedAt || v.PerformedAt || ''
+  const amount = v.amountTl ?? v.AmountTl ?? null
+  const credit = v.creditAmountTl ?? v.CreditAmountTl ?? null
+  const collected = v.collectedAmountTl ?? v.CollectedAmountTl ?? null
+  return {
+    performedAt: perf ? new Date(perf).toISOString().slice(0, 16) : '',
+    procedures: v.procedures || v.Procedures || '',
+    amountTl: amount,
+    notes: v.notes || v.Notes || '',
+    creditAmountTl: credit,
+    collectedAmountTl: collected ?? (amount !== null ? Math.max(0, amount - (credit || 0)) : null),
+    petId: v.petId ?? v.PetId ?? ''
+  }
+}
+
+function openVisitEdit(v) {
+  visitSaveError.value = ''
+  visitEditId.value = v.id || v.Id || v.visitId || v.VisitId
+  visitDraft.value = toVisitDraft(v)
+}
+
+function cancelVisitEdit() {
+  visitEditId.value = null
+  visitDraft.value = null
+  visitSaveError.value = ''
+}
+
+function onEditAmountInput() {
+  const total = visitDraft.value.amountTl || 0
+  const credit = visitDraft.value.creditAmountTl || 0
+  visitDraft.value.collectedAmountTl = Math.max(0, total - credit)
+}
+
+function onEditCreditInput() {
+  const total = visitDraft.value.amountTl || 0
+  const credit = visitDraft.value.creditAmountTl || 0
+  if (credit > total) {
+    visitDraft.value.amountTl = credit
+  }
+  visitDraft.value.collectedAmountTl = Math.max(0, (visitDraft.value.amountTl || 0) - credit)
+}
+
+function onEditCollectedInput() {
+  const total = visitDraft.value.amountTl || 0
+  const collected = visitDraft.value.collectedAmountTl || 0
+  if (collected > total) {
+    visitDraft.value.amountTl = collected
+  }
+  visitDraft.value.creditAmountTl = Math.max(0, (visitDraft.value.amountTl || 0) - collected)
+}
+
+async function saveVisitEdit(v) {
+  const visitId = v?.id || v?.Id || v?.visitId || v?.VisitId
+  if (!visitId || !visitDraft.value) return
+  visitSaving.value = true
+  visitSaveError.value = ''
+  try {
+    const { http } = await import('@/api/http')
+    const payload = {
+      performedAt: new Date(visitDraft.value.performedAt).toISOString(),
+      procedures: (visitDraft.value.procedures || '').trim() || null,
+      amountTl: visitDraft.value.amountTl,
+      notes: (visitDraft.value.notes || '').trim() || null,
+      creditAmountTl: visitDraft.value.creditAmountTl,
+      collectedAmountTl: visitDraft.value.collectedAmountTl,
+      petId: Number(visitDraft.value.petId)
+    }
+    await http.put(`/visits/${visitId}`, payload)
+    await loadOwnerVisits()
+    const res = await fetchOwner(selectedOwner.value)
+    ownerDetail.value = res?.data ?? res
+    cancelVisitEdit()
+  } catch (e) {
+    console.error(e)
+    visitSaveError.value = 'Ziyaret güncellenirken hata oluştu.'
+  } finally {
+    visitSaving.value = false
+  }
+}
+
+async function handleDeleteVisit(v) {
+  const visitId = v?.id || v?.Id || v?.visitId || v?.VisitId
+  if (!visitId) return
+  if (!confirm('Bu ziyareti silmek istediğinize emin misiniz?')) return
+  visitSaving.value = true
+  try {
+    const { http } = await import('@/api/http')
+    await http.delete(`/visits/${visitId}`)
+    await loadOwnerVisits()
+    const res = await fetchOwner(selectedOwner.value)
+    ownerDetail.value = res?.data ?? res
+    cancelVisitEdit()
+  } catch (err) {
+    console.error(err)
+    alert('Ziyaret silinemedi.')
+  } finally {
+    visitSaving.value = false
+  }
+}
 
 const showAddVisitForm = ref(false)
 const visitAdding = ref(false)
@@ -769,6 +992,7 @@ function closeOwnerDetail() {
   showAddVisitForm.value = false
   showAddPetForm.value = false
   resetNewPet()
+  clearSelectedNoteImage()
 }
 
 async function addPet() {
@@ -809,13 +1033,15 @@ async function addPet() {
 }
 
 async function handleAddNote() {
-  if (!selectedOwner.value || !noteText.value.trim()) return
+  if (!selectedOwner.value) return
+  if (!noteText.value?.trim() && !noteImageFile.value) return
 
   noteError.value = ''
   noteAdding.value = true
   try {
-    await addOwnerNote(selectedOwner.value, noteText.value.trim())
+    await addOwnerNote(selectedOwner.value, noteText.value?.trim() || '', noteImageFile.value)
     noteText.value = ''
+    clearSelectedNoteImage()
     
     // Yenile
     const res = await fetchOwner(selectedOwner.value)

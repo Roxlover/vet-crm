@@ -225,16 +225,24 @@
               <textarea v-else-if="visitDraft" v-model="visitDraft.procedures" class="modern-input" rows="3"></textarea>
             </div>
 
-            <div class="detail-item">
-              <label>Ziyaret Tutarı (TL)</label>
-              <div v-if="!visitEditOpen" class="val">{{ selectedVisit.amountTl }} TL</div>
-              <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.amountTl" class="modern-input" />
-            </div>
-
-            <div class="detail-item">
-              <label>Veresiye (TL)</label>
-              <div v-if="!visitEditOpen" class="val">{{ selectedVisit.creditAmountTl || 0 }} TL</div>
-              <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.creditAmountTl" class="modern-input" />
+            <div class="detail-item" style="grid-column: span 2;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; width: 100%;">
+                <div class="detail-item">
+                  <label>Ziyaret Tutarı (TL)</label>
+                  <div v-if="!visitEditOpen" class="val">{{ selectedVisit.amountTl }} TL</div>
+                  <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.amountTl" @input="onEditAmountInput" class="modern-input" />
+                </div>
+                <div class="detail-item">
+                  <label>Nakit (TL)</label>
+                  <div v-if="!visitEditOpen" class="val">{{ selectedVisit.collectedAmountTl ?? (selectedVisit.amountTl - (selectedVisit.creditAmountTl || 0)) }} TL</div>
+                  <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.collectedAmountTl" @input="onEditCollectedInput" class="modern-input" />
+                </div>
+                <div class="detail-item">
+                  <label>Veresiye (TL)</label>
+                  <div v-if="!visitEditOpen" class="val">{{ selectedVisit.creditAmountTl || 0 }} TL</div>
+                  <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.creditAmountTl" @input="onEditCreditInput" class="modern-input" />
+                </div>
+              </div>
             </div>
 
             <div class="detail-item full" style="grid-column: span 2;">
@@ -330,12 +338,15 @@ function closeDetailModal() {
 function openVisitEdit() {
   if (!selectedVisit.value) return
   const v = selectedVisit.value
+  const amount = v.amountTl || 0
+  const credit = v.creditAmountTl || 0
   visitDraft.value = {
     performedAt: new Date(v.performedAt).toISOString().substr(0, 16),
     procedures: v.procedures || '',
     notes: v.notes || '',
-    amountTl: v.amountTl || 0,
-    creditAmountTl: v.creditAmountTl || 0,
+    amountTl: amount,
+    creditAmountTl: credit,
+    collectedAmountTl: v.collectedAmountTl ?? Math.max(0, amount - credit),
     petName: v.petName || '',
     petSpecies: v.species || v.petSpecies || '',
     ownerName: v.ownerName || '',
@@ -347,6 +358,30 @@ function openVisitEdit() {
 function cancelVisitEdit() {
   visitEditOpen.value = false
   visitDraft.value = null
+}
+
+function onEditAmountInput() {
+  const total = visitDraft.value.amountTl || 0
+  const credit = visitDraft.value.creditAmountTl || 0
+  visitDraft.value.collectedAmountTl = Math.max(0, total - credit)
+}
+
+function onEditCreditInput() {
+  const total = visitDraft.value.amountTl || 0
+  const credit = visitDraft.value.creditAmountTl || 0
+  if (credit > total) {
+    visitDraft.value.amountTl = credit
+  }
+  visitDraft.value.collectedAmountTl = Math.max(0, (visitDraft.value.amountTl || 0) - credit)
+}
+
+function onEditCollectedInput() {
+  const total = visitDraft.value.amountTl || 0
+  const collected = visitDraft.value.collectedAmountTl || 0
+  if (collected > total) {
+    visitDraft.value.amountTl = collected
+  }
+  visitDraft.value.creditAmountTl = Math.max(0, (visitDraft.value.amountTl || 0) - collected)
 }
 
 async function saveVisitEdit() {
@@ -381,6 +416,7 @@ async function saveVisitEdit() {
       procedures: (visitDraft.value.procedures || '').trim(),
       amountTl: visitDraft.value.amountTl,
       creditAmountTl: visitDraft.value.creditAmountTl,
+      collectedAmountTl: visitDraft.value.collectedAmountTl,
       notes: (visitDraft.value.notes || '').trim(),
       nextDate: v.nextDate,
       purpose: v.purpose

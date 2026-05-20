@@ -26,8 +26,19 @@ export async function deletePet(petId) {
   return res.data
 }
 
-export async function addOwnerNote(ownerId, note) {
-  const res = await http.post(`/owners/${ownerId}/notes`, { note })
+export async function addOwnerNote(ownerId, note, imageFile) {
+  const formData = new FormData()
+  if (note !== undefined && note !== null) {
+    formData.append('note', note)
+  }
+  if (imageFile) {
+    formData.append('image', imageFile)
+  }
+  const res = await http.post(`/owners/${ownerId}/notes`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
   return res.data
 }
 
