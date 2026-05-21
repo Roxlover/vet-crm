@@ -25,8 +25,11 @@
               @input="handleSearch"
             />
           </div>
-          <button class="btn btn-secondary" @click="loadOwners" :disabled="loading" style="padding: 0 1.5rem; border-radius: 16px;">
-            Yenile
+          <button class="refresh-btn" @click="loadOwners" :disabled="loading" title="Yenile">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
           </button>
         </div>
 
@@ -1240,38 +1243,76 @@ onMounted(loadOwners)
 
 .search-section {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
+  align-items: center;
   margin-bottom: 1rem;
 }
 
 .search-input-wrapper {
   flex: 1;
   position: relative;
+  min-width: 0;
 }
 
 .search-input-wrapper input {
   width: 100%;
-  padding: 1rem 1.25rem 1rem 3rem;
-  border-radius: 16px;
-  border: 1px solid #f1f5f9;
+  box-sizing: border-box;
+  padding: 0.85rem 1rem 0.85rem 2.75rem;
+  border-radius: 14px;
+  border: 1.5px solid #e2e8f0;
   background: #ffffff;
   font-size: 1rem;
+  color: #1e293b;
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
 }
 
+.search-input-wrapper input::placeholder {
+  color: #94a3b8;
+}
+
 .search-input-wrapper input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-light);
+  box-shadow: 0 0 0 3px var(--primary-light);
   outline: none;
 }
 
 .search-icon {
   position: absolute;
-  left: 1.25rem;
+  left: 0.9rem;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-muted);
+  color: #94a3b8;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.refresh-btn {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.refresh-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* OWNER CARDS */
