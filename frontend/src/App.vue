@@ -639,12 +639,14 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 0;
   width: 100%;
+  overflow-x: hidden;
 }
 
 .content {
   padding: 2rem;
   width: 100%;
-  max-width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 /* RESPONSIVE */
@@ -709,7 +711,7 @@ onBeforeUnmount(() => {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 70px;
+    min-height: 70px;
     background: #ffffff;
     display: flex;
     justify-content: space-around;
@@ -718,6 +720,7 @@ onBeforeUnmount(() => {
     box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
     z-index: 1000;
     padding-bottom: env(safe-area-inset-bottom);
+    padding-top: 0.5rem;
   }
 
   .bottom-nav-item {
@@ -745,7 +748,7 @@ onBeforeUnmount(() => {
   }
 
   .main {
-    padding-bottom: 75px; /* Alt menü için boşluk */
+    padding-bottom: calc(85px + env(safe-area-inset-bottom)); /* Alt menü için boşluk */
   }
 
   /* HAMBURGER ANIMATION */
@@ -786,7 +789,8 @@ onBeforeUnmount(() => {
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   color: #166534;
   font-family: 'Inter', sans-serif;
-  padding-bottom: 80px; /* Safe space for bottom navigation */
+  padding-bottom: calc(90px + env(safe-area-inset-bottom)); /* Safe space for bottom navigation */
+  overflow-x: hidden;
 }
 
 .client-main {
@@ -810,7 +814,7 @@ onBeforeUnmount(() => {
   transform: translateX(-50%);
   width: 100%;
   max-width: 600px;
-  height: 70px;
+  min-height: 70px;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -821,6 +825,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 -8px 32px rgba(22, 101, 52, 0.08);
   z-index: 1000;
   padding-bottom: env(safe-area-inset-bottom);
+  padding-top: 0.5rem;
 }
 
 .client-nav-item {
