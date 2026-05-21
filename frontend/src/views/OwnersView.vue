@@ -1367,8 +1367,8 @@ onMounted(loadOwners)
 
 .owner-actions {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
   margin-top: auto;
   padding-top: 1rem;
   border-top: 1px solid rgba(0,0,0,0.05);
