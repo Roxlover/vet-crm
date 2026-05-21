@@ -198,41 +198,28 @@ public async Task<ActionResult<LedgerSummaryDto>> GetVisitSummary(
 
     var (fromDt, toDt) = ToUtcRange(from, to);
 
-    // 1) Visit Count (Hala visitlerden alıyoruz)
     var visitQuery = _db.Visits
         .Where(v => v.PerformedAt >= fromDt && v.PerformedAt <= toDt);
     visitQuery = ApplyLedgerInclusionRule(visitQuery);
-    var visitCount = await visitQuery.CountAsync();
-
-    // 2) Financial Totals (LedgerEntries'den alıyoruz - EN ÖNEMLİ DEĞİŞİKLİK)
-    var entries = await _db.LedgerEntries
-        .Where(l => l.Date >= from && l.Date <= to)
-        .ToListAsync();
-
-    // Revenue: VisitIncome kategorisi + VisitCollected olmayan manuel gelirler
-    // Aslında basiti: IsIncome = true olan her şey "Ciro" (Revenue) dur, 
-    // AMA VisitCollected olanlar "Tahsilat"tır, mükerrer saymamak lazım.
     
-    // Visitlerden beklenen toplam gelir (Ciro) + Manuel Gelirler
-    var totalRevenue = entries
-        .Where(l => l.IsIncome && l.Category != "VisitCollected")
-        .Sum(l => l.Amount);
+    var visitsList = await visitQuery.ToListAsync();
 
-    // Gerçekleşen toplam tahsilat (VisitCollected + Manuel Gelirler)
-    var totalCollected = entries
-        .Where(l => l.IsIncome && l.Category != "VisitIncome")
-        .Sum(l => l.Amount);
-        
-    // Manuel Gelirler (Visit ile bağlı olmayanlar) için de bir mantık kurmak lazım.
-    // Eğer Category VisitIncome veya VisitCollected değilse, o bir Genel Gelirdir.
-    // Şimdilik Ciro = Tüm Gelirler (VisitCollected hariç) diyelim.
+    var visitRevenue = visitsList.Sum(v => v.AmountTl ?? 0m);
+    var visitCollected = visitsList.Sum(v => v.CollectedAmountTl ?? Math.Max(0m, (v.AmountTl ?? 0m) - (v.CreditAmountTl ?? 0m)));
+
+    var manualIncomes = await _db.LedgerEntries
+        .Where(l => l.Date >= from && l.Date <= to && l.IsIncome && l.Category != "VisitIncome" && l.Category != "VisitCollected")
+        .SumAsync(l => l.Amount);
+
+    var totalRevenue = visitRevenue + manualIncomes;
+    var totalCollected = visitCollected + manualIncomes;
 
     var dto = new LedgerSummaryDto
     {
         TotalAmount = totalRevenue,
         TotalCollected = totalCollected,
         TotalCredit = Math.Max(0, totalRevenue - totalCollected),
-        VisitCount = visitCount
+        VisitCount = visitsList.Count
     };
 
     return Ok(dto);
@@ -349,7 +336,7 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
 
         // 2) Get all ledger entries in range to calculate real totals
         var ledgerEntries = await _db.LedgerEntries
-            .Where(l => l.Date >= from && l.Date <= to && l.IsIncome)
+            .Where(l => l.Date >= from && l.Date <= to && l.IsIncome && l.Category != "VisitIncome" && l.Category != "VisitCollected")
             .ToListAsync();
 
         // 3) Group and Prepare Results
@@ -361,16 +348,18 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
             var userId = g.Key;
             var first = g.First();
 
-            // Filter ledger entries for this user
+            // Filter manual incomes for this user
             var userLedger = userId == 0
                 ? ledgerEntries.Where(l => l.UserId == 0).ToList()
                 : ledgerEntries.Where(l => l.UserId == userId).ToList();
             
-            // Revenue: VisitIncome + ManualIncomes
-            var totalAmount = userLedger.Where(l => l.Category != "VisitCollected").Sum(l => l.Amount);
+            var manualIncomeSum = userLedger.Sum(l => l.Amount);
             
-            // Collected: VisitCollected + ManualIncomes
-            var totalCollected = userLedger.Where(l => l.Category != "VisitIncome").Sum(l => l.Amount);
+            var visitRevenue = g.Sum(v => v.AmountTl ?? 0m);
+            var visitCollected = g.Sum(v => v.CollectedAmountTl ?? Math.Max(0m, (v.AmountTl ?? 0m) - (v.CreditAmountTl ?? 0m)));
+
+            var totalAmount = visitRevenue + manualIncomeSum;
+            var totalCollected = visitCollected + manualIncomeSum;
             
             var totalCredit = Math.Max(0, totalAmount - totalCollected);
 
