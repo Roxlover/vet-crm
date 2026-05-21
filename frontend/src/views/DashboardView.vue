@@ -1794,7 +1794,7 @@ async function openStatModal(type) {
       const res = await http.get('/visits', { params: { startDate: firstDay, endDate: lastDay } })
       statModal.data = (res.data || []).filter(v => (v.collectedAmountTl ?? v.amountTl ?? 0) > 0)
     } else if (type === 'reminders') {
-      const data = await fetchReminders('upcoming')
+      const data = await fetchReminders('all-pending')
       statModal.data = data || []
     }
   } catch (e) {

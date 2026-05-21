@@ -32,9 +32,15 @@ public class DashboardController : ControllerBase
             var activePets = await _db.Pets.CountAsync(p => p.IsActive);
 
             // 2. Aylık Tahsilat (Gerçekleşen Nakit Akışı: VisitCollected + Manuel Gelirler)
-            var monthlyRevenue = await _db.LedgerEntries
+            var visitIncome = await _db.Visits
+                .Where(v => v.PerformedAt.Year == todayDt.Year && v.PerformedAt.Month == todayDt.Month)
+                .SumAsync(v => (decimal?)v.CollectedAmountTl) ?? 0;
+
+            var manualIncome = await _db.LedgerEntries
                 .Where(x => x.IsIncome && x.Category != "VisitIncome" && x.Date.Year == todayDt.Year && x.Date.Month == todayDt.Month)
                 .SumAsync(x => (decimal?)x.Amount) ?? 0;
+
+            var monthlyRevenue = visitIncome + manualIncome;
 
             // 3. Bugünkü Randevular
             var todayStart = todayDt.Date;
@@ -42,9 +48,9 @@ public class DashboardController : ControllerBase
             var todayAppointments = await _db.Appointments
                 .CountAsync(a => a.ScheduledAt >= todayStart && a.ScheduledAt < todayEnd);
 
-            // 4. Hatırlatıcılar
+            // 4. Hatırlatıcılar (Tüm bekleyenler)
             var pendingReminders = await _db.Reminders
-                .CountAsync(r => !r.IsCompleted && r.DueDate <= today);
+                .CountAsync(r => !r.IsCompleted);
 
             // 5. Haftalık Aktivite (Son 7 gün)
             var last7Days = Enumerable.Range(0, 7)
@@ -216,6 +222,12 @@ switch (filter)
     case "done":
         baseQuery = baseQuery.Where(x =>
             x.IsCompleted
+        );
+        break;
+
+    case "all-pending":
+        baseQuery = baseQuery.Where(x =>
+            !x.IsCompleted
         );
         break;
 
