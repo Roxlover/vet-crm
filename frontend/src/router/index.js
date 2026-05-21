@@ -10,13 +10,21 @@ import BilancoView from '@/views/BilancoView.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    // --- ORTAK GİRİŞ EKRANI (Herkese Açık) ---
+    {
+      path: '/',
+      name: 'welcome',
+      component: () => import('@/views/WelcomeView.vue'),
+    },
+
+    // --- VETERİNER / CRM ROTALARI ---
     {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
     },
     {
-      path: '/',
+      path: '/dashboard',
       name: 'dashboard',
       component: DashboardView,
     },
@@ -46,7 +54,8 @@ const router = createRouter({
       name: 'calendar',
       component: () => import('@/views/CalendarView.vue'),
     },
-    // Müşteri Portalı Rotaları
+
+    // --- MÜŞTERİ PORTALI ROTALARI ---
     {
       path: '/client/login',
       name: 'client-login',
@@ -72,51 +81,56 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const isClientPath = to.path.startsWith('/client')
+  const isWelcome = to.path === '/'
+  const isVetLogin = to.path === '/login'
+  const isClientLogin = to.path === '/client/login'
+
   const token = localStorage.getItem('vetcrm_token')
   const userRaw = localStorage.getItem('vetcrm_user')
   const user = userRaw ? JSON.parse(userRaw) : null
   const isClient = user && (String(user.role).toLowerCase() === 'client')
+  const isVet = !!(token && !isClient)
 
-  console.log('[ROUTER]', {
-    to: to.path,
-    userRole: user?.role,
-    isClient,
-    hasToken: !!token,
-  })
+  console.log('[ROUTER]', { to: to.path, userRole: user?.role, isClient, isVet, hasToken: !!token })
 
-  if (isClientPath) {
-    const isClientLogin = to.path === '/client/login'
-    if (!isClientLogin && (!token || !isClient)) {
-      return next('/client/login')
-    }
-    if (isClientLogin && token && isClient) {
-      return next('/client/dashboard')
-    }
-    return next()
-  } else {
-    // Hekim / CRM sayfaları
-    const isHekimLogin = to.path === '/login'
-    if (!isHekimLogin && (!token || isClient)) {
-      if (isClient) return next('/client/dashboard')
-      return next('/login')
-    }
-    if (isHekimLogin && token && !isClient) {
-      return next('/')
-    }
-
-    if (to.path === '/bilanco') {
-      const role = String(user?.role || '').trim().toLowerCase()
-      const username = String(user?.username || '').trim().toLowerCase()
-      const allowedUsers = ['bullboss'] // whitelist
-      const isAdmin = role === 'admin'
-      const isExplicitAllowed = allowedUsers.includes(username)
-
-      if (!isAdmin && !isExplicitAllowed) return next('/')
-    }
-
+  // Welcome / Ana Sayfa: Giriş yapmışsa ilgili panele yönlendir
+  if (isWelcome) {
+    if (isVet) return next('/dashboard')
+    if (isClient) return next('/client/dashboard')
     return next()
   }
+
+  // Müşteri login: Zaten müşteri girişi varsa → dashboard
+  if (isClientLogin) {
+    if (isClient) return next('/client/dashboard')
+    return next()
+  }
+
+  // Veteriner login: Zaten vet girişi varsa → dashboard
+  if (isVetLogin) {
+    if (isVet) return next('/dashboard')
+    return next()
+  }
+
+  // Müşteri portalı korumalı sayfalar
+  if (isClientPath) {
+    if (!token || !isClient) return next('/client/login')
+    return next()
+  }
+
+  // Veteriner CRM korumalı sayfalar
+  if (!token) return next('/')
+  if (isClient) return next('/client/dashboard')
+
+  // Bilanço yetkisi kontrolü
+  if (to.path === '/bilanco') {
+    const role = String(user?.role || '').trim().toLowerCase()
+    const username = String(user?.username || '').trim().toLowerCase()
+    const allowedUsers = ['bullboss']
+    if (role !== 'admin' && !allowedUsers.includes(username)) return next('/dashboard')
+  }
+
+  return next()
 })
 
 export default router
-

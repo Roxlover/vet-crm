@@ -1,6 +1,6 @@
 {
   "appId": "com.bullrealboss.crm",
-  "appName": "NL",
+  "appName": "BullVet",
   "webDir": "dist",
   "server": {
     "androidScheme": "http"

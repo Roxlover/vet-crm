@@ -5,36 +5,40 @@
     <!-- STATS GRID - PREMIUM MOBILE CRM STYLE -->
     <!-- STATS GRID - PREMIUM MINIMALIST STYLE -->
     <section class="stats-grid">
-      <div class="stat-card">
+      <div class="stat-card stat-card--clickable" @click="openStatModal('today-appointments')">
         <div class="stat-info">
           <span class="stat-label">Bugünkü Randevular</span>
           <div class="stat-value">{{ stats.todayAppointmentsCount }}</div>
           <span class="stat-sub">Aktif Bekleyen</span>
         </div>
+        <span class="stat-arrow">›</span>
       </div>
 
-      <div class="stat-card">
+      <div class="stat-card stat-card--clickable" @click="openStatModal('active-pets')">
         <div class="stat-info">
           <span class="stat-label">Aktif Hasta</span>
           <div class="stat-value">{{ stats.activePetsCount }}</div>
           <span class="stat-sub">Sistemdeki Toplam</span>
         </div>
+        <span class="stat-arrow">›</span>
       </div>
 
-      <div class="stat-card">
+      <div class="stat-card stat-card--clickable" @click="openStatModal('monthly-revenue')">
         <div class="stat-info">
           <span class="stat-label">Aylık Tahsilat</span>
           <div class="stat-value">₺{{ formatCurrency(stats.monthlyRevenue) }}</div>
           <span class="stat-sub">Toplam Gelir</span>
         </div>
+        <span class="stat-arrow">›</span>
       </div>
 
-      <div class="stat-card">
+      <div class="stat-card stat-card--clickable" @click="openStatModal('reminders')">
         <div class="stat-info">
           <span class="stat-label">Hatırlatıcılar</span>
           <div class="stat-value">{{ stats.pendingRemindersCount }}</div>
           <span class="stat-sub">İşlem Bekleyen</span>
         </div>
+        <span class="stat-arrow">›</span>
       </div>
     </section>
 
@@ -507,6 +511,89 @@
       <button class="viewer-close" @click="closeImageModal">✕</button>
     </div>
   </div>
+
+  <!-- STAT DETAY MODAL -->
+  <div v-if="statModal.show" class="modal-overlay" @click.self="closeStatModal">
+    <div class="modern-modal" @click.stop>
+      <header class="modal-header">
+        <div class="header-info">
+          <h2 style="font-size:1.15rem;">{{ statModalTitle }}</h2>
+        </div>
+        <button class="modal-close-btn" @click="closeStatModal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+      <div class="modal-content-wrapper">
+        <div v-if="statModal.loading" class="loading-state">
+          <div class="spinner"></div>
+          <p>Yükleniyor...</p>
+        </div>
+        <div v-else-if="!statModal.data.length" class="stat-empty-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;opacity:0.3"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <p>Gösterilecek kayıt bulunamadı.</p>
+        </div>
+        <div v-else class="stat-modal-body">
+
+          <!-- Bugünkü Randevular -->
+          <div v-if="statModal.type === 'today-appointments'" class="stat-list">
+            <div
+              v-for="item in statModal.data"
+              :key="item.id"
+              class="stat-list-item clickable-item"
+              @click="openVisitFromCalendar(item); closeStatModal()"
+            >
+              <div class="stat-item-time">{{ formatTime(item.scheduledAt) }}</div>
+              <div class="stat-item-main">
+                <span class="stat-item-name">{{ item.petName }}</span>
+                <span class="stat-item-sub">{{ item.ownerName }}</span>
+              </div>
+              <div class="stat-item-badge">{{ item.purpose || 'Genel Muayene' }}</div>
+              <svg class="stat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
+            </div>
+          </div>
+
+          <!-- Aktif Hastalar -->
+          <div v-if="statModal.type === 'active-pets'" class="stat-list">
+            <div v-for="pet in statModal.data" :key="pet.id" class="stat-list-item">
+              <div class="stat-item-icon">🐾</div>
+              <div class="stat-item-main">
+                <span class="stat-item-name">{{ pet.name }}</span>
+                <span class="stat-item-sub">
+                  {{ pet.ownerName || (pet.owner && pet.owner.fullName) || '—' }}
+                  <template v-if="pet.species"> · {{ pet.species }}</template>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aylık Tahsilat -->
+          <div v-if="statModal.type === 'monthly-revenue'" class="stat-list">
+            <div v-for="visit in statModal.data" :key="visit.id" class="stat-list-item">
+              <div class="stat-item-time">{{ formatMonthDay(new Date(visit.performedAt)) }}</div>
+              <div class="stat-item-main">
+                <span class="stat-item-name">{{ visit.petName }}</span>
+                <span class="stat-item-sub">{{ visit.ownerName }}</span>
+              </div>
+              <div class="stat-item-amount">₺{{ visit.collectedAmountTl ?? visit.amountTl ?? 0 }}</div>
+            </div>
+          </div>
+
+          <!-- Hatırlatıcılar -->
+          <div v-if="statModal.type === 'reminders'" class="stat-list">
+            <div v-for="rem in statModal.data" :key="rem.id" class="stat-list-item">
+              <div class="stat-item-time" style="min-width:55px">{{ rem.reminderDate }}</div>
+              <div class="stat-item-main">
+                <span class="stat-item-name">{{ rem.petName }}</span>
+                <span class="stat-item-sub">{{ rem.ownerName }}</span>
+              </div>
+              <div class="stat-item-badge" v-if="rem.procedures">{{ rem.procedures }}</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
 </main>
 </template>
 
@@ -521,6 +608,7 @@ import {
   searchOwners,
   updateReminderStatus,
   fetchDashboardStats,
+  fetchReminders,
 } from '../api/dashboard'
 import { http, API_BASE } from '@/api/http'
 import { useRouter } from 'vue-router'
@@ -1658,6 +1746,64 @@ function sendWhatsAppReminder(ownerName, ownerPhone, petName, dateStr, purpose) 
   const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');
 }
+
+// ─── STAT DETAIL MODAL ───────────────────────────────────────────────────────
+const statModal = reactive({
+  show: false,
+  type: null,
+  loading: false,
+  data: []
+})
+
+const statModalTitle = computed(() => {
+  switch (statModal.type) {
+    case 'today-appointments': return `Bugünkü Randevular (${statModal.data.length})`
+    case 'active-pets':        return `Aktif Hastalar (${statModal.data.length})`
+    case 'monthly-revenue':    return `Bu Ayki Tahsilat (${statModal.data.length} kayıt)`
+    case 'reminders':          return `Bekleyen Hatırlatıcılar (${statModal.data.length})`
+    default: return ''
+  }
+})
+
+function closeStatModal() {
+  statModal.show = false
+  statModal.type = null
+  statModal.data = []
+}
+
+async function openStatModal(type) {
+  statModal.show = true
+  statModal.type = type
+  statModal.loading = true
+  statModal.data = []
+  try {
+    if (type === 'today-appointments') {
+      const today = toIsoDate(new Date())
+      const data = await fetchCalendarAppointments(today, today)
+      statModal.data = (data || []).sort((a, b) =>
+        new Date(a.scheduledAt) - new Date(b.scheduledAt)
+      )
+    } else if (type === 'active-pets') {
+      const res = await http.get('/pets')
+      const all = res.data || []
+      statModal.data = all.filter(p => p.isActive !== false)
+    } else if (type === 'monthly-revenue') {
+      const now = new Date()
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+      const lastDay  = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
+      const res = await http.get('/visits', { params: { startDate: firstDay, endDate: lastDay } })
+      statModal.data = (res.data || []).filter(v => (v.collectedAmountTl ?? v.amountTl ?? 0) > 0)
+    } else if (type === 'reminders') {
+      const data = await fetchReminders('upcoming')
+      statModal.data = data || []
+    }
+  } catch (e) {
+    console.error('openStatModal error', e)
+    statModal.data = []
+  } finally {
+    statModal.loading = false
+  }
+}
 </script>
 
 <style scoped>
@@ -2682,5 +2828,133 @@ function sendWhatsAppReminder(ownerName, ownerPhone, petName, dateStr, purpose) 
 .btn-whatsapp-icon-sm .wp-icon {
   width: 13px;
   height: 13px;
+}
+
+/* ── STAT CARD CLICKABLE ── */
+.stat-card--clickable {
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card--clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px -8px rgba(79, 70, 229, 0.18);
+}
+.stat-arrow {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: #94a3b8;
+  opacity: 0.45;
+  margin-left: auto;
+  padding-left: 0.5rem;
+  transition: opacity 0.2s, transform 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+.stat-card--clickable:hover .stat-arrow {
+  opacity: 1;
+  color: var(--primary);
+  transform: translateX(4px);
+}
+
+/* ── STAT DETAIL MODAL ── */
+.stat-modal-body {
+  padding: 0;
+}
+.stat-empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 2rem;
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem 1.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.stat-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 1px solid #f1f5f9;
+  transition: background 0.15s, border-color 0.15s;
+}
+.stat-list-item.clickable-item {
+  cursor: pointer;
+}
+.stat-list-item.clickable-item:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+.stat-item-time {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--primary);
+  min-width: 40px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.stat-item-icon {
+  font-size: 1.2rem;
+  min-width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.stat-item-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.stat-item-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stat-item-sub {
+  font-size: 0.73rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stat-item-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  background: #eef2ff;
+  color: #4f46e5;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.stat-item-amount {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #16a34a;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.stat-chevron {
+  width: 16px;
+  height: 16px;
+  color: #94a3b8;
+  flex-shrink: 0;
 }
 </style>

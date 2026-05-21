@@ -74,8 +74,8 @@
           </div>
         </div>
 
-        <nav class="nav-links">
-          <RouterLink to="/" class="nav-item" :class="{ active: route.name === 'dashboard' }">
+        <nav class="nav-links" @click="sidebarOpen = false">
+          <RouterLink to="/dashboard" class="nav-item" :class="{ active: route.name === 'dashboard' }">
             <span>Dashboard</span>
           </RouterLink>
 
@@ -166,7 +166,7 @@
 
       <!-- MOBİL ALT NAVİGASYON (Sadece Mobilde Görünür) -->
       <nav v-if="isMobile && !isAuthRoute" class="bottom-nav">
-        <RouterLink to="/" class="bottom-nav-item" :class="{ active: route.name === 'dashboard' }">
+        <RouterLink to="/dashboard" class="bottom-nav-item" :class="{ active: route.name === 'dashboard' }">
           <span class="nav-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -308,7 +308,7 @@ function toggleSidebar() {
 const router = useRouter()
 
 const isAuthRoute = computed(() =>
-  ['login', 'client-login'].includes(route.name),
+  ['login', 'client-login', 'welcome'].includes(route.name),
 )
 
 const isClientRoute = computed(() =>
