@@ -321,24 +321,29 @@ public async Task<ActionResult> DeleteNote(int ownerId, int noteId)
     }
 
     [HttpGet("search")]
-    public async Task<ActionResult<List<OwnerSearchDto>>> SearchOwners([FromQuery] string query)
+    public async Task<ActionResult<List<OwnerDto>>> SearchOwners([FromQuery] string query)
     {
         if (string.IsNullOrWhiteSpace(query))
-            return Ok(new List<OwnerSearchDto>());
+            return Ok(new List<OwnerDto>());
 
         query = query.Trim();
 
         var owners = await _db.Owners
+            .Include(o => o.Pets)
             .Where(o =>
                 o.FullName.ToLower().Contains(query.ToLower()) ||
                 o.PhoneE164.Contains(query))
             .OrderBy(o => o.FullName)
             .Take(20)
-            .Select(o => new OwnerSearchDto
+            .Select(o => new OwnerDto
             {
                 Id = o.Id,
                 FullName = o.FullName,
-                Phone = o.PhoneE164
+                PhoneE164 = o.PhoneE164,
+                Email = o.Email,
+                Address = o.Address,
+                KvkkOptIn = o.KvkkOptIn,
+                PetCount = o.Pets.Count(p => p.IsActive)
             })
             .ToListAsync();
 
