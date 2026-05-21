@@ -9,7 +9,7 @@
       <!-- Logo & Marka -->
       <div class="brand">
         <div class="logo-ring">
-          <img src="/logo.png" alt="BullVet Logo" class="brand-logo" />
+          <img src="../logo.png" alt="BullVet Logo" class="brand-logo" />
         </div>
         <h1 class="brand-name">BullVet</h1>
         <p class="brand-tagline">Veteriner Klinik Yönetim Sistemi</p>
