@@ -574,7 +574,7 @@
                 <span class="stat-item-name">{{ visit.petName }}</span>
                 <span class="stat-item-sub">{{ visit.ownerName }}</span>
               </div>
-              <div class="stat-item-amount">₺{{ visit.collectedAmountTl ?? visit.amountTl ?? 0 }}</div>
+              <div class="stat-item-amount">₺{{ getCollected(visit) }}</div>
             </div>
           </div>
 
@@ -1675,6 +1675,13 @@ async function openVisitDetail(item) {
   }
 }
 
+function getCollected(visit) {
+  if (visit == null) return 0
+  if (visit.collectedAmountTl != null) return Number(visit.collectedAmountTl)
+  const amount = Number(visit.amountTl || 0)
+  const credit = Number(visit.creditAmountTl || 0)
+  return Math.max(0, amount - credit)
+}
 
 function formatDateTime(dt) {
   if (!dt) return '—'
@@ -1792,7 +1799,7 @@ async function openStatModal(type) {
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
       const lastDay  = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
       const res = await http.get('/visits', { params: { startDate: firstDay, endDate: lastDay } })
-      statModal.data = (res.data || []).filter(v => (v.collectedAmountTl ?? v.amountTl ?? 0) > 0)
+      statModal.data = (res.data || []).filter(v => getCollected(v) > 0)
     } else if (type === 'reminders') {
       const data = await fetchReminders('all-pending')
       statModal.data = data || []

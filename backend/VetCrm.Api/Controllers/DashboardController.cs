@@ -32,12 +32,14 @@ public class DashboardController : ControllerBase
             var activePets = await _db.Pets.CountAsync(p => p.IsActive);
 
             // 2. Aylık Tahsilat (Gerçekleşen Nakit Akışı: VisitCollected + Manuel Gelirler)
-            var visitIncome = await _db.Visits
+            var visitsThisMonth = await _db.Visits
                 .Where(v => v.PerformedAt.Year == todayDt.Year && v.PerformedAt.Month == todayDt.Month)
-                .SumAsync(v => (decimal?)v.CollectedAmountTl) ?? 0;
+                .ToListAsync();
+
+            var visitIncome = visitsThisMonth.Sum(v => v.CollectedAmountTl ?? Math.Max(0m, (v.AmountTl ?? 0m) - (v.CreditAmountTl ?? 0m)));
 
             var manualIncome = await _db.LedgerEntries
-                .Where(x => x.IsIncome && x.Category != "VisitIncome" && x.Date.Year == todayDt.Year && x.Date.Month == todayDt.Month)
+                .Where(x => x.IsIncome && x.Category != "VisitIncome" && x.Category != "VisitCollected" && x.Date.Year == todayDt.Year && x.Date.Month == todayDt.Month)
                 .SumAsync(x => (decimal?)x.Amount) ?? 0;
 
             var monthlyRevenue = visitIncome + manualIncome;
