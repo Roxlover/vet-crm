@@ -239,13 +239,13 @@
 
             <div class="detail-item full" style="grid-column: span 2;">
               <label>İşlem Tarihi</label>
-              <div v-if="!visitEditOpen" class="val">{{ new Date(selectedVisit.performedAt).toLocaleString('tr-TR') }}</div>
+              <div v-if="!visitEditOpen" class="val">{{ new Date(selectedVisit.performedAt || selectedVisit.PerformedAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) }}</div>
               <input v-else-if="visitDraft" type="datetime-local" v-model="visitDraft.performedAt" class="modern-input" />
             </div>
 
             <div class="detail-item" style="grid-column: span 2;">
               <label>Yapılan İşlemler</label>
-              <div v-if="!visitEditOpen" class="val highlight">{{ selectedVisit.procedures || '—' }}</div>
+              <div v-if="!visitEditOpen" class="val highlight">{{ selectedVisit.procedures || selectedVisit.Procedures || '-' }}</div>
               <div v-else-if="visitDraft">
                 <div class="procedure-pills-container">
                   <button
@@ -267,7 +267,7 @@
               <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; width: 100%;">
                 <div class="detail-item">
                   <label>Ziyaret Tutarı (TL)</label>
-                  <div v-if="!visitEditOpen" class="val">{{ selectedVisit.amountTl }} TL</div>
+                  <div v-if="!visitEditOpen" class="val">{{ selectedVisit.amountTl ?? selectedVisit.AmountTl ?? 0 }} TL</div>
                   <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.amountTl" @input="onEditAmountInput" class="modern-input" />
                 </div>
                 <div class="detail-item">
@@ -277,7 +277,7 @@
                 </div>
                 <div class="detail-item">
                   <label>Veresiye (TL)</label>
-                  <div v-if="!visitEditOpen" class="val">{{ selectedVisit.creditAmountTl || 0 }} TL</div>
+                  <div v-if="!visitEditOpen" class="val">{{ selectedVisit.creditAmountTl ?? selectedVisit.CreditAmountTl ?? 0 }} TL</div>
                   <input v-else-if="visitDraft" type="number" v-model.number="visitDraft.creditAmountTl" @input="onEditCreditInput" class="modern-input" />
                 </div>
               </div>
@@ -285,7 +285,7 @@
 
             <div class="detail-item full" style="grid-column: span 2;">
               <label>Notlar</label>
-              <div v-if="!visitEditOpen" class="val">{{ selectedVisit.notes || '—' }}</div>
+              <div v-if="!visitEditOpen" class="val">{{ selectedVisit.notes || selectedVisit.Notes || '-' }}</div>
               <textarea v-else-if="visitDraft" v-model="visitDraft.notes" class="modern-input" rows="2"></textarea>
             </div>
           </div>

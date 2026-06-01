@@ -413,6 +413,7 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
         try
         {
             Console.WriteLine("DTO: " + JsonSerializer.Serialize(dto));
+            Console.WriteLine($"CreateVisit called: Procedures='{dto.Procedures}'");
 
             if (dto == null)
                 return BadRequest("Body boş.");

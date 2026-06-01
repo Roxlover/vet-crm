@@ -29,7 +29,7 @@ namespace VetCrm.Api.Controllers
             try
             {
                 if (request == null) return BadRequest("Request body is null.");
-                Console.WriteLine($"Request: OwnerId={request.OwnerId}, PetId={request.PetId}, ScheduledAt={request.ScheduledAt}");
+                Console.WriteLine($"Request: OwnerId={request.OwnerId}, PetId={request.PetId}, ScheduledAt={request.ScheduledAt}, Procedures='{request.Procedures}'");
 
                 if (request.OwnerId <= 0)
                     return BadRequest("Hasta sahibi (OwnerId) zorunludur.");

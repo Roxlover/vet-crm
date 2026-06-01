@@ -225,7 +225,7 @@
 
               <div class="detail-item full">
                 <label>Yapılan İşlemler</label>
-                <div v-if="!visitEditOpen" class="val highlight">{{ selectedVisit?.procedures || '—' }}</div>
+                <div v-if="!visitEditOpen" class="val highlight">{{ selectedVisit?.procedures || selectedVisit?.Procedures || '—' }}</div>
                 <div v-else-if="visitDraft">
                   <div class="procedure-pills-container">
                     <button
@@ -254,7 +254,7 @@
 
               <div class="detail-item full">
                 <label>Ziyaret Notları</label>
-                <div v-if="!visitEditOpen" class="val">{{ selectedVisit?.notes || '—' }}</div>
+                <div v-if="!visitEditOpen" class="val">{{ selectedVisit?.notes || selectedVisit?.Notes || '—' }}</div>
                 <textarea v-else-if="visitDraft" v-model="visitDraft.notes" class="modern-input" rows="2"></textarea>
               </div>
             </div>
