@@ -260,52 +260,60 @@
             </div>
 
             <!-- FİNANSAL ÖZET KARTI -->
-            <div class="finance-card">
-              <div class="fin-row">
-                <div class="fin-item">
-                  <span class="fin-label">Veresiye</span>
-                  <span class="fin-val" :class="{ 'has-debt': (selectedVisit.creditAmountTl || 0) > 0 }">
-                    ₺{{ selectedVisit?.creditAmountTl || 0 }}
-                  </span>
+            <div style="margin-top: 1.5rem; background: #f8fafc; border-radius: 16px; padding: 1.25rem; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="flex: 1;">
+                  <span style="font-size: 0.85rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.25rem;">Veresiye</span>
+                  <strong style="font-size: 1.5rem; color: var(--danger); display: flex; align-items: center; gap: 0.25rem;">
+                    ₺{{ selectedVisit?.creditAmountTl ?? selectedVisit?.CreditAmountTl ?? 0 }}
+                  </strong>
                 </div>
-                <div class="fin-item">
-                  <span class="fin-label">Tahsilat</span>
-                  <span class="fin-val success">₺{{ collectedShown }}</span>
+                <div style="width: 1px; height: 40px; background: #cbd5e1; margin: 0 1rem;"></div>
+                <div style="flex: 1; text-align: right;">
+                  <span style="font-size: 0.85rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.25rem;">Tahsilat</span>
+                  <strong style="font-size: 1.5rem; color: var(--success); display: flex; justify-content: flex-end; align-items: center; gap: 0.25rem;">
+                    ₺{{ collectedShown }}
+                  </strong>
                 </div>
               </div>
-              <div class="fin-actions">
-                <button class="btn-outline-sm" @click="creditEditOpen = !creditEditOpen">Veresiye</button>
-                <button class="btn-outline-sm" @click="collectedEditOpen = !collectedEditOpen">Tahsilat</button>
+
+              <div style="display: flex; gap: 0.5rem; border-top: 1px dashed #cbd5e1; padding-top: 1rem;">
+                <button style="flex: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--danger); color: var(--danger); background: transparent; font-weight: 600; cursor: pointer; transition: all 0.2s;" @click="creditEditOpen = !creditEditOpen">Veresiye Ekle</button>
+                <button style="flex: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--success); color: var(--success); background: transparent; font-weight: 600; cursor: pointer; transition: all 0.2s;" @click="collectedEditOpen = !collectedEditOpen">Tahsilat Al</button>
               </div>
-              
+
               <!-- Hızlı Tahsilat/Veresiye Editörleri -->
-              <div v-if="creditEditOpen || collectedEditOpen" class="quick-edit-box">
-                <div v-if="creditEditOpen" class="edit-field">
-                  <input v-model="creditAmount" type="number" placeholder="Veresiye tutarı..." class="modern-input" />
-                  <button class="btn-primary-sm" @click="saveCredit" :disabled="savingCredit">Kaydet</button>
+              <div v-if="creditEditOpen || collectedEditOpen" style="background: white; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem;">
+                <div v-if="creditEditOpen" style="display: flex; gap: 0.5rem;">
+                  <input v-model="creditAmount" type="number" placeholder="Veresiye tutarı..." style="flex: 1; padding: 0.5rem 1rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: none;" />
+                  <button style="padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;" @click="saveCredit" :disabled="savingCredit">Kaydet</button>
                 </div>
-                <div v-if="collectedEditOpen" class="edit-field">
-                  <input v-model="collectedInput" type="text" placeholder="Tahsilat tutarı..." class="modern-input" />
-                  <button class="btn-primary-sm" @click="saveCollected" :disabled="collectedSaving">Kaydet</button>
+                <div v-if="collectedEditOpen" style="display: flex; gap: 0.5rem;">
+                  <input v-model="collectedInput" type="text" placeholder="Tahsilat tutarı..." style="flex: 1; padding: 0.5rem 1rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: none;" />
+                  <button style="padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;" @click="saveCollected" :disabled="collectedSaving">Kaydet</button>
                 </div>
               </div>
             </div>
 
             <!-- GÖRSEL GALERİSİ -->
-            <div class="gallery-section">
-              <div class="section-header-row">
-                <label>Görseller ({{ visitImages.length }})</label>
-                <label class="upload-link">
-                  Ekle +
+            <div style="margin-top: 2rem; background: #fff; border-radius: 16px; padding: 1.25rem; border: 1px solid #e2e8f0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.1rem; color: #1e293b; font-weight: 700; margin: 0;">Görseller ({{ visitImages.length }})</h3>
+                <label style="color: var(--primary); font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; padding: 0.25rem 0.75rem; border-radius: 20px; background: #eff6ff; transition: all 0.2s;">
+                  <span>+ Ekle</span>
                   <input type="file" multiple accept="image/*" @change="onVisitImagesSelected" style="display:none" />
                 </label>
               </div>
-              <div v-if="visitImages.length" class="thumb-grid">
-                <div v-for="(img, idx) in visitImages" :key="img.id || idx" class="thumb-wrapper" @click="activeImageIndex = idx; openImageModal()">
-                  <img :src="img.imageUrl.startsWith('http') ? img.imageUrl : API_BASE + img.imageUrl" />
+              
+              <div v-if="visitImages.length" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem;">
+                <div v-for="(img, idx) in visitImages" :key="img.id || idx" style="aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 2px solid transparent; cursor: pointer; transition: all 0.2s;" @click="activeImageIndex = idx; openImageModal()" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='transparent'">
+                  <img :src="img.imageUrl.startsWith('http') ? img.imageUrl : API_BASE + img.imageUrl" style="width: 100%; height: 100%; object-fit: cover;" />
                 </div>
               </div>
-              <p v-else class="empty-hint">Bu ziyarete ait görsel yok.</p>
+              <div v-else style="background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 16px; padding: 2rem; text-align: center; color: #64748b; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.5;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                <span style="font-size: 0.9rem;">Bu ziyarete ait görsel yok.</span>
+              </div>
             </div>
 
             <!-- 2.5 GELECEK RANDEVULAR (PLANS) -->
