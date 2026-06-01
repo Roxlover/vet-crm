@@ -326,14 +326,15 @@ public async Task<ActionResult> DeleteNote(int ownerId, int noteId)
         if (string.IsNullOrWhiteSpace(query))
             return Ok(new List<OwnerDto>());
 
-        var queryLower = query.Trim().ToLower();
+        query = query.Trim();
 
-        var ownersDb = await _db.Owners
+        var owners = await _db.Owners
             .Include(o => o.Pets)
             .Where(o =>
-                o.FullName.ToLower().Contains(queryLower) ||
-                o.PhoneE164.Contains(queryLower))
-            .Take(50)
+                o.FullName.ToLower().Contains(query.ToLower()) ||
+                o.PhoneE164.Contains(query))
+            .OrderBy(o => o.FullName)
+            .Take(20)
             .Select(o => new OwnerDto
             {
                 Id = o.Id,
@@ -345,12 +346,6 @@ public async Task<ActionResult> DeleteNote(int ownerId, int noteId)
                 PetCount = o.Pets.Count(p => p.IsActive)
             })
             .ToListAsync();
-
-        var owners = ownersDb
-            .OrderByDescending(o => o.FullName.ToLower().StartsWith(queryLower))
-            .ThenBy(o => o.FullName)
-            .Take(20)
-            .ToList();
 
         return Ok(owners);
     }

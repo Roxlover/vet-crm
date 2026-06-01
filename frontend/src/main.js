@@ -21,29 +21,33 @@ const updateSW = registerSW({
   },
 })
 
-// Initialize Push Notifications
-PushNotifications.requestPermissions().then(result => {
-  if (result.receive === 'granted') {
-    // Register with APNs/FCM
-    PushNotifications.register()
-  } else {
-    console.warn('Push notification permission not granted')
-  }
-})
+import { Capacitor } from '@capacitor/core'
 
-PushNotifications.addListener('registration', token => {
-  console.log('Push registration token:', token.value)
-  // TODO: send token to backend if needed
-})
+if (Capacitor.isNativePlatform()) {
+  // Initialize Push Notifications
+  PushNotifications.requestPermissions().then(result => {
+    if (result.receive === 'granted') {
+      // Register with APNs/FCM
+      PushNotifications.register()
+    } else {
+      console.warn('Push notification permission not granted')
+    }
+  })
 
-PushNotifications.addListener('pushNotificationReceived', notification => {
-  console.log('Push notification received:', notification)
-})
+  PushNotifications.addListener('registration', token => {
+    console.log('Push registration token:', token.value)
+    // TODO: send token to backend if needed
+  })
 
-PushNotifications.addListener('pushNotificationActionPerformed', notification => {
-  console.log('Push notification action performed', notification)
-  // Handle notification click, navigate if needed
-})
+  PushNotifications.addListener('pushNotificationReceived', notification => {
+    console.log('Push notification received:', notification)
+  })
+
+  PushNotifications.addListener('pushNotificationActionPerformed', notification => {
+    console.log('Push notification action performed', notification)
+    // Handle notification click, navigate if needed
+  })
+}
 
 const app = createApp(App)
 app.use(router)
