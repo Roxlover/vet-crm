@@ -11,7 +11,10 @@
     "cap:init": "npx cap init",
     "cap:sync": "npx cap sync",
     "cap:open:android": "npx cap open android",
-    "cap:open:ios": "npx cap open ios"
+    "cap:open:ios": "npx cap open ios",
+    "mobile:push-setup": "npm install @capacitor/push-notifications && npx cap sync",
+    "mobile:build": "npm run build && npx cap sync && npx cap open android && npx cap open ios",
+    "mobile:ci": "npm run build && npx cap sync && npm run ci:android && npm run ci:ios"
   },
   "dependencies": {
     "@capacitor/camera": "^7.0.5",

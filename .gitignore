@@ -98,3 +98,7 @@ frontend-dist/
 
 frontend-dist
 frontend-dist/
+
+# Firebase Mobile Credentials
+google-services.json
+GoogleService-Info.plist
