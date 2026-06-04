@@ -114,6 +114,11 @@
                 </div>
 
                 <div class="form-group full-width" style="margin-bottom: 0; grid-column: span 2;">
+                  <label>Mikroçip No</label>
+                  <input v-model="pet.microchipNumber" type="text" placeholder="Mikroçip numarası" />
+                </div>
+
+                <div class="form-group full-width" style="margin-bottom: 0; grid-column: span 2;">
                   <label>Pet Hakkında Notlar</label>
                   <textarea v-model="pet.notes" placeholder="Mizaç, alerji vb..." class="mini-textarea"></textarea>
                 </div>
@@ -271,6 +276,7 @@
                     <input v-model.number="newPet.ageMonths" type="number" placeholder="Yaş (Ay)" class="mini-input" />
                     <input v-model="newPet.breed" placeholder="Cins" class="mini-input" />
                     <input v-model="newPet.birthDate" type="date" class="mini-input" />
+                    <input v-model="newPet.microchipNumber" placeholder="Mikroçip No" class="mini-input" style="grid-column: span 2;" />
                     <textarea v-model="newPet.notes" placeholder="Notlar..." class="mini-input full-width" style="grid-column: span 2; min-height: 60px;"></textarea>
                   </div>
                   <button class="btn btn-primary btn-sm full-width" @click="addPet" :disabled="petAdding">
@@ -311,6 +317,7 @@
                           <input v-model.number="petDraft.ageYears" type="number" placeholder="Yaş (Yıl)" class="mini-input" min="0" />
                           <input v-model.number="petDraft.ageMonths" type="number" placeholder="Yaş (Ay)" class="mini-input" min="0" max="11" />
                         </div>
+                        <input v-model="petDraft.microchipNumber" placeholder="Mikroçip No" class="mini-input" />
                         <textarea v-model="petDraft.notes" placeholder="Notlar" class="mini-input" style="min-height: 50px;"></textarea>
                         <div style="border-top: 1px dashed #e2e8f0; padding-top: 0.5rem; margin-top: 0.25rem;">
                           <p style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem;">Hızlı Ücret Girişi</p>

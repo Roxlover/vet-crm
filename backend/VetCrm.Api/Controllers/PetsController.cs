@@ -68,6 +68,7 @@ public class PetsController : ControllerBase
                 Species = p.Species,
                 Breed = p.Breed,
                 BirthDate = p.BirthDate,
+                MicrochipNumber = p.MicrochipNumber,
                 Notes = p.Notes
             })
             .ToListAsync();
@@ -91,6 +92,7 @@ public class PetsController : ControllerBase
                 p.Species,
                 p.Breed,
                 p.BirthDate,
+                p.MicrochipNumber,
                 p.Notes
             })
             .FirstOrDefaultAsync();
@@ -137,6 +139,7 @@ public class PetsController : ControllerBase
             Species = petBase.Species ?? "",
             Breed = petBase.Breed,
             BirthDate = petBase.BirthDate,
+            MicrochipNumber = petBase.MicrochipNumber,
             Notes = petBase.Notes,
             AgeMonths = age?.months,
             Visits = visits
@@ -161,6 +164,7 @@ public class PetsController : ControllerBase
                 Species = p.Species,
                 Breed = p.Breed,
                 BirthDate = p.BirthDate,
+                MicrochipNumber = p.MicrochipNumber,
                 Notes = p.Notes
             })
             .FirstOrDefaultAsync();
@@ -187,6 +191,7 @@ public class PetsController : ControllerBase
             Species = dto.Species,
             Breed = dto.Breed,
             BirthDate = dto.BirthDate,
+            MicrochipNumber = dto.MicrochipNumber,
             Notes = dto.Notes
         };
 
@@ -204,6 +209,7 @@ public class PetsController : ControllerBase
             Species = pet.Species,
             Breed = pet.Breed,
             BirthDate = pet.BirthDate,
+            MicrochipNumber = pet.MicrochipNumber,
             Notes = pet.Notes
         };
 
@@ -220,6 +226,7 @@ public class PetsController : ControllerBase
         pet.Name = dto.Name;
         pet.Species = dto.Species;
         pet.Breed = dto.Breed;
+        pet.MicrochipNumber = dto.MicrochipNumber;
         pet.Notes = dto.Notes;
 
         // BirthDate öncelikli; yoksa AgeYears/AgeMonths'tan hesapla

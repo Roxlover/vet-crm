@@ -11,6 +11,7 @@ public class PetDto
     public string? Species { get; set; }  
     public string? Breed { get; set; }   
     public DateOnly? BirthDate { get; set; }
+    public string? MicrochipNumber { get; set; }
 
     public string? Notes { get; set; }
 }

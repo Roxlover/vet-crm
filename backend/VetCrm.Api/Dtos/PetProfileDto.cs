@@ -11,6 +11,7 @@ public class PetProfileDto
     public string Species { get; set; } = null!;
     public string? Breed { get; set; }
     public DateOnly? BirthDate { get; set; }
+    public string? MicrochipNumber { get; set; }
     public string? Notes { get; set; }
 
     public List<PetVisitDto> Visits { get; set; } = new();

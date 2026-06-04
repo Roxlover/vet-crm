@@ -88,6 +88,11 @@
               <span class="label">Yaş</span>
               <div class="value">{{ formatAge(profile.ageYears ?? profile.AgeYears, profile.ageMonths ?? profile.AgeMonths) }}</div>
             </div>
+            <div class="info-card">
+              <span class="label">Mikroçip No</span>
+              <div v-if="!petEditOpen" class="value">{{ profile.microchipNumber || '—' }}</div>
+              <input v-else-if="petDraft" type="text" v-model="petDraft.microchipNumber" class="edit-input" placeholder="Mikroçip no" />
+            </div>
             <div class="info-card wide">
               <span class="label">Notlar</span>
               <div v-if="!petEditOpen" class="value">{{ profile.notes || 'Not eklenmemiş.' }}</div>
@@ -463,6 +468,7 @@ function openPetEdit() {
     species: profile.value.species,
     breed: profile.value.breed,
     birthDate: profile.value.birthDate?.slice(0, 10) || null,
+    microchipNumber: profile.value.microchipNumber || '',
     notes: profile.value.notes,
   }
   petEditOpen.value = true
