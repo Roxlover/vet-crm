@@ -1097,9 +1097,52 @@ function sendWhatsAppReminder(ownerName, ownerPhone, petName, dateStr, purpose) 
   }
 
   .visit-footer {
-    flex-direction: row;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
     font-size: 0.9rem;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+  }
+  
+  .detail-grid .detail-item {
+    margin-bottom: 0.5rem;
+  }
+
+  .detail-item label {
+    font-size: 0.65rem;
+  }
+  
+  .modern-input, .edit-input {
+    padding: 0.5rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  .section-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .finance-card > div {
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .finance-card > div > div {
+    text-align: inherit !important;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .modal-header {
+    padding: 1rem;
   }
 }
 

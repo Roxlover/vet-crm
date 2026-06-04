@@ -353,7 +353,7 @@
 
             <div v-if="showAddVisitForm" class="modern-visit-card" style="margin-bottom: 2rem; border-color: var(--primary-light); background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0;">
               <h5 style="margin-bottom: 1rem; font-weight: 700; color: var(--primary);">Yeni Ziyaret / İşlem Kaydı</h5>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+              <div class="responsive-grid" style="gap: 1rem; margin-bottom: 1rem;">
                 <div class="form-group" style="margin-bottom: 0;">
                   <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">Hangi Hayvan İçin?</label>
                   <select v-model="newVisit.petId" class="modern-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;">
@@ -382,7 +382,7 @@
                 </div>
                 <textarea v-model="newVisit.procedures" class="modern-input" rows="2" placeholder="Örn: İç dış parazit yapıldı..." style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;"></textarea>
               </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+              <div class="responsive-grid" style="gap: 1rem; margin-bottom: 1rem;">
                 <div class="form-group" style="margin-bottom: 0;">
                   <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">Alınan Ücret (TL)</label>
                   <input type="number" v-model.number="newVisit.amountTl" class="modern-input" min="0" step="0.01" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;" />
@@ -414,7 +414,7 @@
               <div v-for="v in ownerVisits" :key="v.id || v.visitId" class="modern-visit-card" style="background: #ffffff; padding: 1.5rem; border-radius: 12px; border: 1px solid #f1f5f9; box-shadow: var(--shadow-sm); position: relative; border-left: 4px solid var(--primary);">
                 <!-- DÜZENLEME MODU (ZİYARET) -->
                 <div v-if="visitEditId === (v.id || v.visitId)">
-                  <div class="edit-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+                  <div class="responsive-grid" style="gap: 0.75rem; margin-bottom: 1rem;">
                     <div class="field">
                       <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">İŞLEM TARİHİ</label>
                       <input type="datetime-local" v-model="visitDraft.performedAt" class="edit-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;" />
@@ -444,7 +444,7 @@
                     <textarea v-model="visitDraft.procedures" class="edit-input" rows="3" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;"></textarea>
                   </div>
 
-                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+                  <div class="responsive-grid-3" style="gap: 0.75rem; margin-bottom: 1rem;">
                     <div class="field">
                       <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">TUTAR (TL)</label>
                       <input type="number" v-model.number="visitDraft.amountTl" @input="onEditAmountInput" class="edit-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;" />
@@ -1857,6 +1857,36 @@ onMounted(loadOwners)
     gap: 1rem;
     margin-bottom: 1.5rem;
   }
+  .responsive-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+  }
+  .responsive-grid-3 {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 0.5rem !important;
+  }
+  .pet-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+  }
+  .pet-grid .full-width {
+    grid-column: span 2 !important;
+  }
+  .modern-input, .edit-input {
+    padding: 0.5rem !important;
+    font-size: 0.85rem !important;
+  }
+  label {
+    font-size: 0.65rem !important;
+  }
+}
+.responsive-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
 }
 .btn-text-action {
   background: transparent;
