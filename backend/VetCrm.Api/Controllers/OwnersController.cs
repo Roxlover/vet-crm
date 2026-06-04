@@ -90,6 +90,7 @@ public async Task<ActionResult<OwnerDto>> GetOwner(int id)
                     Species = p.Species,
                     Breed = p.Breed,
                     BirthDate = p.BirthDate,
+                    MicrochipNumber = p.MicrochipNumber,
                     AgeYears = age?.years,
                     AgeMonths = age?.months,
                     TotalAmount = _db.Visits.Where(v => v.PetId == p.Id).Sum(v => v.AmountTl) ?? 0,

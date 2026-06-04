@@ -358,7 +358,7 @@
                   <label style="font-size: 0.8rem; font-weight: bold; color: #64748b;">Hangi Hayvan İçin?</label>
                   <select v-model="newVisit.petId" class="modern-input" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;">
                     <option value="">-- Hayvan Seçin --</option>
-                    <option v-for="p in ownerDetail?.pets" :key="p.id" :value="p.id">{{ p.name }} ({{ p.species || 'Tür yok' }})</option>
+                    <option v-for="p in ownerDetail?.pets" :key="p.id" :value="p.id">{{ p.name }} ({{ p.species || 'Tür yok' }}) - Çip: {{ p.microchipNumber || 'Yok' }}</option>
                   </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
