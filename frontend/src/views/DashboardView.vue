@@ -562,7 +562,7 @@
 
           <!-- Aktif Hastalar -->
           <div v-if="statModal.type === 'active-pets'" class="stat-list">
-            <div v-for="pet in statModal.data" :key="pet.id" class="stat-list-item">
+            <div v-for="pet in statModal.data" :key="pet.id" class="stat-list-item clickable-item" @click="goToPetProfile(pet.id)">
               <div class="stat-item-icon">🐾</div>
               <div class="stat-item-main">
                 <span class="stat-item-name">{{ pet.name }}</span>
@@ -571,30 +571,33 @@
                   <template v-if="pet.species"> · {{ pet.species }}</template>
                 </span>
               </div>
+              <svg class="stat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
             </div>
           </div>
 
           <!-- Aylık Tahsilat -->
           <div v-if="statModal.type === 'monthly-revenue'" class="stat-list">
-            <div v-for="visit in statModal.data" :key="visit.id" class="stat-list-item">
+            <div v-for="visit in statModal.data" :key="visit.id" class="stat-list-item clickable-item" @click="openStatVisit(visit)">
               <div class="stat-item-time">{{ formatMonthDay(new Date(visit.performedAt)) }}</div>
               <div class="stat-item-main">
                 <span class="stat-item-name">{{ visit.petName }}</span>
                 <span class="stat-item-sub">{{ visit.ownerName }}</span>
               </div>
               <div class="stat-item-amount">₺{{ getCollected(visit) }}</div>
+              <svg class="stat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
             </div>
           </div>
 
           <!-- Hatırlatıcılar -->
           <div v-if="statModal.type === 'reminders'" class="stat-list">
-            <div v-for="rem in statModal.data" :key="rem.id" class="stat-list-item">
+            <div v-for="rem in statModal.data" :key="rem.id" class="stat-list-item clickable-item" @click="openStatReminder(rem)">
               <div class="stat-item-time" style="min-width:55px">{{ rem.reminderDate }}</div>
               <div class="stat-item-main">
                 <span class="stat-item-name">{{ rem.petName }}</span>
                 <span class="stat-item-sub">{{ rem.ownerName }}</span>
               </div>
               <div class="stat-item-badge" v-if="rem.procedures">{{ rem.procedures }}</div>
+              <svg class="stat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
             </div>
           </div>
 
@@ -1784,6 +1787,25 @@ function closeStatModal() {
   statModal.show = false
   statModal.type = null
   statModal.data = []
+}
+
+function goToPetProfile(petId) {
+  closeStatModal()
+  router.push({ path: '/pets', query: { id: petId } })
+}
+
+function openStatVisit(visit) {
+  closeStatModal()
+  openVisit({ visitId: visit.id || visit.Id })
+}
+
+function openStatReminder(rem) {
+  closeStatModal()
+  if (rem.visitId || rem.VisitId) {
+    openVisit({ id: rem.id || rem.Id, visitId: rem.visitId || rem.VisitId })
+  } else {
+    openVisit({ id: rem.id || rem.Id, visitId: rem.id || rem.Id })
+  }
 }
 
 async function openStatModal(type) {
