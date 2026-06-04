@@ -399,7 +399,7 @@
               </div>
               <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
                 <button class="btn btn-ghost" @click="showAddVisitForm = false">İptal</button>
-                <button class="btn btn-primary" @click="handleAddVisit" :disabled="visitAdding || !newVisit.petId || !newVisit.procedures">
+                <button class="btn btn-primary" @click="handleAddVisit" :disabled="visitAdding">
                   {{ visitAdding ? 'Kaydediliyor...' : 'İşlemi Kaydet' }}
                 </button>
               </div>
@@ -737,8 +737,16 @@ function handleVisitFiles(e) {
 }
 
 async function handleAddVisit() {
-  if (!newVisit.petId) { visitAddError.value = 'Lütfen bir hayvan seçin.'; return }
-  if (!newVisit.procedures?.trim()) { visitAddError.value = 'İşlem detayını girin.'; return }
+  if (!newVisit.petId) { visitAddError.value = 'Lütfen bir hayvan (hasta) seçin.'; return }
+  if (!newVisit.procedures?.trim()) { visitAddError.value = 'Lütfen uygulanan tedaviyi (neler yapıldığını) girin.'; return }
+  
+  const hasAmount = newVisit.amountTl !== null && newVisit.amountTl !== undefined && newVisit.amountTl > 0;
+  const hasCredit = newVisit.creditAmountTl !== null && newVisit.creditAmountTl !== undefined && newVisit.creditAmountTl > 0;
+  
+  if (!hasAmount && !hasCredit) {
+    visitAddError.value = 'Lütfen alınan ücret (tutar) veya veresiye miktarından en az birini mutlaka girin.';
+    return;
+  }
   
   visitAdding.value = true
   visitAddError.value = ''
