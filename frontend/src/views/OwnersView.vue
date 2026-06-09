@@ -118,9 +118,13 @@
                   <input v-model="pet.microchipNumber" type="text" placeholder="Mikroçip numarası" />
                 </div>
 
-                <div class="form-group full-width" style="margin-bottom: 0; grid-column: span 2;">
-                  <label>Pet Hakkında Notlar</label>
-                  <textarea v-model="pet.notes" placeholder="Mizaç, alerji vb..." class="mini-textarea"></textarea>
+                <div class="field-group">
+                  <label>Hekim Notu</label>
+                  <textarea v-model="pet.notes" placeholder="Mizaç, alerji vb... (Hekim)" class="mini-textarea"></textarea>
+                </div>
+                <div class="field-group">
+                  <label>Hasta Sahibine Not</label>
+                  <textarea v-model="pet.clientNotes" placeholder="Müşteri portalında görünecek..." class="mini-textarea"></textarea>
                 </div>
               </div>
             </div>
@@ -277,7 +281,8 @@
                     <input v-model="newPet.breed" placeholder="Cins" class="mini-input" />
                     <input v-model="newPet.birthDate" type="date" class="mini-input" />
                     <input v-model="newPet.microchipNumber" placeholder="Mikroçip No" class="mini-input" style="grid-column: span 2;" />
-                    <textarea v-model="newPet.notes" placeholder="Notlar..." class="mini-input full-width" style="grid-column: span 2; min-height: 60px;"></textarea>
+                    <textarea v-model="newPet.notes" placeholder="Hekim Notu..." class="mini-input full-width" style="grid-column: span 2; min-height: 60px;"></textarea>
+                    <textarea v-model="newPet.clientNotes" placeholder="Hasta Sahibine Not (Opsiyonel)..." class="mini-input full-width" style="grid-column: span 2; min-height: 60px;"></textarea>
                   </div>
                   <button class="btn btn-primary btn-sm full-width" @click="addPet" :disabled="petAdding">
                     {{ petAdding ? 'Ekleniyor...' : 'Hayvanı Kaydet' }}
@@ -318,7 +323,10 @@
                           <input v-model.number="petDraft.ageMonths" type="number" placeholder="Yaş (Ay)" class="mini-input" min="0" max="11" />
                         </div>
                         <input v-model="petDraft.microchipNumber" placeholder="Mikroçip No" class="mini-input" />
-                        <textarea v-model="petDraft.notes" placeholder="Notlar" class="mini-input" style="min-height: 50px;"></textarea>
+                        <textarea v-model="petDraft.notes" placeholder="Hekim Notu" class="mini-input" style="min-height: 50px;"></textarea>
+                      </div>
+                      <div class="field-group" style="grid-column: span 2;">
+                        <textarea v-model="petDraft.clientNotes" placeholder="Hasta Sahibine Not (Opsiyonel)" class="mini-input" style="min-height: 50px;"></textarea>
                         <div style="border-top: 1px dashed #e2e8f0; padding-top: 0.5rem; margin-top: 0.25rem;">
                           <p style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem;">Hızlı Ücret Girişi</p>
                           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
@@ -459,9 +467,13 @@
                     </div>
                   </div>
 
-                  <div class="field" style="margin-bottom: 1rem;">
-                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 0.25rem;">HEKİM NOTU</label>
+                  <div style="grid-column: span 2;">
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-bottom: 0.25rem; display: block;">HEKİM NOTU</label>
                     <textarea v-model="visitDraft.notes" class="edit-input" rows="2" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;"></textarea>
+                  </div>
+                  <div style="grid-column: span 2;">
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-bottom: 0.25rem; display: block;">HASTA SAHİBİNE NOT (OPSİYONEL)</label>
+                    <textarea v-model="visitDraft.clientNotes" class="edit-input" rows="2" style="padding: 0.5rem; border-radius: 8px; width: 100%; border: 1px solid #cbd5e1;"></textarea>
                   </div>
 
                   <div v-if="visitSaveError" class="state state-error" style="font-size: 0.85rem; margin-bottom: 1rem; padding: 0.5rem;">{{ visitSaveError }}</div>
@@ -502,8 +514,12 @@
                     <p style="margin-top: 0.25rem;">{{ v.procedures || 'Belirtilmemiş' }}</p>
                   </div>
                   <div v-if="v.notes" class="notes-block" style="background: #fffbeb; padding: 1rem; border-radius: 8px; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1rem; border: 1px solid #fef3c7;">
-                    <strong style="color: #d97706; font-size: 0.8rem; text-transform: uppercase;">Hekim Notu</strong>
+                    <strong style="color: #b45309; display: block; margin-bottom: 0.25rem; font-size: 0.85rem;">Hekim Notu:</strong>
                     <p style="margin-top: 0.25rem;">{{ v.notes }}</p>
+                  </div>
+                  <div v-if="v.clientNotes" class="notes-block" style="background: #f0fdf4; padding: 1rem; border-radius: 8px; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1rem; border: 1px solid #bbf7d0;">
+                    <strong style="color: #166534; display: block; margin-bottom: 0.25rem; font-size: 0.85rem;">Hasta Sahibine Not:</strong>
+                    <p style="margin-top: 0.25rem;">{{ v.clientNotes }}</p>
                   </div>
                   
                   <div v-if="getVisitImages(v).length > 0" class="visit-gallery" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
@@ -578,7 +594,7 @@ const ownerSaving = ref(false)
 const ownerDraft = reactive({ fullName: '', phoneE164: '', password: '' })
 
 const editingPetId = ref(null)
-const petDraft = reactive({ name: '', species: '', breed: '', ageYears: null, ageMonths: null, notes: '', amountTl: null, creditAmountTl: null })
+const petDraft = reactive({ name: '', species: '', breed: '', ageYears: null, ageMonths: null, notes: '', clientNotes: '', amountTl: null, creditAmountTl: null })
 
 const editingNoteId = ref(null)
 const noteDraft = ref('')
@@ -603,6 +619,7 @@ function toVisitDraft(v) {
     procedures: v.procedures || v.Procedures || '',
     amountTl: amount,
     notes: v.notes || v.Notes || '',
+    clientNotes: v.clientNotes || v.ClientNotes || '',
     creditAmountTl: credit,
     collectedAmountTl: collected ?? (amount !== null ? Math.max(0, amount - (credit || 0)) : null),
     petId: v.petId ?? v.PetId ?? ''
@@ -657,6 +674,7 @@ async function saveVisitEdit(v) {
       procedures: (visitDraft.value.procedures || '').trim() || null,
       amountTl: visitDraft.value.amountTl,
       notes: (visitDraft.value.notes || '').trim() || null,
+      clientNotes: (visitDraft.value.clientNotes || '').trim() || null,
       creditAmountTl: visitDraft.value.creditAmountTl,
       collectedAmountTl: visitDraft.value.collectedAmountTl,
       petId: Number(visitDraft.value.petId)
@@ -704,6 +722,7 @@ const newVisit = reactive({
   amountTl: null,
   creditAmountTl: null,
   notes: '',
+  clientNotes: '',
 })
 const visitImagesToUpload = ref([])
 
@@ -758,7 +777,8 @@ async function handleAddVisit() {
       amountTl: newVisit.amountTl,
       creditAmountTl: newVisit.creditAmountTl,
       status: 1, // completed
-      notes: newVisit.notes?.trim() || null
+      notes: newVisit.notes?.trim() || null,
+      clientNotes: newVisit.clientNotes?.trim() || null
     }
     
     const created = await createVisit(payload)
@@ -779,6 +799,7 @@ async function handleAddVisit() {
     newVisit.amountTl = null
     newVisit.creditAmountTl = null
     newVisit.notes = ''
+    newVisit.clientNotes = ''
     newVisit.petId = ''
     visitImagesToUpload.value = []
     
@@ -885,6 +906,7 @@ function startEditPet(pet) {
   petDraft.ageYears = pet.ageYears ?? null
   petDraft.ageMonths = pet.ageMonths ?? null
   petDraft.notes = pet.notes || ''
+  petDraft.clientNotes = pet.clientNotes || ''
   petDraft.amountTl = null
   petDraft.creditAmountTl = null
 }
@@ -900,6 +922,7 @@ async function savePetEdit() {
       species: (petDraft.species || '').trim() || null,
       breed: (petDraft.breed || '').trim() || null,
       notes: (petDraft.notes || '').trim() || null,
+      clientNotes: (petDraft.clientNotes || '').trim() || null,
       ageYears: petDraft.ageYears ?? null,
       ageMonths: petDraft.ageMonths ?? null,
     }
@@ -915,6 +938,7 @@ async function savePetEdit() {
         creditAmountTl: petDraft.creditAmountTl ? Number(petDraft.creditAmountTl) : null,
         status: 1, // 1 = Completed (Yapıldı)
         notes: null,
+        clientNotes: null,
       }
       await http.post('/visits', visitPayload)
     }
@@ -967,7 +991,7 @@ const form = reactive({
   phoneE164: '',
   password: '',
   kvkkOptIn: true,
-  pets: [{ name: '', species: '', ageYears: null, ageMonths: null, notes: '' }]
+  pets: [{ name: '', species: '', ageYears: null, ageMonths: null, notes: '', clientNotes: '' }]
 })
 
 const newPet = reactive({
@@ -977,7 +1001,8 @@ const newPet = reactive({
   ageMonths: null,
   breed: '',
   birthDate: '',
-  notes: ''
+  notes: '',
+  clientNotes: ''
 })
 
 function resetNewPet() {
@@ -988,6 +1013,7 @@ function resetNewPet() {
   newPet.breed = ''
   newPet.birthDate = ''
   newPet.notes = ''
+  newPet.clientNotes = ''
   petAddError.value = ''
 }
 
@@ -1071,7 +1097,8 @@ async function addPet() {
       ageMonths: newPet.ageMonths ?? null,
       breed: newPet.breed?.trim() || null,
       birthDate: newPet.birthDate || null,
-      notes: newPet.notes?.trim() || null
+      notes: newPet.notes?.trim() || null,
+      clientNotes: newPet.clientNotes?.trim() || null
     }
 
     await addPetToOwner(selectedOwner.value, payload)
@@ -1118,7 +1145,7 @@ function goToPetProfile(petId) {
 }
 
 function addPetRow() {
-  form.pets.push({ name: '', species: '', ageYears: null, ageMonths: null, notes: '' })
+  form.pets.push({ name: '', species: '', ageYears: null, ageMonths: null, notes: '', clientNotes: '' })
 }
 
 function removePetRow(index) {
@@ -1144,7 +1171,8 @@ async function handleCreate() {
         species: p.species || null,
         ageYears: p.ageYears ?? null,
         ageMonths: p.ageMonths ?? null,
-        notes: p.notes || null
+        notes: p.notes || null,
+        clientNotes: p.clientNotes || null
       }))
 
     await createOwner({
@@ -1161,7 +1189,7 @@ async function handleCreate() {
     form.fullName = ''
     form.phoneE164 = ''
     form.password = ''
-    form.pets = [{ name: '', species: '', ageYears: null, ageMonths: null, notes: '' }]
+    form.pets = [{ name: '', species: '', ageYears: null, ageMonths: null, notes: '', clientNotes: '' }]
   } catch (err) {
     console.error(err)
     formError.value = 'Kayıt oluşturulurken bir hata oluştu.'

@@ -17,6 +17,7 @@ public class DashboardVisitDetailDto
     public string? Procedures { get; set; }
     public decimal? AmountTl { get; set; }
     public string? Notes { get; set; }
+    public string? ClientNotes { get; set; }
     public string? ImageUrl { get; set; }
     public decimal? CreditAmountTl { get; set; }
     public decimal? CollectedAmountTl { get; set; }

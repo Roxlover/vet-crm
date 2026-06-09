@@ -14,4 +14,5 @@ public class PetDto
     public string? MicrochipNumber { get; set; }
 
     public string? Notes { get; set; }
+    public string? ClientNotes { get; set; }
 }

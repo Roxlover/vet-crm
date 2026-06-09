@@ -364,6 +364,7 @@ var dto = await _db.Visits
         Procedures = v.Procedures,
         AmountTl = v.AmountTl,
         Notes = v.Notes,
+        ClientNotes = v.ClientNotes,
         CreditAmountTl = v.CreditAmountTl,
         CollectedAmountTl = v.CollectedAmountTl,
         ImageUrl = v.ImageUrl,

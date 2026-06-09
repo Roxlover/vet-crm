@@ -15,6 +15,7 @@ public class Visit
     public string? Procedures { get; set; }
     public decimal? AmountTl { get; set; }
     public string? Notes { get; set; }
+    public string? ClientNotes { get; set; }
 
     public string? ImageUrl { get; set; }
     public ICollection<VisitImage> Images { get; set; } = new List<VisitImage>();

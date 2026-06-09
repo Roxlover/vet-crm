@@ -7,6 +7,7 @@ public class OwnerPetCreateDto
     public int? AgeMonths { get; set; }
     public int? AgeYears { get; set; }
     public string? Notes { get; set; }
+    public string? ClientNotes { get; set; }
 }
 
 public class OwnerCreateDto

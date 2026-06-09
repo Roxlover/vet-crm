@@ -69,7 +69,8 @@ public class PetsController : ControllerBase
                 Breed = p.Breed,
                 BirthDate = p.BirthDate,
                 MicrochipNumber = p.MicrochipNumber,
-                Notes = p.Notes
+                Notes = p.Notes,
+                ClientNotes = p.ClientNotes
             })
             .ToListAsync();
 
@@ -93,7 +94,8 @@ public class PetsController : ControllerBase
                 p.Breed,
                 p.BirthDate,
                 p.MicrochipNumber,
-                p.Notes
+                p.Notes,
+                p.ClientNotes
             })
             .FirstOrDefaultAsync();
 
@@ -110,6 +112,7 @@ public class PetsController : ControllerBase
                 Purpose = v.Purpose,
                 Procedures = v.Procedures,
                 Notes = v.Notes,
+                ClientNotes = v.ClientNotes,
                 AmountTl = v.AmountTl,
                 CreditAmountTl = v.CreditAmountTl,
                 CreatedByUsername = v.CreatedByUsername,
@@ -141,6 +144,7 @@ public class PetsController : ControllerBase
             BirthDate = petBase.BirthDate,
             MicrochipNumber = petBase.MicrochipNumber,
             Notes = petBase.Notes,
+            ClientNotes = petBase.ClientNotes,
             AgeMonths = age?.months,
             Visits = visits
         };
@@ -165,7 +169,8 @@ public class PetsController : ControllerBase
                 Breed = p.Breed,
                 BirthDate = p.BirthDate,
                 MicrochipNumber = p.MicrochipNumber,
-                Notes = p.Notes
+                Notes = p.Notes,
+                ClientNotes = p.ClientNotes
             })
             .FirstOrDefaultAsync();
 
@@ -192,7 +197,8 @@ public class PetsController : ControllerBase
             Breed = dto.Breed,
             BirthDate = dto.BirthDate,
             MicrochipNumber = dto.MicrochipNumber,
-            Notes = dto.Notes
+            Notes = dto.Notes,
+            ClientNotes = dto.ClientNotes
         };
 
         _db.Pets.Add(pet);
@@ -210,7 +216,8 @@ public class PetsController : ControllerBase
             Breed = pet.Breed,
             BirthDate = pet.BirthDate,
             MicrochipNumber = pet.MicrochipNumber,
-            Notes = pet.Notes
+            Notes = pet.Notes,
+            ClientNotes = pet.ClientNotes
         };
 
         return CreatedAtAction(nameof(GetPet), new { id = pet.Id }, result);
@@ -228,6 +235,7 @@ public class PetsController : ControllerBase
         pet.Breed = dto.Breed;
         pet.MicrochipNumber = dto.MicrochipNumber;
         pet.Notes = dto.Notes;
+        pet.ClientNotes = dto.ClientNotes;
 
         // BirthDate öncelikli; yoksa AgeYears/AgeMonths'tan hesapla
         if (dto.BirthDate.HasValue)

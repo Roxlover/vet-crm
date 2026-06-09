@@ -139,6 +139,7 @@ public async Task<ActionResult<OwnerDto>> GetOwner(int id)
         // Tutmak istiyorsan:
         AgeYears = p.AgeYears,
         Notes = p.Notes,
+        ClientNotes = p.ClientNotes,
         IsActive = true
     };
 })
@@ -217,6 +218,7 @@ var pet = new Pet
     BirthDate = derivedBirthDate,
     AgeYears = dto.AgeYears, // istersen tut
     Notes = dto.Notes,
+    ClientNotes = dto.ClientNotes,
     IsActive = true
 };
 

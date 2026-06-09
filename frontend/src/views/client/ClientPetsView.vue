@@ -47,9 +47,9 @@
           <!-- Genişletilmiş Sağlık Karnesi / Aşı Takvimi Bölümü -->
           <div v-if="expandedPetId === pet.id" class="pet-card-details">
             <!-- Hakkında Notları -->
-            <div v-if="pet.notes" class="pet-notes-section">
-              <strong>Hekim Notları:</strong>
-              <p>{{ pet.notes }}</p>
+            <div v-if="pet.clientNotes" class="pet-notes-section">
+              <strong>Veteriner Notu:</strong>
+              <p>{{ pet.clientNotes }}</p>
             </div>
 
             <!-- Aşı & Kontrol Karnesi -->

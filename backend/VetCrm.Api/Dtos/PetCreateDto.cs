@@ -12,4 +12,5 @@ public class PetCreateDto
     public int? AgeYears { get; set; }
     public int? AgeMonths { get; set; }
     public string? Notes { get; set; }
+    public string? ClientNotes { get; set; }
 }

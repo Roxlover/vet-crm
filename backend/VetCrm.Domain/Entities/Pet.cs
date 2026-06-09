@@ -16,6 +16,7 @@ public class Pet
     public int? AgeMonths { get; set; }
     public bool IsActive { get; set; } = true;
     public string? Notes { get; set; }
+    public string? ClientNotes { get; set; }
 
     public ICollection<Visit> Visits { get; set; } = new List<Visit>();
 }

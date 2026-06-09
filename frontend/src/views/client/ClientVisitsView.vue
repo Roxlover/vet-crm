@@ -58,10 +58,15 @@
               <p class="section-content font-semibold">{{ visit.procedures || 'Genel Kontrol' }}</p>
             </div>
 
-            <!-- Hekim Notu -->
-            <div v-if="visit.notes" class="visit-section notes-block">
-              <span class="section-label text-warning-dark">📝 Hekim Notu</span>
-              <p class="section-content text-warning-dark">{{ visit.notes }}</p>
+            <!-- Veteriner Notu (Önceki Hekim Notu) -->
+            <div v-if="visit.clientNotes" class="visit-section notes-block">
+              <span class="section-label text-warning-dark">📝 Veteriner Notu</span>
+              <p class="section-content text-warning-dark">{{ visit.clientNotes }}</p>
+            </div>
+            
+            <div v-if="visit.collectedAmountTl !== null" class="visit-section">
+              <span class="section-label">💰 Ödenen Ücret</span>
+              <p class="section-content font-bold text-success">{{ visit.collectedAmountTl }} TL</p>
             </div>
 
             <!-- Ekli Dosyalar/Görseller -->

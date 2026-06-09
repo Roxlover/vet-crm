@@ -8,6 +8,7 @@ public class PetUpdateDto
     public DateOnly? BirthDate { get; set; }
     public string? MicrochipNumber { get; set; }
     public string? Notes { get; set; }
+    public string? ClientNotes { get; set; }
     public int? AgeYears { get; set; }
     public int? AgeMonths { get; set; }
 }

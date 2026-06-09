@@ -116,6 +116,7 @@ private static (DateTime fromDt, DateTime toDt) ToUtcRange(DateOnly from, DateOn
         public string? Purpose { get; set; }
         public string? Procedures { get; set; }
         public string? Notes { get; set; }    
+        public string? ClientNotes { get; set; }
 }
 
 
@@ -260,7 +261,8 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
             v.CreatedByName,
             v.Purpose,
             v.Procedures,
-            v.Notes
+            v.Notes,
+            v.ClientNotes
         })
         .ToListAsync();
 
@@ -282,7 +284,8 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
                 CreatedByName = v.CreatedByName,
                 Purpose = v.Purpose,
                 Procedures = v.Procedures,
-                Notes = v.Notes
+                Notes = v.Notes,
+                ClientNotes = v.ClientNotes
             };
         })
         .OrderByDescending(x => x.PerformedAt)
@@ -330,7 +333,8 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
                 OwnerPhone = (v.Pet != null && v.Pet.Owner != null) ? v.Pet.Owner.PhoneE164 : null,
                 v.Purpose,
                 v.Procedures,
-                v.Notes
+                v.Notes,
+                v.ClientNotes
             })
             .ToListAsync();
 
@@ -380,7 +384,8 @@ public async Task<ActionResult<List<LedgerVisitItemDto>>> GetVisitItems(
                     CreatedByName = v.CreatedByName,
                     Purpose = v.Purpose,
                     Procedures = v.Procedures,
-                    Notes = v.Notes
+                    Notes = v.Notes,
+                    ClientNotes = v.ClientNotes
                 };
             })
             .OrderByDescending(x => x.PerformedAt)

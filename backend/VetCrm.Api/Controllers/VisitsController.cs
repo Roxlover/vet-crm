@@ -295,6 +295,7 @@ public async Task<IActionResult> UpdateVisitCredit([FromRoute] int id, [FromBody
                 Procedures = v.Procedures,
                 AmountTl = v.AmountTl,
                 Notes = v.Notes,
+                ClientNotes = v.ClientNotes,
                 NextDate = v.NextDate,
                 Purpose = v.Purpose,
                 DoctorId = v.DoctorId,
@@ -368,6 +369,7 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
         Procedures = v.Procedures,
         AmountTl = v.AmountTl,
         Notes = v.Notes,
+        ClientNotes = v.ClientNotes,
         NextDate = v.NextDate,
         Purpose = v.Purpose,
         CreatedByUserId = v.CreatedByUserId,
@@ -445,6 +447,7 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
                 Procedures  = dto.Procedures,
                 AmountTl    = dto.AmountTl,
                 Notes       = dto.Notes,
+                ClientNotes = dto.ClientNotes,
                 NextDate    = primaryNextDate ?? dto.NextDate,
                 Purpose     = dto.Purpose,
                 CreatedByUserId   = _currentUser.UserId,
@@ -485,6 +488,7 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
                 Procedures  = visit.Procedures,
                 AmountTl    = visit.AmountTl,
                 Notes       = visit.Notes,
+                ClientNotes = visit.ClientNotes,
                 NextDate    = visit.NextDate,
                 Purpose     = visit.Purpose,
                 DoctorName  = visit.Doctor != null ? visit.Doctor.FullName : null,
@@ -523,6 +527,7 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
         visit.CreditAmountTl  = dto.CreditAmountTl;
         visit.CollectedAmountTl = dto.CollectedAmountTl ?? Math.Max(0m, (dto.AmountTl ?? 0m) - (dto.CreditAmountTl ?? 0m));
         visit.Notes           = dto.Notes;
+        visit.ClientNotes     = dto.ClientNotes;
         visit.MicrochipNumber = dto.MicrochipNumber;
 
         DateOnly? primaryNextDate = null;

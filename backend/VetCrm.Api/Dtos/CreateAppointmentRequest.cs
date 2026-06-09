@@ -16,6 +16,7 @@ namespace VetCrm.Api.Dtos
         public decimal? CreditAmountTl { get; set; }
         public string? Procedures { get; set; }
         public string? Notes { get; set; }
+        public string? ClientNotes { get; set; }
         public decimal? PaidAmountTl { get; set; }
         public List<Microsoft.AspNetCore.Http.IFormFile>? Images { get; set; }
     }

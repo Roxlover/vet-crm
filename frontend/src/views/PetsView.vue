@@ -98,6 +98,11 @@
               <div v-if="!petEditOpen" class="value">{{ profile.notes || 'Not eklenmemiş.' }}</div>
               <textarea v-else-if="petDraft" v-model="petDraft.notes" rows="3" class="edit-input" placeholder="Not ekleyin..."></textarea>
             </div>
+            <div class="info-card wide">
+              <span class="label">Hasta Sahibine Not (Opsiyonel)</span>
+              <div v-if="!petEditOpen" class="value">{{ profile.clientNotes || 'Not eklenmemiş.' }}</div>
+              <textarea v-else-if="petDraft" v-model="petDraft.clientNotes" rows="3" class="edit-input" placeholder="Müşteri portalında görünecek notlar..."></textarea>
+            </div>
           </div>
 
           <h3 class="section-title">Ziyaret Geçmişi</h3>
@@ -189,8 +194,12 @@
                   </div>
 
                   <div class="field">
-                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">NOTLAR</label>
+                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">HEKİM NOTU</label>
                     <textarea v-model="visitDraft.notes" class="edit-input" rows="2"></textarea>
+                  </div>
+                  <div class="field">
+                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">HASTA SAHİBİNE NOT (OPSİYONEL)</label>
+                    <textarea v-model="visitDraft.clientNotes" class="edit-input" rows="2"></textarea>
                   </div>
 
                   <div class="edit-actions" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
@@ -211,6 +220,10 @@
                   <div v-if="v.notes || v.Notes" class="notes-block">
                     <label>Hekim Notu</label>
                     <p>{{ v.notes || v.Notes }}</p>
+                  </div>
+                  <div v-if="v.clientNotes || v.ClientNotes" class="notes-block">
+                    <label>Hasta Sahibine Not</label>
+                    <p>{{ v.clientNotes || v.ClientNotes }}</p>
                   </div>
 
                   <div style="margin-top: 1rem;">
@@ -309,6 +322,7 @@ function toVisitDraft(v) {
     procedures: v.procedures || v.Procedures || '',
     amountTl: amount,
     notes: v.notes || v.Notes || '',
+    clientNotes: v.clientNotes || v.ClientNotes || '',
     creditAmountTl: Number(credit ?? 0),
     collectedAmountTl: collected ?? (amount !== null ? Math.max(0, amount - (credit || 0)) : null),
 
@@ -389,6 +403,7 @@ async function saveVisitEdit(v) {
       procedures: (visitDraft.value.procedures || '').trim() || null,
       amountTl: visitDraft.value.amountTl,
       notes: (visitDraft.value.notes || '').trim() || null,
+      clientNotes: (visitDraft.value.clientNotes || '').trim() || null,
       purpose: (visitDraft.value.purpose || '').trim() || null,
       nextDate: v.nextDate || v.NextDate || null,
       creditAmountTl: visitDraft.value.creditAmountTl,
@@ -470,6 +485,7 @@ function openPetEdit() {
     birthDate: profile.value.birthDate?.slice(0, 10) || null,
     microchipNumber: profile.value.microchipNumber || '',
     notes: profile.value.notes,
+    clientNotes: profile.value.clientNotes,
   }
   petEditOpen.value = true
 }

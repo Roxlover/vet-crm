@@ -49,7 +49,8 @@
 
             <div class="treatment-info">
               <p><strong>İşlemler:</strong> {{ visit.procedures || 'Belirtilmedi' }}</p>
-              <p v-if="visit.notes"><strong>Notlar:</strong> {{ visit.notes }}</p>
+              <p v-if="visit.notes"><strong>Hekim Notu:</strong> {{ visit.notes }}</p>
+              <p v-if="visit.clientNotes"><strong>Hasta Sahibine Not:</strong> {{ visit.clientNotes }}</p>
             </div>
 
             <div class="visit-footer">
@@ -159,6 +160,15 @@
             <label>Veresiye (TL)</label>
             <input type="number" v-model.number="form.creditAmountTl" placeholder="0.00" />
           </div>
+        </div>
+
+        <div class="form-group">
+          <label>Hekim Notu (İç Kullanım)</label>
+          <textarea v-model="form.notes" rows="2" placeholder="Sadece kliniğin görebileceği notlar..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Hasta Sahibine Not (Opsiyonel)</label>
+          <textarea v-model="form.clientNotes" rows="2" placeholder="Hasta sahibinin portalda göreceği notlar..."></textarea>
         </div>
 
         <button class="btn btn-primary" style="margin-top: 1rem;" @click="handleSave" :disabled="saving">
@@ -284,9 +294,14 @@
             </div>
 
             <div class="detail-item full" style="grid-column: span 2;">
-              <label>Notlar</label>
+              <label>Hekim Notu</label>
               <div v-if="!visitEditOpen" class="val">{{ selectedVisit.notes || selectedVisit.Notes || '-' }}</div>
               <textarea v-else-if="visitDraft" v-model="visitDraft.notes" class="modern-input" rows="2"></textarea>
+            </div>
+            <div class="detail-item full" style="grid-column: span 2;">
+              <label>Hasta Sahibine Not (Opsiyonel)</label>
+              <div v-if="!visitEditOpen" class="val">{{ selectedVisit.clientNotes || selectedVisit.ClientNotes || '-' }}</div>
+              <textarea v-else-if="visitDraft" v-model="visitDraft.clientNotes" class="modern-input" rows="2"></textarea>
             </div>
           </div>
 
@@ -342,6 +357,7 @@ const form = reactive({
   creditAmountTl: '',
   amountTl: null,
   notes: '',
+  clientNotes: '',
   imageFiles: [],
   microchipNumber: '',
 })
@@ -417,6 +433,7 @@ function openVisitEdit() {
     performedAt: new Date(v.performedAt).toISOString().substr(0, 16),
     procedures: v.procedures || '',
     notes: v.notes || '',
+    clientNotes: v.clientNotes || '',
     amountTl: amount,
     creditAmountTl: credit,
     collectedAmountTl: v.collectedAmountTl ?? Math.max(0, amount - credit),
@@ -491,6 +508,7 @@ async function saveVisitEdit() {
       creditAmountTl: visitDraft.value.creditAmountTl,
       collectedAmountTl: visitDraft.value.collectedAmountTl,
       notes: (visitDraft.value.notes || '').trim(),
+      clientNotes: (visitDraft.value.clientNotes || '').trim(),
       nextDate: v.nextDate,
       purpose: v.purpose
     })
@@ -683,6 +701,7 @@ async function handleSave() {
       amountTl: form.amountTl === '' || form.amountTl === null ? 0 : Number(form.amountTl),
       creditAmountTl: form.creditAmountTl === '' || form.creditAmountTl === null ? null : Number(form.creditAmountTl),
       notes: form.notes,
+      clientNotes: form.clientNotes,
     }
     
     // 1. Ziyareti oluştur
@@ -702,6 +721,7 @@ async function handleSave() {
     form.amountTl = null
     form.creditAmountTl = ''
     form.notes = ''
+    form.clientNotes = ''
     form.imageFiles = []
     selectedPetId.value = ''
     selectedOwnerId.value = ''

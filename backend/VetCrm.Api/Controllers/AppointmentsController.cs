@@ -94,6 +94,7 @@ namespace VetCrm.Api.Controllers
                         CollectedAmountTl = paidAmount > 0 ? paidAmount : (totalAmount > 0 ? totalAmount : null),
                         CreditAmountTl = creditAmount > 0 ? creditAmount : null,
                         Notes = request.Notes,
+                        ClientNotes = request.ClientNotes,
                         Status = (totalAmount > 0) ? Visit.VisitStatus.Completed : Visit.VisitStatus.Pending,
                         CreatedByUserId = currentUserId,
                         CreatedByUsername = _currentUser.Username,
@@ -108,6 +109,7 @@ namespace VetCrm.Api.Controllers
                     if (request.PaidAmountTl.HasValue) targetVisit.CreditAmountTl = creditAmount;
                     if (!string.IsNullOrWhiteSpace(request.Procedures)) targetVisit.Procedures = request.Procedures;
                     if (!string.IsNullOrWhiteSpace(request.Notes)) targetVisit.Notes = request.Notes;
+                    if (!string.IsNullOrWhiteSpace(request.ClientNotes)) targetVisit.ClientNotes = request.ClientNotes;
                 }
 
                 var appointment = new Appointment

@@ -13,6 +13,7 @@ public class PetProfileDto
     public DateOnly? BirthDate { get; set; }
     public string? MicrochipNumber { get; set; }
     public string? Notes { get; set; }
+    public string? ClientNotes { get; set; }
 
     public List<PetVisitDto> Visits { get; set; } = new();
 }
@@ -26,6 +27,7 @@ public class PetVisitDto
     public decimal? AmountTl { get; set; }
     public decimal? CreditAmountTl { get; set; }
     public string? Notes { get; set; }
+    public string? ClientNotes { get; set; }
 
     public string? CreatedByUsername { get; set; }
     public string? CreatedByName { get; set; }

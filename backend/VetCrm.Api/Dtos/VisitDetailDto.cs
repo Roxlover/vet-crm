@@ -16,6 +16,7 @@ public class VisitDetailDto
     public string Procedures { get; set; } = string.Empty;
     public decimal? AmountTl { get; set; }
     public string Notes { get; set; } = string.Empty;
+    public string? ClientNotes { get; set; }
     public string? ImageUrl { get; set; }
     public string? CreatedByName { get; set; }
     public string? CreatedByUsername { get; set; }

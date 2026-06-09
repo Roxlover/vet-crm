@@ -253,9 +253,14 @@
               </div>
 
               <div class="detail-item full">
-                <label>Ziyaret Notları</label>
+                <label>Hekim Notu</label>
                 <div v-if="!visitEditOpen" class="val">{{ selectedVisit?.notes || selectedVisit?.Notes || '—' }}</div>
                 <textarea v-else-if="visitDraft" v-model="visitDraft.notes" class="modern-input" rows="2"></textarea>
+              </div>
+              <div class="detail-item full">
+                <label>Hasta Sahibine Not (Opsiyonel)</label>
+                <div v-if="!visitEditOpen" class="val">{{ selectedVisit?.clientNotes || selectedVisit?.ClientNotes || '—' }}</div>
+                <textarea v-else-if="visitDraft" v-model="visitDraft.clientNotes" class="modern-input" rows="2"></textarea>
               </div>
             </div>
 
@@ -478,8 +483,12 @@
                   </div>
 
                   <div class="form-group">
-                    <label>Ziyaret Notları</label>
+                    <label>Hekim Notu</label>
                     <textarea v-model="appointmentNotes" class="premium-input" rows="2" placeholder="Özel notlar..."></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label>Hasta Sahibine Not (Opsiyonel)</label>
+                    <textarea v-model="appointmentClientNotes" class="premium-input" rows="2" placeholder="Müşteri portalında görünecek notlar..."></textarea>
                   </div>
 
                   <div class="form-group">
@@ -739,6 +748,7 @@ const appointmentCreditCalc = computed(() => Math.max(0, (appointmentAmount.valu
 const appointmentFiles = ref([])
 const appointmentProcedures = ref('')
 const appointmentNotes = ref('')
+const appointmentClientNotes = ref('')
 const showSuccess = ref(false)
 
 const selectedDayEvents = ref([])
@@ -948,6 +958,7 @@ function toVisitDraft(v) {
     microchipNumber: v.microchipNumber ?? v.MicrochipNumber ?? '',
     procedures: v.procedures ?? v.Procedures ?? '',
     notes: v.notes ?? v.Notes ?? '',
+    clientNotes: v.clientNotes ?? v.ClientNotes ?? '',
     amountTl: v.amountTl ?? v.AmountTl ?? null,
     creditAmountTl: v.creditAmountTl ?? v.CreditAmountTl ?? 0,
     
@@ -1000,7 +1011,8 @@ async function saveVisitEdit() {
         // Diğer alanları korumak için mevcutları gönderiyoruz (Backend DTO gereği)
         breed: selectedVisit.value.breed || selectedVisit.value.Breed,
         birthDate: selectedVisit.value.birthDate || selectedVisit.value.BirthDate,
-        notes: selectedVisit.value.petNotes || selectedVisit.value.PetNotes || ''
+        notes: selectedVisit.value.petNotes || selectedVisit.value.PetNotes || '',
+        clientNotes: selectedVisit.value.petClientNotes || selectedVisit.value.PetClientNotes || ''
       }
       await http.put(`/pets/${petId}`, petPayload)
     }
@@ -1038,6 +1050,7 @@ async function saveVisitEdit() {
       microchipNumber: (visitDraft.value.microchipNumber || '').trim() || null,
       procedures: (visitDraft.value.procedures || '').trim() || null,
       notes: (visitDraft.value.notes || '').trim() || null,
+      clientNotes: (visitDraft.value.clientNotes || '').trim() || null,
       amountTl: amount,
       creditAmountTl: visitDraft.value.creditAmountTl,
       nextDate: visitDraft.value.nextDate ?? (selectedVisit.value?.nextDate ?? selectedVisit.value?.NextDate ?? null),
@@ -1115,6 +1128,7 @@ async function submitAppointment() {
   formData.append('AmountTl', appointmentAmount.value || 0)
   formData.append('PaidAmountTl', appointmentPaid.value || 0)
   formData.append('Notes', appointmentNotes.value)
+  formData.append('ClientNotes', appointmentClientNotes.value)
   appointmentFiles.value.forEach(f => formData.append('Images', f))
 
   try {
@@ -1138,6 +1152,7 @@ async function submitAppointment() {
     appointmentPaid.value = null
     appointmentProcedures.value = ''
     appointmentNotes.value = ''
+    appointmentClientNotes.value = ''
   } catch(e) {
     console.error(e)
     alert('Randevu kaydedilemedi.')
@@ -1374,6 +1389,7 @@ function openNewAppointmentFromCalendar(day) {
   appointmentAmount.value = null
   appointmentPaid.value = null
   appointmentNotes.value = ''
+  appointmentClientNotes.value = ''
   appointmentFiles.value = []
   
   selectedReminderId.value = null

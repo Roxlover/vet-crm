@@ -36,7 +36,7 @@ public class ClientPortalController : ControllerBase
         public DateOnly? BirthDate { get; set; }
         public int? AgeYears { get; set; }
         public int? AgeMonths { get; set; }
-        public string? Notes { get; set; }
+        public string? ClientNotes { get; set; }
     }
 
     public class ClientVisitDto
@@ -47,7 +47,8 @@ public class ClientPortalController : ControllerBase
         public DateTime PerformedAt { get; set; }
         public string? Purpose { get; set; }
         public string? Procedures { get; set; }
-        public string? Notes { get; set; }
+        public string? ClientNotes { get; set; }
+        public decimal? CollectedAmountTl { get; set; }
         public string? DoctorName { get; set; }
         public List<string> Images { get; set; } = new();
     }
@@ -117,7 +118,7 @@ public class ClientPortalController : ControllerBase
                 BirthDate = p.BirthDate,
                 AgeYears = p.AgeYears,
                 AgeMonths = p.AgeMonths,
-                Notes = p.Notes
+                ClientNotes = p.ClientNotes
             })
             .ToListAsync();
 
@@ -147,7 +148,8 @@ public class ClientPortalController : ControllerBase
                 PerformedAt = v.PerformedAt,
                 Purpose = v.Purpose,
                 Procedures = v.Procedures,
-                Notes = v.Notes,
+                ClientNotes = v.ClientNotes,
+                CollectedAmountTl = v.CollectedAmountTl,
                 DoctorName = v.Doctor != null ? v.Doctor.FullName : v.CreatedByName,
                 Images = v.Images.Select(img => img.ImageUrl).ToList()
             })
