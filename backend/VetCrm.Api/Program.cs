@@ -225,6 +225,9 @@ if (app.Environment.IsDevelopment() || enableSwagger)
     app.UseSwaggerUI();
 }
 
+// ✅ CORS mutlaka en üstte olmalı (Exception veya 500 hatalarında da header eklensin diye)
+app.UseCors(FrontendCorsPolicy);
+
 app.UseMiddleware<ExceptionMiddleware>();
 
 // Pipeline order (kritik)
@@ -232,9 +235,6 @@ app.UseHangfireDashboard("/hangfire");
 app.UseStaticFiles();
 
 app.UseRouting();
-
-// ✅ CORS mutlaka Authentication/Authorization'dan ÖNCE
-app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
