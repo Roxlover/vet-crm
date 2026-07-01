@@ -225,30 +225,37 @@ if (app.Environment.IsDevelopment() || enableSwagger)
     app.UseSwaggerUI();
 }
 
-// ✅ CORS mutlaka en üstte olmalı (Exception veya 500 hatalarında da header eklensin diye)
-app.UseCors(FrontendCorsPolicy);
-
 app.UseMiddleware<ExceptionMiddleware>();
 
-// Pipeline order (kritik)
-app.UseHangfireDashboard("/hangfire");
-app.UseStaticFiles();
+try
+{
+    // Pipeline order (kritik)
+    app.UseHangfireDashboard("/hangfire");
 
+    // Hangfire recurring job
+    RecurringJob.AddOrUpdate<ReminderProcessor>(
+        "process-reminders",
+        rp => rp.ProcessDueRemindersAsync(),
+        "0 9 * * *",
+        new RecurringJobOptions
+        {
+            TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time")
+        });
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "Hangfire failed to initialize on startup. Bypassing...");
+}
+
+app.UseStaticFiles();
 app.UseRouting();
+
+// ✅ CORS Endpoint Routing'den SONRA, Auth'tan ÖNCE olmalı
+app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-
-// Hangfire recurring job
-RecurringJob.AddOrUpdate<ReminderProcessor>(
-    "process-reminders",
-    rp => rp.ProcessDueRemindersAsync(),
-    "0 9 * * *",
-    new RecurringJobOptions
-    {
-        TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time")
-    });
 
 app.Run();
