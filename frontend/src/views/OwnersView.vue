@@ -1199,9 +1199,7 @@ async function handleCreate() {
 }
 
 const predefinedProcedures = [
-  'İlaç A',
-  'İlaç B',
-  'İlaç C',
+
   'Kedi karma',
   'Köpek karma',
   'Corona',

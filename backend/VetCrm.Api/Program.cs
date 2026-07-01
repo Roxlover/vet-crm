@@ -43,7 +43,10 @@ builder.Services.AddHangfire(config =>
         })
 );
 
-builder.Services.AddHangfireServer();
+// ✅ GEÇİCİ OLARAK KAPATILDI: Eğer veritabanı bağlantısında veya migration'da sorun varsa, 
+// Hangfire arka plan servisi başlatılırken (app.Run sırasında) kilitlenip tüm sunucuyu (Kestrel) çökertiyor!
+// Sunucu çökünce Nginx 502 dönüyor ve tarayıcıda CORS hatası görünüyor.
+// builder.Services.AddHangfireServer();
 
 // R2
 builder.Services.Configure<R2Options>(builder.Configuration.GetSection("R2"));

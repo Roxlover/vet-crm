@@ -788,9 +788,6 @@ const stats = reactive({
 const trendValue = ref(0)
 
 const predefinedProcedures = [
-  'İlaç A',
-  'İlaç B',
-  'İlaç C',
   'Kedi karma',
   'Köpek karma',
   'Corona',

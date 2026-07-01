@@ -543,9 +543,7 @@ async function handleDeleteVisit(v) {
 }
 
 const predefinedProcedures = [
-  'İlaç A',
-  'İlaç B',
-  'İlaç C',
+
   'Kedi karma',
   'Köpek karma',
   'Corona',
