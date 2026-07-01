@@ -144,9 +144,12 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<VetCrmDbContext>();
-    db.Database.Migrate();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        db.Database.Migrate();
 
-    // Eğer hiç kullanıcı yoksa varsayılan kullanıcıları ekle
+        // Eğer hiç kullanıcı yoksa varsayılan kullanıcıları ekle
     if (!db.Users.Any())
     {
         db.Users.Add(new VetCrm.Domain.Entities.User
@@ -207,6 +210,11 @@ using (var scope = app.Services.CreateScope())
         };
         db.Diseases.AddRange(diseases);
         db.SaveChanges();
+    }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
     }
 }
 

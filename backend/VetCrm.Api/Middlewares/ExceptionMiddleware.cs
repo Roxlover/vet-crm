@@ -24,18 +24,22 @@ public class ExceptionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
-            context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            _logger.LogError(ex, "An unhandled exception occurred.");
+            
+            if (!context.Response.HasStarted)
+            {
+                context.Response.ContentType = "application/json";
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-            var response = _env.IsDevelopment()
-                ? new { statusCode = context.Response.StatusCode, message = ex.Message, details = ex.StackTrace?.ToString() }
-                : new { statusCode = context.Response.StatusCode, message = "Sunucu tarafında beklenmeyen bir hata oluştu.", details = (string?)null };
+                var response = _env.IsDevelopment()
+                    ? new { statusCode = context.Response.StatusCode, message = ex.Message, details = ex.StackTrace?.ToString() }
+                    : new { statusCode = context.Response.StatusCode, message = "Sunucu tarafında beklenmeyen bir hata oluştu.", details = (string?)null };
 
-            var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-            var json = JsonSerializer.Serialize(response, options);
+                var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+                var json = JsonSerializer.Serialize(response, options);
 
-            await context.Response.WriteAsync(json);
+                await context.Response.WriteAsync(json);
+            }
         }
     }
 }
