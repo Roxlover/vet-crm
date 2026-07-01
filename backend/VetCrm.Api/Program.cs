@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using VetCrm.Api.Options;
 using VetCrm.Api.Services;
 using VetCrm.Api.Storage;
+using VetCrm.Api.Middlewares;
 using VetCrm.Infrastructure.Data;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -157,6 +158,56 @@ using (var scope = app.Services.CreateScope())
         });
         db.SaveChanges();
     }
+
+    if (!db.Diseases.Any())
+    {
+        var diseases = new List<VetCrm.Domain.Entities.Disease>
+        {
+            // Orijinal Enfeksiyöz ve Paraziter Hastalıklar
+            new() { Name = "Parvovirus (Kanlı İshal)", Category = VetCrm.Domain.Entities.DiseaseCategory.Enfeksiyoz, Species = "Köpek", IsContagious = true },
+            new() { Name = "Distemper (Gençlik Hastalığı)", Category = VetCrm.Domain.Entities.DiseaseCategory.Enfeksiyoz, Species = "Köpek", IsContagious = true },
+            new() { Name = "FeLV (Kedi Lösemisi)", Category = VetCrm.Domain.Entities.DiseaseCategory.Enfeksiyoz, Species = "Kedi", IsContagious = true },
+            new() { Name = "FIP (Feline İnfeksiyöz Peritonit)", Category = VetCrm.Domain.Entities.DiseaseCategory.Enfeksiyoz, Species = "Kedi", IsContagious = false },
+            new() { Name = "Ehrlichiosis (Kene Ateşi)", Category = VetCrm.Domain.Entities.DiseaseCategory.Paraziter, Species = "Köpek", IsContagious = false },
+            new() { Name = "Leishmaniasis", Category = VetCrm.Domain.Entities.DiseaseCategory.Paraziter, Species = "Köpek", IsContagious = false },
+            new() { Name = "Otit (Kulak İltihabı)", Category = VetCrm.Domain.Entities.DiseaseCategory.Diger, Species = "Tümü", IsContagious = false },
+            new() { Name = "Dermatofitoz (Mantar)", Category = VetCrm.Domain.Entities.DiseaseCategory.Enfeksiyoz, Species = "Tümü", IsContagious = true },
+            new() { Name = "Kalp Kurdu (Dirofilariasis)", Category = VetCrm.Domain.Entities.DiseaseCategory.Paraziter, Species = "Köpek", IsContagious = false },
+
+            // Yeni Kronik Hastalıklar - Kedi
+            new() { Name = "Kronik Böbrek Yetmezliği (Kedi)", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Kedi", Description = "Yaşlı kedilerde en sık görülen kronik rahatsızlıklardan biri. Böbrek fonksiyonlarında ilerleyici kayıp.", IsContagious = false },
+            new() { Name = "Hipertiroidizm", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Kedi", Description = "Tiroid bezinin aşırı çalışması sonucu kilo kaybı, huzursuzluk ve iştah artışı ile seyreder.", IsContagious = false },
+            new() { Name = "Diyabetes Mellitus (Kedi)", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Kedi", Description = "Özellikle şişman ve orta yaş kedilerde görülen şeker hastalığı.", IsContagious = false },
+            new() { Name = "Kronik Sistit / FLUTD", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Kedi", Description = "Alt idrar yolu hastalığı, tekrarlayan ataklarla seyreder.", IsContagious = false },
+            new() { Name = "Feline Astım", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Kedi", Description = "Kronik solunum yolu iltihabı, öksürük ve nefes darlığı ile kendini gösterir.", IsContagious = false },
+            new() { Name = "İnflamatuar Bağırsak Hastalığı (IBD)", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Kedi", Description = "Kronik kusma ve ishal ile seyreden bağırsak iltihabı.", IsContagious = false },
+            new() { Name = "Kronik Gingivostomatit", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Kedi", Description = "Ağız içi kronik iltihap, oldukça ağrılı ve tedaviye dirençli olabilir.", IsContagious = false },
+            new() { Name = "Hipertrofik Kardiyomiyopati (HCM)", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Kedi", Description = "Kalp kası kalınlaşması, bazı ırklarda genetik yatkınlık gösterir.", IsContagious = false },
+            new() { Name = "FIV (Kedi AIDS'i)", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Kedi", Description = "Kronik immün yetmezlik, genelde kavga/ısırık yoluyla bulaşır.", IsContagious = true },
+            new() { Name = "Osteoartrit (Kedi)", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Kedi", Description = "Yaşlı kedilerde eklem yıpranması sonucu gelişir.", IsContagious = false },
+
+            // Yeni Kronik Hastalıklar - Köpek
+            new() { Name = "Diyabetes Mellitus (Köpek)", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Orta yaş ve yaşlı köpeklerde sık görülen şeker hastalığı.", IsContagious = false },
+            new() { Name = "Kronik Böbrek Yetmezliği (Köpek)", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Özellikle yaşlı köpeklerde görülen ilerleyici böbrek fonksiyon kaybı.", IsContagious = false },
+            new() { Name = "Hipotiroidizm", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Tiroid bezinin az çalışması, kilo alımı ve halsizlik ile seyreder.", IsContagious = false },
+            new() { Name = "Cushing Sendromu", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Aşırı kortizol üretimi (Hiperadrenokortisizm) sonucu gelişen hormonal hastalık.", IsContagious = false },
+            new() { Name = "Addison Hastalığı", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Yetersiz kortizol üretimi sonucu gelişen hormonal yetmezlik.", IsContagious = false },
+            new() { Name = "İdiyopatik Epilepsi", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Tekrarlayan nöbetlerle seyreder, genelde genç yaşta başlar.", IsContagious = false },
+            new() { Name = "Mitral Kapak Hastalığı", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Kronik kalp yetmezliği, özellikle küçük ırklarda çok yaygındır.", IsContagious = false },
+            new() { Name = "Atopik Dermatit", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Kronik alerjik cilt hastalığı, tekrarlayan kaşıntı ve iltihapla seyreder.", IsContagious = false },
+            new() { Name = "Kalça Displazisi", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Büyük ırklarda görülen genetik eklem bozukluğu.", IsContagious = false },
+            new() { Name = "Osteoartrit (Köpek)", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Eklem yıpranması, yaşla birlikte ilerler.", IsContagious = false },
+            new() { Name = "Ekzokrin Pankreas Yetmezliği (EPI)", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Sindirim enzimi eksikliği, kilo kaybı ve yağlı dışkı ile seyreder.", IsContagious = false },
+            new() { Name = "Kronik Otit Eksterna", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Köpek", Description = "Özellikle sarkık kulaklı ırklarda tekrarlayan kulak iltihabı.", IsContagious = false },
+
+            // Ortak (Kedi & Köpek)
+            new() { Name = "Obeziteye Bağlı Kronik Komplikasyonlar", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Tümü", Description = "Aşırı kiloya bağlı eklem yükü artışı ve diyabet riski artışı.", IsContagious = false },
+            new() { Name = "Kronik Karaciğer Yetmezliği", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Tümü", Description = "İlerleyici karaciğer fonksiyon kaybı.", IsContagious = false },
+            new() { Name = "Dejeneratif Miyelopati", Category = VetCrm.Domain.Entities.DiseaseCategory.Kronik, Species = "Tümü", Description = "Omurilik sinirlerinde ilerleyici dejenerasyon, özellikle yaşlı hayvanlarda görülür.", IsContagious = false }
+        };
+        db.Diseases.AddRange(diseases);
+        db.SaveChanges();
+    }
 }
 
 var enableSwagger = builder.Configuration.GetValue<bool>("EnableSwagger");
@@ -165,6 +216,8 @@ if (app.Environment.IsDevelopment() || enableSwagger)
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 // Pipeline order (kritik)
 app.UseHangfireDashboard("/hangfire");

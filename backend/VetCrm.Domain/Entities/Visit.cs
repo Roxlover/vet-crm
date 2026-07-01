@@ -45,4 +45,5 @@ public DateTime? StatusUpdatedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<VisitPlan> Plans { get; set; } = new List<VisitPlan>();
     public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+    public ICollection<PetDiagnosis> Diagnoses { get; set; } = new List<PetDiagnosis>();
 }

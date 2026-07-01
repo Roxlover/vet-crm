@@ -19,4 +19,5 @@ public class Pet
     public string? ClientNotes { get; set; }
 
     public ICollection<Visit> Visits { get; set; } = new List<Visit>();
+    public ICollection<PetDiagnosis> Diagnoses { get; set; } = new List<PetDiagnosis>();
 }

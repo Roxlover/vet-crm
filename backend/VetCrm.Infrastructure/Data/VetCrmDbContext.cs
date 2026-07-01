@@ -22,6 +22,8 @@ public class VetCrmDbContext : DbContext
     public DbSet<VisitPlan> VisitPlans { get; set; } = null!;
     public DbSet<Appointment> Appointments { get; set; } = null!;
     public DbSet<OwnerNote> OwnerNotes { get; set; } = null!;
+    public DbSet<Disease> Diseases { get; set; } = null!;
+    public DbSet<PetDiagnosis> PetDiagnoses { get; set; } = null!;
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -167,6 +169,36 @@ public class VetCrmDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
             b.Property(x => x.Note).IsRequired(false);
             b.Property(x => x.CreatedAt).HasDefaultValueSql("NOW()");
+        });
+
+        modelBuilder.Entity<Disease>(b =>
+        {
+            b.Property(d => d.Name).IsRequired().HasMaxLength(150);
+            b.Property(d => d.Category).IsRequired();
+            b.Property(d => d.Species).HasMaxLength(50);
+            b.Property(d => d.Description).HasMaxLength(1000);
+            b.Property(d => d.CreatedAt).HasDefaultValueSql("NOW()");
+        });
+
+        modelBuilder.Entity<PetDiagnosis>(b =>
+        {
+            b.HasOne(pd => pd.Pet)
+                .WithMany(p => p.Diagnoses)
+                .HasForeignKey(pd => pd.PetId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(pd => pd.Disease)
+                .WithMany()
+                .HasForeignKey(pd => pd.DiseaseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne(pd => pd.Visit)
+                .WithMany(v => v.Diagnoses)
+                .HasForeignKey(pd => pd.VisitId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            b.Property(pd => pd.Notes).HasMaxLength(1000);
+            b.Property(pd => pd.CreatedAt).HasDefaultValueSql("NOW()");
         });
 
     }

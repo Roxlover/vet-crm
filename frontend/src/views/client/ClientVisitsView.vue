@@ -64,6 +64,17 @@
               <p class="section-content text-warning-dark">{{ visit.clientNotes }}</p>
             </div>
             
+            <!-- Tanı / Hastalık -->
+            <div v-if="visit.diseaseName" class="visit-section notes-block" style="background: #eef2ff; border-color: #c7d2fe;">
+              <span class="section-label" style="color: #4338ca;">🦠 Tanı / Hastalık</span>
+              <p class="section-content font-bold" style="color: #3730a3;">
+                {{ visit.diseaseName }} 
+                <span style="font-size: 0.8em; margin-left: 8px; background: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; font-weight: normal;">
+                  {{ visit.diagnosisStatus }}
+                </span>
+              </p>
+            </div>
+            
             <div v-if="visit.collectedAmountTl !== null" class="visit-section">
               <span class="section-label">💰 Ödenen Ücret</span>
               <p class="section-content font-bold text-success">{{ visit.collectedAmountTl }} TL</p>

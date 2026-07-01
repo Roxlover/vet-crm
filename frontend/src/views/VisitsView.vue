@@ -129,6 +129,24 @@
           <input type="datetime-local" v-model="form.performedAt" />
         </div>
 
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Tanı / Hastalık (Opsiyonel)</label>
+            <select v-model="form.diseaseId">
+              <option :value="null">Yok</option>
+              <option v-for="d in diseases" :key="d.id" :value="d.id">{{ d.name }}</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;" v-if="form.diseaseId">
+            <label>Durum</label>
+            <select v-model="form.diagnosisStatus">
+              <option value="Aktif">Aktif</option>
+              <option value="Kronik">Kronik</option>
+              <option value="Iyilesti">İyileşti</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Görsel Ekleme (Cloudflare R2) -->
         <div class="form-group">
           <label>Görsel(ler) Ekle</label>
@@ -273,6 +291,28 @@
               </div>
             </div>
 
+            <div class="detail-item full" style="grid-column: span 2;">
+              <label>Tanı (Hastalık)</label>
+              <div v-if="!visitEditOpen" class="val highlight">
+                 <span v-if="selectedVisit.diseaseName">
+                   {{ selectedVisit.diseaseName }}
+                   <span class="badge" style="font-size: 0.8em; margin-left: 8px; background: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px;">{{ selectedVisit.diagnosisStatus }}</span>
+                 </span>
+                 <span v-else>-</span>
+              </div>
+              <div v-else-if="visitDraft" style="display: flex; gap: 1rem;">
+                <select v-model="visitDraft.diseaseId" class="modern-input" style="flex: 1;">
+                  <option :value="null">Yok</option>
+                  <option v-for="d in diseases" :key="d.id" :value="d.id">{{ d.name }}</option>
+                </select>
+                <select v-if="visitDraft.diseaseId" v-model="visitDraft.diagnosisStatus" class="modern-input" style="width: 150px;">
+                  <option value="Aktif">Aktif</option>
+                  <option value="Kronik">Kronik</option>
+                  <option value="Iyilesti">İyileşti</option>
+                </select>
+              </div>
+            </div>
+
             <div class="detail-item" style="grid-column: span 2;">
               <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; width: 100%;">
                 <div class="detail-item">
@@ -328,6 +368,7 @@
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch, nextTick  } from 'vue'
 import { fetchOwners } from '../api/owners'
 import { fetchPets, fetchPetsByOwner } from '../api/pets'
+import { getDiseases } from '@/api/diseases'
 import { http } from '@/api/http'
 import { uploadVisitImages } from '../api/visits'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
@@ -338,6 +379,7 @@ const isNative = Capacitor.isNativePlatform()
 const visits = ref([])
 const owners = ref([])
 const pets = ref([])
+const diseases = ref([])
 const loading = ref(false)
 const filterDate = ref('') 
 const searchQuery = ref('')
@@ -358,6 +400,8 @@ const form = reactive({
   amountTl: null,
   notes: '',
   clientNotes: '',
+  diseaseId: null,
+  diagnosisStatus: 'Aktif',
   imageFiles: [],
   microchipNumber: '',
 })
@@ -441,6 +485,8 @@ function openVisitEdit() {
     petSpecies: v.species || v.petSpecies || '',
     ownerName: v.ownerName || '',
     ownerPhone: v.phoneE164 || v.ownerPhone || '',
+    diseaseId: v.diseaseId || null,
+    diagnosisStatus: v.diagnosisStatus || 'Aktif',
   }
   visitEditOpen.value = true
 }
@@ -507,6 +553,8 @@ async function saveVisitEdit() {
       amountTl: visitDraft.value.amountTl,
       creditAmountTl: visitDraft.value.creditAmountTl,
       collectedAmountTl: visitDraft.value.collectedAmountTl,
+      diseaseId: visitDraft.value.diseaseId,
+      diagnosisStatus: visitDraft.value.diagnosisStatus,
       notes: (visitDraft.value.notes || '').trim(),
       clientNotes: (visitDraft.value.clientNotes || '').trim(),
       nextDate: v.nextDate,
@@ -642,6 +690,15 @@ async function loadOwnersAndPets() {
   }
 }
 
+async function loadDiseases() {
+  try {
+    const res = await getDiseases({ pageSize: 100 })
+    diseases.value = res.data.items || []
+  } catch (e) {
+    console.error('loadDiseases ERROR:', e)
+  }
+}
+
 function onFilesSelected(e) {
   form.imageFiles = Array.from(e.target.files || [])
 }
@@ -700,6 +757,8 @@ async function handleSave() {
       procedures: form.procedures,
       amountTl: form.amountTl === '' || form.amountTl === null ? 0 : Number(form.amountTl),
       creditAmountTl: form.creditAmountTl === '' || form.creditAmountTl === null ? null : Number(form.creditAmountTl),
+      diseaseId: form.diseaseId,
+      diagnosisStatus: form.diagnosisStatus,
       notes: form.notes,
       clientNotes: form.clientNotes,
     }
@@ -722,6 +781,8 @@ async function handleSave() {
     form.creditAmountTl = ''
     form.notes = ''
     form.clientNotes = ''
+    form.diseaseId = null
+    form.diagnosisStatus = 'Aktif'
     form.imageFiles = []
     selectedPetId.value = ''
     selectedOwnerId.value = ''
@@ -748,6 +809,7 @@ function onDocPointerDown(e) {
 onMounted(() => {
   loadVisits()
   loadOwnersAndPets()
+  loadDiseases()
   document.addEventListener('pointerdown', onDocPointerDown)
 })
 

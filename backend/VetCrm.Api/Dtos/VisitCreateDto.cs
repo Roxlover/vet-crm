@@ -20,6 +20,10 @@ public class VisitCreateDto
     public DateOnly? NextDate { get; set; }
 
     public string? MicrochipNumber { get; set; }
+    
+    // Disease Tracking
+    public int? DiseaseId { get; set; }
+    public string? DiagnosisStatus { get; set; }
 
     // Yeni isim: plans
     [JsonPropertyName("plans")]

@@ -15,6 +15,10 @@ public class VisitUpdateDto
 
     public DateOnly? NextDate { get; set; }
     public string? MicrochipNumber { get; set; }
+    
+    // Disease Tracking
+    public int? DiseaseId { get; set; }
+    public string? DiagnosisStatus { get; set; }
 
     [JsonPropertyName("plans")]
     public List<VisitPlanCreateDto>? Plans { get; set; }

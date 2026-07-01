@@ -25,7 +25,13 @@ public class VisitDto
     public int? DoctorId { get; set; }
     public string? DoctorName { get; set; }
     public string? ImageUrl { get; set; }
-    public List<VisitImageDto> Images { get; set; } = new();
+    
+    // Hastalık Takibi (Disease Tracking)
+    public int? DiseaseId { get; set; }
+    public string? DiseaseName { get; set; }
+    public string? DiagnosisStatus { get; set; }
+
+    public ICollection<VisitImageDto> Images { get; set; } = new List<VisitImageDto>();
     public string? MicrochipNumber { get; set; } 
     public List<VisitPlanDto> Plans { get; set; } = new();
 

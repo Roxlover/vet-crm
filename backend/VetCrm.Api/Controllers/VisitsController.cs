@@ -101,6 +101,60 @@ private void SyncRemindersForVisit(Visit visit, List<VisitPlanCreateDto>? plans)
     }
 }
 
+private async Task SyncDiseaseDiagnosisForVisit(Visit visit, int? diseaseId, string? statusStr)
+{
+    var existingDiagnosis = await _db.PetDiagnoses.FirstOrDefaultAsync(pd => pd.VisitId == visit.Id);
+
+    if (!diseaseId.HasValue || diseaseId.Value <= 0)
+    {
+        if (existingDiagnosis != null)
+        {
+            _db.PetDiagnoses.Remove(existingDiagnosis);
+            await _db.SaveChangesAsync();
+        }
+        return;
+    }
+
+    if (!Enum.TryParse<DiagnosisStatus>(statusStr, true, out var status))
+        status = DiagnosisStatus.Aktif;
+
+    if (existingDiagnosis == null)
+    {
+        existingDiagnosis = new PetDiagnosis
+        {
+            PetId = visit.PetId,
+            VisitId = visit.Id,
+            DiseaseId = diseaseId.Value,
+            Status = status,
+            DiagnosedDate = visit.PerformedAt,
+            Notes = "Ziyaret sırasında eklendi."
+        };
+        _db.PetDiagnoses.Add(existingDiagnosis);
+    }
+    else
+    {
+        existingDiagnosis.DiseaseId = diseaseId.Value;
+        existingDiagnosis.Status = status;
+        existingDiagnosis.UpdatedAt = DateTime.UtcNow;
+    }
+    await _db.SaveChangesAsync();
+
+    if (status == DiagnosisStatus.Kronik)
+    {
+         var chronicReminder = await _db.Reminders.FirstOrDefaultAsync(r => r.VisitId == visit.Id && r.DueDate > DateOnly.FromDateTime(visit.PerformedAt.AddMonths(1)));
+         if (chronicReminder == null)
+         {
+             _db.Reminders.Add(new Reminder
+             {
+                 VisitId = visit.Id,
+                 DueDate = DateOnly.FromDateTime(visit.PerformedAt.AddMonths(3)),
+                 Status = ReminderStatus.Pending
+             });
+             await _db.SaveChangesAsync();
+         }
+    }
+}
+
 public class UpdateVisitCollectedDto
 {
     public decimal? CollectedAmountTl { get; set; }
@@ -260,6 +314,8 @@ public async Task<IActionResult> UpdateVisitCredit([FromRoute] int id, [FromBody
             .Include(v => v.Images)
             .Include(v => v.Plans)
                 .ThenInclude(p => p.Doctor)
+            .Include(v => v.Diagnoses)
+                .ThenInclude(d => d.Disease)
             .AsQueryable();
 
         if (ownerId.HasValue)
@@ -307,6 +363,9 @@ public async Task<IActionResult> UpdateVisitCredit([FromRoute] int id, [FromBody
                 CreatedByName = v.CreatedByName,
                 ImageUrl = v.ImageUrl,
                 MicrochipNumber = v.MicrochipNumber,
+                DiseaseId = v.Diagnoses.FirstOrDefault() != null ? (int?)v.Diagnoses.FirstOrDefault()!.DiseaseId : null,
+                DiseaseName = v.Diagnoses.FirstOrDefault() != null ? v.Diagnoses.FirstOrDefault()!.Disease!.Name : null,
+                DiagnosisStatus = v.Diagnoses.FirstOrDefault() != null ? v.Diagnoses.FirstOrDefault()!.Status.ToString() : null,
 
                 Images = v.Images
                     .OrderByDescending(i => i.CreatedAt)
@@ -353,6 +412,8 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
         .Include(x => x.Images)
         .Include(x => x.Plans)
             .ThenInclude(p => p.Doctor)
+        .Include(x => x.Diagnoses)
+            .ThenInclude(d => d.Disease)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     if (v == null) return NotFound();
@@ -379,6 +440,9 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
         DoctorName = v.Doctor != null ? v.Doctor.FullName : null,
         ImageUrl = v.ImageUrl,
         MicrochipNumber = v.MicrochipNumber,
+        DiseaseId = v.Diagnoses?.FirstOrDefault()?.DiseaseId,
+        DiseaseName = v.Diagnoses?.FirstOrDefault()?.Disease?.Name,
+        DiagnosisStatus = v.Diagnoses?.FirstOrDefault()?.Status.ToString(),
         CollectedAmountTl = v.CollectedAmountTl,
         CreditAmountTl = v.CreditAmountTl,
 
@@ -470,6 +534,7 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
             await _db.Entry(visit.Pet).Reference(p => p.Owner).LoadAsync();
 
             SyncRemindersForVisit(visit, (dto.Plans != null && dto.Plans.Count > 0) ? dto.Plans : null);
+            await SyncDiseaseDiagnosisForVisit(visit, dto.DiseaseId, dto.DiagnosisStatus);
 
             // ✅ Sync Ledger (Ziyaret tamamlandıysa veya tahsilat varsa)
             await SyncLedgerForVisit(visit);
@@ -497,6 +562,8 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
                 CreatedByName     = visit.CreatedByName,
                 ImageUrl          = visit.ImageUrl,
                 MicrochipNumber   = visit.MicrochipNumber,
+                DiseaseId         = dto.DiseaseId,
+                DiagnosisStatus   = dto.DiagnosisStatus,
                 Plans             = new()
             };
 
@@ -545,6 +612,8 @@ public async Task<ActionResult<VisitDto>> GetVisit(int id)
 
 
         SyncRemindersForVisit(visit, (dto.Plans != null && dto.Plans.Count > 0) ? dto.Plans : null);
+        await SyncDiseaseDiagnosisForVisit(visit, dto.DiseaseId, dto.DiagnosisStatus);
+        
         await _db.SaveChangesAsync();
 
         // ✅ Sync Ledger

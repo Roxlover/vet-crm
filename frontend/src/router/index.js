@@ -6,6 +6,7 @@ import OwnersView from '@/views/OwnersView.vue'
 import PetsView from '@/views/PetsView.vue'
 import VisitsView from '@/views/VisitsView.vue'
 import BilancoView from '@/views/BilancoView.vue'
+import DiseasesView from '@/views/DiseasesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -43,6 +44,11 @@ const router = createRouter({
       path: '/pets',
       name: 'pets',
       component: PetsView,
+    },
+    {
+      path: '/diseases',
+      name: 'diseases',
+      component: DiseasesView,
     },
     {
       path: '/visits',
