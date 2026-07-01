@@ -1,21 +1,21 @@
-import http from './http';
+import { http } from './http';
 
 export const getDiseases = (params = {}) => {
-  return http.get('/api/diseases', { params });
+  return http.get('/diseases', { params });
 };
 
 export const getDisease = (id) => {
-  return http.get(`/api/diseases/${id}`);
+  return http.get(`/diseases/${id}`);
 };
 
 export const createDisease = (data) => {
-  return http.post('/api/diseases', data);
+  return http.post('/diseases', data);
 };
 
 export const updateDisease = (id, data) => {
-  return http.put(`/api/diseases/${id}`, data);
+  return http.put(`/diseases/${id}`, data);
 };
 
 export const deleteDisease = (id) => {
-  return http.delete(`/api/diseases/${id}`);
+  return http.delete(`/diseases/${id}`);
 };
