@@ -147,9 +147,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { getDiseases, createDisease, updateDisease, deleteDisease } from '@/api/diseases';
-import { useToast } from 'vue-toastification';
 
-const toast = useToast();
 const diseases = ref([]);
 const isModalOpen = ref(false);
 const isEditing = ref(false);
@@ -168,7 +166,7 @@ const loadDiseases = async () => {
     const res = await getDiseases({ pageSize: 100 });
     diseases.value = res.data.items;
   } catch (error) {
-    toast.error('Hastalıklar yüklenirken hata oluştu.');
+    alert('Hastalıklar yüklenirken hata oluştu.');
   }
 };
 
@@ -197,22 +195,22 @@ const closeModal = () => {
 const save = async () => {
   try {
     if (!form.value.name) {
-      toast.warning('Lütfen hastalık adını girin.');
+      alert('Lütfen hastalık adını girin.');
       return;
     }
 
     if (isEditing.value) {
       await updateDisease(form.value.id, form.value);
-      toast.success('Hastalık güncellendi.');
+      alert('Hastalık güncellendi.');
     } else {
       await createDisease(form.value);
-      toast.success('Hastalık eklendi.');
+      alert('Hastalık eklendi.');
     }
     
     closeModal();
     await loadDiseases();
   } catch (error) {
-    toast.error('Kaydedilirken hata oluştu.');
+    alert('Kaydedilirken hata oluştu.');
   }
 };
 
@@ -220,10 +218,10 @@ const confirmDelete = async (id) => {
   if (confirm('Bu hastalığı silmek istediğinize emin misiniz?')) {
     try {
       await deleteDisease(id);
-      toast.success('Hastalık silindi.');
+      alert('Hastalık silindi.');
       await loadDiseases();
     } catch (error) {
-      toast.error('Silinirken hata oluştu.');
+      alert('Silinirken hata oluştu.');
     }
   }
 };
