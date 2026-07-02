@@ -86,54 +86,62 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const isClientPath = to.path.startsWith('/client')
-  const isWelcome = to.path === '/'
-  const isVetLogin = to.path === '/login'
-  const isClientLogin = to.path === '/client/login'
-
   const token = localStorage.getItem('vetcrm_token')
   const userRaw = localStorage.getItem('vetcrm_user')
   const user = userRaw ? JSON.parse(userRaw) : null
   const isClient = user && (String(user.role).toLowerCase() === 'client')
-  const isVet = !!(token && !isClient)
+  
+  const isWelcome = to.path === '/'
+  const isClientPath = to.path.startsWith('/client')
+  const isClientLogin = to.path === '/client/login'
+  const isVetLogin = to.path === '/login'
 
-  console.log('[ROUTER]', { to: to.path, userRole: user?.role, isClient, isVet, hasToken: !!token })
+  console.log('[ROUTER GUARD]', { to: to.path, isClient, hasToken: !!token })
 
-  // Welcome / Ana Sayfa: Giriş yapmışsa ilgili panele yönlendir
+  // Welcome sayfası
   if (isWelcome) {
-    if (isVet) return next('/dashboard')
-    if (isClient) return next('/client/dashboard')
+    if (token) {
+      return next(isClient ? '/client/dashboard' : '/dashboard')
+    }
     return next()
   }
 
-  // Müşteri login: Zaten müşteri girişi varsa → dashboard
-  if (isClientLogin) {
-    if (isClient) return next('/client/dashboard')
+  // MÜŞTERİ PORTALI ROTALARI
+  if (isClientPath) {
+    if (isClientLogin) {
+      if (token && isClient) return next('/client/dashboard')
+      return next()
+    }
+    
+    // Korumalı müşteri sayfaları
+    if (!token || !isClient) {
+      return next('/client/login')
+    }
     return next()
   }
 
-  // Veteriner login: Zaten vet girişi varsa → dashboard
+  // VETERİNER / CRM ROTALARI
   if (isVetLogin) {
-    if (isVet) return next('/dashboard')
+    if (token && !isClient) return next('/dashboard')
     return next()
   }
 
-  // Müşteri portalı korumalı sayfalar
-  if (isClientPath && !isClientLogin) {
-    if (!token || !isClient) return next('/client/login')
-    return next()
+  // Korumalı veteriner sayfaları
+  if (!token) {
+    return next('/')
   }
-
-  // Veteriner CRM korumalı sayfalar
-  if (!token) return next('/')
-  if (isClient) return next('/client/dashboard')
+  if (isClient) {
+    return next('/client/dashboard')
+  }
 
   // Bilanço yetkisi kontrolü
   if (to.path === '/bilanco') {
     const role = String(user?.role || '').trim().toLowerCase()
     const username = String(user?.username || '').trim().toLowerCase()
     const allowedUsers = ['bullboss']
-    if (role !== 'admin' && !allowedUsers.includes(username)) return next('/dashboard')
+    if (role !== 'admin' && !allowedUsers.includes(username)) {
+      return next('/dashboard')
+    }
   }
 
   return next()
