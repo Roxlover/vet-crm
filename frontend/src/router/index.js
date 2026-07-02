@@ -86,65 +86,80 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('vetcrm_token')
-  const userRaw = localStorage.getItem('vetcrm_user')
-  const user = userRaw ? JSON.parse(userRaw) : null
-  const isClient = user && (String(user.role).toLowerCase() === 'client')
-  
-  const isWelcome = to.path === '/'
-  const isClientPath = to.path.startsWith('/client')
-  const isClientLogin = to.path === '/client/login'
-  const isVetLogin = to.path === '/login'
-
-  console.log('[ROUTER GUARD]', { to: to.path, isClient, hasToken: !!token })
-
-  // Welcome sayfası
-  if (isWelcome) {
-    if (token) {
-      return next(isClient ? '/client/dashboard' : '/dashboard')
+  try {
+    const token = localStorage.getItem('vetcrm_token')
+    const userRaw = localStorage.getItem('vetcrm_user')
+    
+    let user = null
+    if (userRaw) {
+      try {
+        user = JSON.parse(userRaw)
+      } catch (e) {
+        console.error('[ROUTER] User JSON parse error:', e)
+      }
     }
-    return next()
-  }
 
-  // MÜŞTERİ PORTALI ROTALARI
-  if (isClientPath) {
-    if (isClientLogin) {
-      if (token && isClient) return next('/client/dashboard')
+    const isClient = user && user.role && (String(user.role).toLowerCase() === 'client')
+    
+    const isWelcome = to.path === '/'
+    const isClientPath = to.path.startsWith('/client')
+    const isClientLogin = to.path === '/client/login'
+    const isVetLogin = to.path === '/login'
+
+    console.log('[ROUTER GUARD]', { to: to.path, isClient, hasToken: !!token })
+
+    // Welcome sayfası
+    if (isWelcome) {
+      if (token) {
+        return next(isClient ? '/client/dashboard' : '/dashboard')
+      }
       return next()
     }
-    
-    // Korumalı müşteri sayfaları
-    if (!token || !isClient) {
-      return next('/client/login')
+
+    // MÜŞTERİ PORTALI ROTALARI
+    if (isClientPath) {
+      if (isClientLogin) {
+        if (token && isClient) return next('/client/dashboard')
+        return next()
+      }
+      
+      // Korumalı müşteri sayfaları
+      if (!token || !isClient) {
+        return next('/client/login')
+      }
+      return next()
     }
+
+    // VETERİNER / CRM ROTALARI
+    if (isVetLogin) {
+      if (token && !isClient) return next('/dashboard')
+      return next()
+    }
+
+    // Korumalı veteriner sayfaları
+    if (!token) {
+      return next('/')
+    }
+    if (isClient) {
+      return next('/client/dashboard')
+    }
+
+    // Bilanço yetkisi kontrolü
+    if (to.path === '/bilanco') {
+      const role = String(user?.role || '').trim().toLowerCase()
+      const username = String(user?.username || '').trim().toLowerCase()
+      const allowedUsers = ['bullboss']
+      if (role !== 'admin' && !allowedUsers.includes(username)) {
+        return next('/dashboard')
+      }
+    }
+
+    return next()
+  } catch (error) {
+    console.error('[ROUTER GUARD EXCEPTION]', error)
+    // Hata durumunda döngüye girmemesi için hedefe izin ver veya login'e yolla
     return next()
   }
-
-  // VETERİNER / CRM ROTALARI
-  if (isVetLogin) {
-    if (token && !isClient) return next('/dashboard')
-    return next()
-  }
-
-  // Korumalı veteriner sayfaları
-  if (!token) {
-    return next('/')
-  }
-  if (isClient) {
-    return next('/client/dashboard')
-  }
-
-  // Bilanço yetkisi kontrolü
-  if (to.path === '/bilanco') {
-    const role = String(user?.role || '').trim().toLowerCase()
-    const username = String(user?.username || '').trim().toLowerCase()
-    const allowedUsers = ['bullboss']
-    if (role !== 'admin' && !allowedUsers.includes(username)) {
-      return next('/dashboard')
-    }
-  }
-
-  return next()
 })
 
 export default router
