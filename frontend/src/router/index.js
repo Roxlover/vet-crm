@@ -119,7 +119,7 @@ router.beforeEach((to, from, next) => {
   }
 
   // Müşteri portalı korumalı sayfalar
-  if (isClientPath) {
+  if (isClientPath && !isClientLogin) {
     if (!token || !isClient) return next('/client/login')
     return next()
   }
