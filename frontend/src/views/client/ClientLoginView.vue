@@ -77,20 +77,26 @@ async function handleLogin() {
   loading.value = true
 
   try {
+    // Önceki tüm eski oturum kalıntılarını temizle
+    localStorage.removeItem('vetcrm_token')
+    localStorage.removeItem('vetcrm_user')
+
     const res = await http.post('/auth/client-login', {
       phone: phone.value,
       password: password.value,
     })
 
     const data = res.data
-    // Save to auth storage with role: 'client'
-    saveAuth({
+    
+    // JWT Token'ı ve kullanıcı bilgilerini doğrudan diske yazıyoruz
+    localStorage.setItem('vetcrm_token', data.token)
+    localStorage.setItem('vetcrm_user', JSON.stringify({
       token: data.token,
       role: 'client',
       id: data.id,
       username: data.fullName,
       phone: data.phone,
-    })
+    }))
 
     router.push('/client/dashboard')
   } catch (err) {

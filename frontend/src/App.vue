@@ -786,17 +786,20 @@ onBeforeUnmount(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  background:
+    radial-gradient(ellipse at 10% 0%, rgba(167, 243, 208, 0.45) 0%, transparent 55%),
+    radial-gradient(ellipse at 90% 100%, rgba(110, 231, 183, 0.3) 0%, transparent 55%),
+    linear-gradient(160deg, #ecfdf5 0%, #f0fdf4 40%, #f9fafb 100%);
   color: #166534;
   font-family: 'Inter', sans-serif;
-  padding-bottom: calc(90px + env(safe-area-inset-bottom)); /* Safe space for bottom navigation */
+  padding-bottom: calc(90px + env(safe-area-inset-bottom));
   overflow-x: hidden;
 }
 
 .client-main {
   flex: 1;
   width: 100%;
-  max-width: 600px; /* Force mobile width center on desktop */
+  max-width: 600px;
   margin: 0 auto;
   padding: 1.5rem 1rem;
   box-sizing: border-box;
@@ -814,15 +817,15 @@ onBeforeUnmount(() => {
   transform: translateX(-50%);
   width: 100%;
   max-width: 600px;
-  min-height: 70px;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(22, 101, 52, 0.1);
+  min-height: 68px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(22, 101, 52, 0.08);
   display: flex;
   justify-content: space-around;
   align-items: center;
-  box-shadow: 0 -8px 32px rgba(22, 101, 52, 0.08);
+  box-shadow: 0 -10px 40px rgba(6, 78, 59, 0.1);
   z-index: 1000;
   padding-bottom: env(safe-area-inset-bottom);
   padding-top: 0.5rem;
@@ -832,16 +835,17 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  color: #71717a;
+  gap: 3px;
+  color: #9ca3af;
   text-decoration: none;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 8px 14px;
+  border-radius: 16px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex: 1;
+  position: relative;
 }
 
 .client-nav-item.logout-btn {
@@ -852,20 +856,21 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: #6b7280;
-  transition: transform 0.3s ease;
+  width: 26px;
+  height: 26px;
+  color: #9ca3af;
+  transition: all 0.25s ease;
 }
 
 .client-nav-item .client-nav-label {
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  transition: color 0.3s ease;
+  transition: all 0.25s ease;
+  letter-spacing: 0.01em;
 }
 
-.client-nav-item:hover .client-nav-icon {
-  transform: translateY(-2px);
+.client-nav-item:active {
+  transform: scale(0.93);
 }
 
 .client-nav-item.active {
@@ -874,12 +879,24 @@ onBeforeUnmount(() => {
 
 .client-nav-item.active .client-nav-icon {
   color: #059669;
-  transform: translateY(-2px) scale(1.1);
+  filter: drop-shadow(0 2px 4px rgba(5, 150, 105, 0.3));
+}
+
+.client-nav-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 3px;
+  background: linear-gradient(90deg, #059669, #047857);
+  border-radius: 0 0 4px 4px;
 }
 
 .client-nav-item.active .client-nav-label {
   color: #047857;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 /* Global Custom Styles for Client Dashboard & Views */
