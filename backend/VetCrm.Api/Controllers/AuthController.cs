@@ -86,13 +86,20 @@ namespace VetCrm.Api.Controllers
                 return BadRequest("Telefon numarası ve şifre zorunludur.");
 
             var cleanedPhone = new string(dto.Phone.Where(char.IsDigit).ToArray());
-            if (cleanedPhone.Length == 10 && cleanedPhone.StartsWith("5"))
+            
+            string phone10 = cleanedPhone;
+            if (cleanedPhone.Length == 12 && cleanedPhone.StartsWith("90"))
             {
-                cleanedPhone = "90" + cleanedPhone;
+                phone10 = cleanedPhone.Substring(2);
             }
+            else if (cleanedPhone.Length == 10 && cleanedPhone.StartsWith("5"))
+            {
+                phone10 = cleanedPhone;
+            }
+            string phone12 = "90" + phone10;
 
             var owner = await _db.Owners
-                .FirstOrDefaultAsync(o => o.PhoneE164 == cleanedPhone);
+                .FirstOrDefaultAsync(o => o.PhoneE164 == phone12 || o.PhoneE164 == phone10 || o.PhoneE164 == dto.Phone);
 
             if (owner == null || string.IsNullOrWhiteSpace(owner.PasswordHash) || !BC.Verify(dto.Password, owner.PasswordHash))
                 return Unauthorized("Telefon numarası veya şifre hatalı.");
