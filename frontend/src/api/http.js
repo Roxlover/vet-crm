@@ -138,7 +138,11 @@ http.interceptors.response.use(
       if (status === 401) {
         console.warn('[AUTH] 401 geldi, token temizleniyor...')
         clearAuth()
-        if (isBrowser && !isNativeApp) {
+        
+        // Eğer istek zaten bir giriş/auth isteğiyse sayfayı yenileme (böylece hata modalı görünebilsin)
+        const isAuthRequest = url && (url.includes('/auth/login') || url.includes('/auth/client-login'))
+        
+        if (isBrowser && !isNativeApp && !isAuthRequest) {
           if (window.location.pathname.startsWith('/client')) {
             window.location.href = '/client/login'
           } else {
