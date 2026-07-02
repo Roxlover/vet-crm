@@ -43,10 +43,10 @@ function resolveBase() {
 
   const { protocol, hostname } = window.location
 
-  // 4) Local dev (web)
+  // 4) Local dev (web) - Canlı API'ye yönlendirildi (Test için)
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    console.log('[HTTP][BASE][LOCALHOST] http://localhost:5239')
-    return 'http://localhost:5239'
+    console.log('[HTTP][BASE][LOCALHOST] https://api.e-bullvet.com')
+    return 'https://api.e-bullvet.com'
   }
 
   // 5) LAN IP
