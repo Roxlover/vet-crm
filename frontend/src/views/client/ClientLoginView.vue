@@ -57,6 +57,26 @@
         <p>Giriş yapamıyorsanız lütfen kliniğiniz ile iletişime geçerek şifre tanımlatın.</p>
       </footer>
     </div>
+
+    <!-- HATA BİLGİLENDİRME MODALI -->
+    <div v-if="showErrorModal" class="modal-overlay" @click="showErrorModal = false">
+      <div class="modal-card" @click.stop>
+        <div class="modal-header">
+          <span class="modal-title-icon">⚠️</span>
+          <h2>Giriş Başarısız</h2>
+        </div>
+        <div class="modal-body">
+          <p class="main-error-msg">{{ error }}</p>
+          <div v-if="debugDetails" class="debug-section">
+            <span class="debug-title">Sistem / Hata Detayı:</span>
+            <pre class="debug-content">{{ debugDetails }}</pre>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-close-btn" @click="showErrorModal = false">Kapat</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -71,9 +91,12 @@ const phone = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
+const showErrorModal = ref(false)
+const debugDetails = ref('')
 
 async function handleLogin() {
   error.value = ''
+  debugDetails.value = ''
   loading.value = true
 
   try {
@@ -101,10 +124,20 @@ async function handleLogin() {
     router.push('/client/dashboard')
   } catch (err) {
     console.error('[CLIENT LOGIN ERROR]', err)
-    if (err.response && err.response.data) {
-      error.value = typeof err.response.data === 'string' ? err.response.data : 'Giriş yapılamadı.'
+    showErrorModal.value = true
+
+    if (err.response) {
+      // Sunucu yanıt verdi ama 4xx/5xx döndü
+      const apiData = err.response.data
+      error.value = typeof apiData === 'string' ? apiData : (apiData?.message || 'Telefon numarası veya şifre hatalı.')
+      debugDetails.value = `Durum Kodu: ${err.response.status}\nDetay: ${JSON.stringify(apiData, null, 2)}`
+    } else if (err.request) {
+      // İstek yapıldı ama sunucudan yanıt alınamadı (CORS, ağ kesintisi vb.)
+      error.value = 'Sunucuya ulaşılamadı. Lütfen internet bağlantınızı veya API durumunu kontrol edin.'
+      debugDetails.value = `İstek Hatası: Sunucu yanıt vermedi. CORS engeli olabilir.\nAPI URL: ${http.defaults.baseURL}/auth/client-login`
     } else {
-      error.value = 'Bağlantı hatası oluştu. Lütfen tekrar deneyin.'
+      error.value = 'Giriş işlemi başlatılırken beklenmedik bir hata oluştu.'
+      debugDetails.value = err.message
     }
   } finally {
     loading.value = false
@@ -345,5 +378,121 @@ async function handleLogin() {
   color: rgba(209, 250, 229, 0.6);
   line-height: 1.4;
   margin: 0;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1.5rem;
+  animation: fadeInModal 0.25s ease-out;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 28px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  padding: 2rem;
+  color: #1f2937;
+  transform: scale(0.95);
+  animation: scaleUpModal 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards;
+}
+
+@keyframes scaleUpModal {
+  to { transform: scale(1); }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-title-icon {
+  font-size: 2rem;
+}
+
+.modal-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #991b1b;
+  margin: 0;
+}
+
+.modal-body {
+  margin-bottom: 1.5rem;
+}
+
+.main-error-msg {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.debug-section {
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 0.85rem;
+  border: 1px solid #e5e7eb;
+}
+
+.debug-title {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #6b7280;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.debug-content {
+  margin: 0;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: #374151;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-close-btn {
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: #d1d5db;
+}
+
+.modal-close-btn:active {
+  transform: scale(0.97);
 }
 </style>
