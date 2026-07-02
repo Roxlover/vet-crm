@@ -432,14 +432,26 @@ onMounted(() => fetchData())
   margin-bottom: 0.4rem;
 }
 .balance-status { font-size: 0.78rem; color: rgba(255,255,255,0.8); margin: 0; font-weight: 600; }
-.balance-deco { position: relative; width: 60px; flex-shrink: 0; }
+.balance-deco { 
+  position: absolute; 
+  right: 0; 
+  top: 0; 
+  bottom: 0; 
+  width: 140px; 
+  overflow: hidden; 
+  border-radius: 0 24px 24px 0;
+  pointer-events: none;
+}
 .balance-ring {
   position: absolute;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.15);
+  background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.05) 100%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.2);
 }
-.ring-1 { width: 70px; height: 70px; top: -20px; right: -10px; }
-.ring-2 { width: 45px; height: 45px; top: 5px; right: 10px; }
+.ring-1 { width: 120px; height: 120px; top: -40px; right: -30px; }
+.ring-2 { width: 90px; height: 90px; bottom: -30px; right: 40px; background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%); }
 
 /* ── Section ── */
 .section-block { margin-bottom: 1.5rem; }
